@@ -1,0 +1,190 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.hngf.mapper.sys.OrgIndustryMapper">
+
+
+    <select id="findList" resultType="com.hngf.entity.sys.OrgIndustry">
+		select * from sys_org_industry
+        where del_flag = 0
+	</select>
+
+    <select id="findById" resultType="com.hngf.entity.sys.OrgIndustry" parameterType="Long">
+		select * from sys_org_industry
+        where del_flag = 0 and org_industry_id = #{id}
+	</select>
+
+    <insert id="add" parameterType="com.hngf.entity.sys.OrgIndustry">
+        INSERT INTO sys_org_industry (
+                                                                                                                org_id
+                                            ,
+                                                                                    group_id
+                                            ,
+                                                                                    industry_id
+                                            ,
+                                                                                    created_by
+                                            ,
+                                                                                    created_time
+                                            ,
+                                                                                    updated_by
+                                            ,
+                                                                                    updated_time
+                                            ,
+                                                                                    del_flag
+                                                        )
+        VALUES (
+                                                                                                                #{orgId}
+
+                                            ,
+                                                                                    #{groupId}
+
+                                            ,
+                                                                                    #{industryId}
+
+                                            ,
+                                                                                    #{createdBy}
+
+                                            ,
+                                                                                    #{createdTime}
+
+                                            ,
+                                                                                    #{updatedBy}
+
+                                            ,
+                                                                                    #{updatedTime}
+
+                                            ,
+                                                                                    #{delFlag}
+
+                                                        )
+
+    </insert>
+
+    <update id="update" parameterType="com.hngf.entity.sys.OrgIndustry">
+        UPDATE sys_org_industry SET
+
+                                                        org_id = #{orgId}
+
+                                    ,
+                                                                group_id = #{groupId}
+
+                                    ,
+                                                                industry_id = #{industryId}
+
+                                    ,
+                                                                created_by = #{createdBy}
+
+                                    ,
+                                                                created_time = #{createdTime}
+
+                                    ,
+                                                                updated_by = #{updatedBy}
+
+                                    ,
+                                                                updated_time = #{updatedTime}
+
+                                    ,
+                                                                del_flag = #{delFlag}
+
+                                    
+        where org_industry_id = #{orgIndustryId}
+    </update>
+
+    <update id="deleteById" parameterType="Long">
+        UPDATE sys_org_industry SET
+        del_flag = 1
+        where org_industry_id = #{id}
+    </update>
+    <!--给组织添加行业之前先删除之前组织下的行业-->
+    <update id="deleteIndustry" parameterType="Long">
+        UPDATE sys_org_industry SET
+        del_flag = 1
+        where org_id=#{orgId}
+    </update>
+    <!--查询所选中组织下的行业 checkd值-->
+    <select id="orgIndustryChecked" resultType="OrgIndustry">
+        select * from sys_org_industry where org_id=#{orgId} and del_flag=0
+    </select>
+    <update id="deleteByIds" parameterType="java.util.List">
+        UPDATE sys_org_industry SET
+        del_flag = 1
+        where org_industry_id in
+        <foreach collection="ids" item="id" open="(" close=")" separator="," index="idx">
+            #{id}
+        </foreach>
+    </update>
+
+    <select id="getOrgRiskAnalysis" resultType="java.util.Map">
+        SELECT
+        a.industry_id AS industryId,
+        a.industry_name AS industryName,
+        a.industry_code  as industryCode,
+        IF( b.codes IS NOT NULL, CONCAT( a.industry_code, ',', b.codes ), a.industry_code ) AS codes
+        FROM(
+            SELECT
+                soi.industry_id,
+                si.industry_code,
+                si.industry_name
+            FROM
+                sys_org_industry soi
+                LEFT JOIN sys_industry si ON soi.industry_id = si.`industry_id`
+            WHERE
+                soi.org_id =#{orgId}
+                AND si.industry_parent_id = 0
+        ) a
+        LEFT JOIN (
+            SELECT
+                si.industry_parent_id,
+                GROUP_CONCAT( si.industry_code ) AS codes
+            FROM
+                sys_org_industry  soi
+                LEFT JOIN sys_industry si ON soi.industry_id = si.industry_id
+            WHERE
+                soi.org_id =#{orgId}
+                AND si.industry_parent_id != 0
+            GROUP BY
+            si.industry_parent_id
+        ) b ON a.industry_id = b.industry_parent_id
+    </select>
+
+    <!--根据orgId查找机构-->
+    <select id="findListByOrgId" resultType="OrgIndustry">
+       SELECT
+        A.org_industry_id  as industryId,
+        A.org_id as orgId,
+        A.group_id as groupId,
+        A.industry_id industryId,
+        B.industry_name industryName,
+        B.industry_code industryCode,
+        C.org_name orgName,
+        D.group_name  groupName
+        FROM   sys_org_industry   A
+        LEFT JOIN  sys_industry   B ON B.industry_id = A.industry_id
+        LEFT JOIN  sys_org    C ON C.org_id= A.org_id
+        LEFT JOIN  sys_group  D ON D.group_id        = A.group_id
+        WHERE  A.del_flag = 0
+        AND A.org_id  = #{orgId,jdbcType=BIGINT}
+    </select>
+
+    <select id="selectIndustryCodeByPid" resultType="Industry" parameterType="Long">
+	        SELECT
+			  psi.industry_id industryId,
+			  psi.industry_name industryName,
+			  psi.industry_code industryCode,
+              GROUP_CONCAT(si.industry_code) AS childIndustryCodes
+            FROM
+              `sys_org_industry` soi
+            LEFT JOIN sys_industry si    ON soi.industry_id = si.`industry_id`
+			LEFT JOIN sys_industry psi  on psi.industry_id  =  si.industry_parent_id
+            WHERE soi.org_id =#{orgId,jdbcType=BIGINT} AND si.industry_parent_id != 0 and soi.del_flag = 0
+            GROUP BY si.industry_parent_id
+    </select>
+
+    <select id="selectIndustryCodeByOrgId" resultType="String" >
+         SELECT
+            group_concat(industry_code)
+        FROM sys_org_industry oi
+        left join sys_industry si on oi.industry_id = si.industry_id
+        WHERE  oi.del_flag = 0 and oi.org_id =   #{orgId,jdbcType=BIGINT}
+    </select>
+</mapper>

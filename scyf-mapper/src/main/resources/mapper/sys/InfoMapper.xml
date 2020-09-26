@@ -1,0 +1,172 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.hngf.mapper.sys.InfoMapper">
+
+ <sql id="Base_Column_List">
+        sys_id as "sysId" ,
+        sys_name as "sysName" ,
+        sys_code as "sysCode" ,
+        sys_logo as "sysLogo" ,
+        sys_desc as "sysDesc" ,
+        risk_judge_method as "riskJudgeMethod" ,
+        web_url as "webUrl" ,
+        company_id as "companyId" ,
+        check_device_on as "checkDeviceOn" ,
+        hdangerReview_on as "hdangerReviewOn" ,
+        is_show_check_address as "isShowCheckAddress" ,
+        hdanger_work_flow as "hdangerWorkFlow" ,
+        facility_map as "facilityMap",
+        auto_supervise as "autoSupervise",
+        superviser_id as "superviserId",
+        superviser_advent as "superviserAdvent"
+ </sql>
+    <select id="findList" resultType="com.hngf.entity.sys.Info">
+		select * from sys_info
+        where del_flag = 0
+	</select>
+
+    <select id="findById" resultType="com.hngf.entity.sys.Info" parameterType="Long">
+		select
+		 <include refid="Base_Column_List"/>
+		 from sys_info
+        where del_flag = 0 and sys_id = #{id}
+	</select>
+    <select id="getList" resultType="com.hngf.entity.sys.Info">
+        select
+        <include refid="Base_Column_List"/>
+        from sys_info
+        where del_flag = 0 and company_id = #{companyId}
+    </select>
+    <select id="getByCId" resultType="com.hngf.entity.sys.Info">
+        select
+        sys_id as "sysId" ,
+        sys_name as "sysName" ,
+        sys_code as "sysCode" ,
+        sys_logo as "sysLogo" ,
+        sys_desc as "sysDesc" ,
+        risk_judge_method as "riskJudgeMethod" ,
+        web_url as "webUrl" ,
+        company_id as "companyId" ,
+        check_device_on as "checkDeviceOn" ,
+        hdangerReview_on as "hdangerReviewOn" ,
+        is_show_check_address as "isShowCheckAddress" ,
+        hdanger_work_flow as "hdangerWorkFlow" ,
+        facility_map as "facilityMap",
+        auto_supervise as "autoSupervise",
+        superviser_id as "superviserId",
+        superviser_advent as "superviserAdvent"
+        from sys_info
+        where del_flag=0 and  company_id = #{companyId} and info_type = #{infoType}
+    </select>
+
+    <insert id="add" parameterType="com.hngf.entity.sys.Info" useGeneratedKeys="true" keyProperty="sysId">
+        INSERT INTO sys_info (
+        sys_name,
+        sys_code,
+        sys_logo,
+        sys_desc,
+        risk_judge_method,
+        web_url,
+        company_id,
+        info_type,
+        check_device_on,
+        hdangerReview_on,
+        is_show_check_address,
+        hdanger_work_flow,
+        facility_map,
+        del_flag,
+        auto_supervise ,
+        superviser_id ,
+        superviser_advent
+        )
+        VALUES (
+        #{sysName} ,
+        #{sysCode},
+        #{sysLogo},
+        #{sysDesc} ,
+        #{riskJudgeMethod},
+        #{webUrl},
+        #{companyId},
+        #{infoType},
+        #{checkDeviceOn},
+        #{hdangerreviewOn},
+        #{isShowCheckAddress},
+        #{hdangerWorkFlow},
+        #{facilityMap},
+        #{delFlag},
+        #{autoSupervise},
+        #{superviserId},
+        #{superviserAdvent}
+        )
+
+    </insert>
+
+    <update id="update" parameterType="com.hngf.entity.sys.Info">
+        UPDATE sys_info
+        <trim suffixOverrides=",">
+        <set>
+         <if test="sysName != null and sysName != ''">
+         sys_name = #{sysName},
+         </if>
+        <if test="sysCode != null and sysCode != ''">
+         sys_code = #{sysCode},
+        </if>
+        <if test="sysLogo != null and sysLogo != ''">
+         sys_logo = #{sysLogo},
+        </if>
+        <if test="sysDesc != null and sysDesc != ''">
+         sys_desc = #{sysDesc},
+        </if>
+        <if test="riskJudgeMethod != null and riskJudgeMethod != ''">
+        risk_judge_method = #{riskJudgeMethod},
+        </if>
+        <if test="webUrl != null and webUrl != ''">
+        web_url = #{webUrl},
+        </if>
+        <if test="checkDeviceOn != null">
+         check_device_on = #{checkDeviceOn},
+        </if>
+        <if test="hdangerreviewOn != null">
+         hdangerReview_on = #{hdangerreviewOn},
+        </if>
+        <if test="isShowCheckAddress != null">
+         is_show_check_address = #{isShowCheckAddress},
+        </if>
+        <if test="hdangerWorkFlow != null">
+         hdanger_work_flow = #{hdangerWorkFlow},
+        </if>
+        <if test="facilityMap != null and facilityMap != ''">
+         facility_map = #{facilityMap},
+        </if>
+        <if test="autoSupervise!=null and autoSupervise!=''">
+            auto_supervise = #{autoSupervise},
+        </if>
+        <if test="superviserId!=null and superviserId!=''">
+            superviser_id=#{superviserId},
+        </if>
+        <if test="superviserAdvent!=null and superviserAdvent!=''">
+            superviser_advent = #{superviserAdvent},
+        </if>
+
+        </set>
+        </trim>
+        where sys_id = #{sysId}
+    </update>
+
+    <update id="deleteById" parameterType="Long">
+        UPDATE sys_info SET
+        del_flag = 1
+        where sys_id = #{id}
+    </update>
+
+    <update id="deleteByIds" parameterType="java.util.List">
+        UPDATE sys_info SET
+        del_flag = 1
+        where sys_id in
+        <foreach collection="ids" item="id" open="(" close=")" separator="," index="idx">
+            #{id}
+        </foreach>
+    </update>
+
+</mapper>

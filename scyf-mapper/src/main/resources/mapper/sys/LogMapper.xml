@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.hngf.mapper.sys.LogMapper">
+
+
+    <select id="findList" resultType="com.hngf.entity.sys.Log">
+		select a.sys_log_id,
+		a.sys_log_type_id,
+		a.sys_log_desc,
+		a.sys_log_time,
+		a.sys_log_ip,
+		a.sys_log_exetime,
+		b.user_name as sys_log_username
+		from sys_log a
+		left join sys_user b on  b.user_id = a.sys_log_userid
+		where 1=1
+		<if test="startTime != null and startTime != '' and endTime != null and endTime != ''">
+			and a.sys_log_time between #{startTime} and #{endTime}
+		</if>
+		<if test="keyword != null and keyword != ''">
+			and (a.sys_log_desc like "%"#{keyword}"%"
+			or a.sys_log_method like "%"#{keyword}"%"
+			or a.sys_log_ip like "%"#{keyword}"%"
+			or b.user_name like "%"#{keyword}"%"
+			)
+		</if>
+		order by a.sys_log_id desc
+	</select>
+
+    <select id="findById" resultType="com.hngf.entity.sys.Log"
+            parameterType="Long">
+		select a.*,b.user_name as sys_log_username from sys_log a
+		left join sys_user b on  b.user_id = a.sys_log_userid
+		where a.sys_log_id = #{value}
+	</select>
+
+    <insert id="add" parameterType="com.hngf.entity.sys.Log">
+		INSERT INTO sys_log (
+		sys_log_type_id
+		,
+		sys_log_desc
+		,
+		sys_log_param1
+		,
+		sys_log_param2
+		,
+		sys_log_time
+		,
+		sys_log_method
+		,
+		sys_log_ip
+		,
+		sys_log_userid
+		,
+		sys_log_exetime
+		)
+		VALUES (
+		#{sysLogTypeId}
+		,
+		#{sysLogDesc}
+		,
+		#{sysLogParam1}
+		,
+		#{sysLogParam2}
+		,
+		#{sysLogTime}
+		,
+		#{sysLogMethod}
+		,
+		#{sysLogIp}
+		,
+		#{sysLogUserid}
+		,
+		#{sysLogExetime}
+		)
+
+	</insert>
+
+    <delete id="deleteById" parameterType="Long">
+		delete FROM sys_log where sys_log_id = #{id}
+	</delete>
+
+    <delete id="deleteByIds" parameterType="java.util.List">
+        delete FROM sys_log
+        where sys_log_id in
+        <foreach collection="ids" item="id" open="(" close=")"
+                 separator="," index="idx">
+            #{id}
+        </foreach>
+    </delete>
+
+</mapper>

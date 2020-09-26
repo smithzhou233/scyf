@@ -1,0 +1,248 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.hngf.mapper.exam.PaperMapper">
+    <resultMap id="paperDtoMap" type="com.hngf.dto.exam.PaperDto">
+        <id column="paperId" jdbcType="INTEGER" property="paperId" javaType="Long"></id>
+        <result column="paperName" jdbcType="VARCHAR" property="paperName" javaType="String"></result>
+        <result column="paperInfo" jdbcType="VARCHAR" property="paperInfo" javaType="String"></result>
+        <result column="answerTime" jdbcType="INTEGER" property="answerTime" javaType="Integer"></result>
+        <result column="groupId" jdbcType="INTEGER" property="groupId" javaType="Long"></result>
+        <result column="companyId" jdbcType="INTEGER" property="companyId" javaType="Long"></result>
+        <result column="paperStatus" jdbcType="INTEGER" property="paperStatus" javaType="Integer"></result>
+        <result column="paperStatusName" jdbcType="VARCHAR" property="paperStatusName" javaType="String"></result>
+        <result column="createdTimeStr" jdbcType="VARCHAR" property="createdTimeStr" javaType="String"></result>
+        <result column="groupName" jdbcType="VARCHAR" property="groupName" javaType="String"></result>
+        <collection  javaType="List" property="paperMarkDtoList" ofType="com.hngf.dto.exam.PaperMarkDto" select="getPaperMarkList" column="paperId">
+        </collection>
+    </resultMap>
+    <resultMap id="paperMarkDtoMap" type="com.hngf.dto.exam.PaperMarkDto">
+        <id column="paperMarkId" jdbcType="INTEGER" property="paperMarkId" javaType="Long"></id>
+        <result column="paperId" jdbcType="INTEGER" property="paperId" javaType="Long"></result>
+        <result column="questionsType" jdbcType="INTEGER" property="questionsType" javaType="Integer"></result>
+        <result column="mark" jdbcType="INTEGER" property="mark" javaType="Integer"></result>
+        <result column="lessMark" jdbcType="INTEGER" property="lessMark" javaType="Integer"></result>
+        <result column="moreMark" jdbcType="INTEGER" property="moreMark" javaType="Integer"></result>
+        <collection  javaType="List" property="questionsIdList" ofType="java.lang.Long" select="getQuestionsIdList" column="paperMarkId">
+        </collection>
+    </resultMap>
+    <sql id="PaperColumns">
+        a.paper_id,
+        a.paper_name,
+        a.paper_info,
+        a.answer_time,
+        a.group_id,
+        a.company_id,
+        a.paper_status,
+        a.created_by,
+        a.created_time,
+        a.updated_by,
+        a.updated_time,
+        a.del_flag
+    </sql>
+
+
+
+    <select id="findList" resultType="Paper">
+        select
+            <include refid="PaperColumns"/>
+        from
+            scyf_paper a
+        where
+            a.del_flag = 0
+	</select>
+
+    <select id="findGroupList" parameterType="java.util.Map" resultType="com.hngf.entity.exam.Paper">
+        select
+            a.paper_id as paperId ,
+            a.paper_name as paperName ,
+            a.paper_info as paperInfo ,
+            a.answer_time as answerTime ,
+            a.group_id as groupId ,
+            a.paper_status as paperStatus ,
+            sdqt.dict_name as paperStatusName ,
+            DATE_FORMAT( a.created_time, '%Y-%m-%d %H:%i' ) as createdTimeStr ,
+            concat(
+            (
+            SELECT
+            concat( '【', sg.group_name, '】', IFNULL( psg.group_name, '' ) ) AS group_name
+            FROM
+            sys_group sg
+            LEFT JOIN sys_group psg ON ( sg.group_parent = psg.group_id )
+            WHERE
+            b.group_id = sg.group_id
+            )
+            ) AS groupName
+        from (select * from scyf_paper
+            <trim prefix="where" prefixOverrides="and">
+                <if test=" null != paperName and '' != paperName ">
+                    and locate(#{paperName}, paper_name ) &gt; 0
+                </if>
+                <if test=" null != paperStatus and '' != paperStatus ">
+                    and paper_status = #{paperStatus}
+                </if>
+                <if test=" null != companyId and '' != companyId ">
+                    and company_id = #{companyId}
+                </if>
+                <if test=" null != groupId and '' != groupId ">
+                    and group_id = #{groupId}
+                </if>
+                and del_flag = 0
+            </trim>
+        )a
+        LEFT JOIN sys_group b ON a.group_id = b.group_id
+        LEFT JOIN sys_dict sdqt ON sdqt.dict_type = 'paper_status' and sdqt.dict_code = a.paper_status
+    </select>
+
+    <select id="findById" resultType="Paper" parameterType="Long">
+        select
+            a.paper_id as paperId ,
+            a.paper_name as paperName ,
+            a.paper_info as paperInfo ,
+            a.answer_time as answerTime ,
+            a.group_id as groupId ,
+            a.company_id as companyId ,
+            a.paper_status as paperStatus ,
+            a.created_by as createdBy ,
+            DATE_FORMAT( a.created_time, '%Y-%m-%d %H:%i' ) as createdTimeStr ,
+            a.created_time as createdTime
+        from
+            scyf_paper a
+        where
+            a.paper_id = #{id} and a.del_flag = 0
+        order by created_time desc LIMIT  1
+	</select>
+
+    <insert id="add" parameterType="Paper" useGeneratedKeys="true" keyProperty="paperId">
+        INSERT INTO scyf_paper (
+            paper_name,
+            paper_info,
+            answer_time,
+            group_id,
+            company_id,
+            paper_status,
+            created_by,
+            created_time,
+            updated_by,
+            updated_time,
+            del_flag)
+        VALUES (
+            #{paperName},
+            #{paperInfo},
+            #{answerTime},
+            #{groupId},
+            #{companyId},
+            #{paperStatus},
+            #{createdBy},
+            #{createdTime},
+            #{updatedBy},
+            #{updatedTime},
+            #{delFlag}
+        )
+    </insert>
+
+    <update id="update" parameterType="Paper">
+        UPDATE scyf_paper a
+        <trim prefix="set" suffixOverrides=","  suffix="where a.paper_id = #{paperId} and a.paper_status = 0 ">
+            <if test=" null != paperName and '' != paperName ">
+                a.paper_name = #{paperName},
+            </if>
+            <if test=" null != paperInfo ">
+                a.paper_info = #{paperInfo},
+            </if>
+            <if test=" null != answerTime  ">
+                a.answer_time = #{answerTime},
+            </if>
+            <if test=" null != groupId ">
+                a.group_id = #{groupId},
+            </if>
+            <if test=" null != updatedBy ">
+                a.updated_by = #{updatedBy},
+            </if>
+            <if test=" null != updatedTime ">
+                a.updated_time = #{updatedTime},
+            </if>
+        </trim>
+    </update>
+
+    <!-- 只能删除 未发布的试卷 -->
+    <update id="deleteById" parameterType="Long">
+        UPDATE scyf_paper a SET
+            a.del_flag = 1, a.updated_by = #{updatedBy}, a.updated_time = now()
+        where a.paper_id = #{id} and a.paper_status = 0
+        and not exists ( select up.user_paper_id from scyf_user_paper up where up.paper_id = a.paper_id and up.del_flag = 0 )
+    </update>
+
+    <update id="deleteByIds" parameterType="java.util.List">
+        UPDATE scyf_paper a SET
+            a.del_flag = 1, a.updated_by = #{updatedBy}, a.updated_time = now()
+        where a.paper_id in
+        <foreach collection="ids" item="id" open="(" close=")" separator="," index="idx">
+            #{id}
+        </foreach>
+    </update>
+
+    <select id="findDtoById" resultMap="paperDtoMap" parameterType="Long">
+        select
+            a.paper_id as paperId ,
+            a.paper_name as paperName ,
+            a.paper_info as paperInfo ,
+            a.answer_time as answerTime ,
+            a.group_id as groupId ,
+            a.company_id as companyId ,
+            a.paper_status as paperStatus ,
+            sdps.dict_name as paperStatusName ,
+            DATE_FORMAT( a.created_time, '%Y-%m-%d %H:%i' ) as createdTimeStr ,
+            concat(
+            (
+            SELECT
+            concat( '【', sg.group_name, '】', IFNULL( psg.group_name, '' ) ) AS group_name
+            FROM
+            sys_group sg
+            LEFT JOIN sys_group psg ON ( sg.group_parent = psg.group_id )
+            WHERE
+            b.group_id = sg.group_id
+            )
+            ) AS groupName
+        from ( select * from  scyf_paper where paper_id = #{paperId} and del_flag = 0 order by created_time desc LIMIT  1 ) a
+        LEFT JOIN sys_group b ON a.group_id = b.group_id
+        LEFT JOIN sys_dict sdps ON sdps.dict_type = 'paper_status' and sdps.dict_code = a.paper_status
+	</select>
+
+    <select id="getPaperMarkList" resultMap="paperMarkDtoMap" parameterType="java.lang.Long">
+        select
+            a.paper_mark_id as paperMarkId ,
+            a.paper_id as paperId ,
+            a.questions_type as questionsType ,
+            a.mark as mark ,
+            a.less_mark as lessMark ,
+            a.more_mark as moreMark
+        from
+            scyf_paper_mark a
+        where
+            a.paper_id = #{paperId} and  a.del_flag = 0
+    </select>
+
+    <select id="getQuestionsIdList" resultType="Long" parameterType="java.lang.Long">
+        select a.questions_id from scyf_paper_questions a  where a.paper_mark_id = #{paperMarkId} and a. del_flag = 0
+    </select>
+
+    <select id="findPaperStatusById" resultType="java.lang.Integer" parameterType="Long">
+        select a.paper_status from scyf_paper a where a.paper_id = #{id} and  a.del_flag = 0 order by a.created_time desc LIMIT  1
+    </select>
+
+    <!-- 试卷发布、撤销时更新试卷状态 0 撤销 ，1发布 -->
+    <update id="updatePaperStatus" >
+        UPDATE scyf_paper a SET a.paper_status = #{status} , a.updated_by = #{updatedBy}, a.updated_time = now()
+        WHERE  a.del_flag = 0
+        <if test=" 0 == status "><!--  0 撤销 -->
+            AND a.paper_status = 1
+            AND a.paper_id in ( SELECT up.paper_id FROM scyf_user_paper up WHERE up.paper_id =  #{paperId} AND up.user_paper_status = 0 AND up.del_flag = 0  )
+        </if>
+        <if test=" 1 == status "><!-- 1发布 -->
+            AND a.paper_status = 0
+            AND a.paper_id =  #{paperId}
+        </if>
+    </update>
+
+</mapper>

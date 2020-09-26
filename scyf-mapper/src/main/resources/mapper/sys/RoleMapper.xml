@@ -1,0 +1,152 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.hngf.mapper.sys.RoleMapper">
+
+
+    <select id="findList" resultType="com.hngf.entity.sys.Role">
+		select * from sys_role
+		where del_flag = 0
+		<if test="keyword != null and keyword != ''">
+			and (
+			role_name like "%"#{keyword}"%"
+			or role_desc like "%"#{keyword}"%"
+			)
+		</if>
+	</select>
+
+    <select id="findById" resultType="com.hngf.entity.sys.Role"
+            parameterType="Long">
+		select * from sys_role
+		where del_flag = 0 and role_id = #{id}
+	</select>
+
+    <select id="findAll" resultType="com.hngf.entity.sys.Role" >
+		select * from sys_role
+		where del_flag = 0 and role_id <![CDATA[ <> ]]> 1
+	</select>
+	<!--查询添加用户的角色-->
+	<select id="findUserRole" resultType="com.hngf.entity.sys.Role" >
+		select * from sys_role
+		where del_flag = 0 and role_id <![CDATA[ <> ]]> 1
+			and role_type=2
+	</select>
+
+	<!--因为牵涉到前端树级级联问题，只查询最末子节点数据，让子节点带动树级父节点选中-->
+    <select id="findMenuByRoleId" resultType="Menu" parameterType="Long">
+		SELECT sm.menu_id as "menuId"
+		FROM sys_menu sm
+		WHERE
+			sm.menu_id in (
+				SELECT 	rm.menu_id
+				FROM	sys_role_menu rm
+					LEFT JOIN sys_menu c ON c.menu_parent_id = rm.menu_id and c.del_flag = 0
+				WHERE 	rm.role_id = #{roleId}
+					AND rm.del_flag = 0
+					AND c.menu_id IS NULL
+					)
+			AND sm.del_flag = 0
+	</select>
+
+    <insert id="add" parameterType="com.hngf.entity.sys.Role">
+		INSERT INTO sys_role (
+		role_name
+		,
+		role_desc
+		,
+		role_type
+		,
+		role_order
+		,
+		role_status
+		,
+		role_fixed
+		,
+		created_time
+		,
+		created_by
+		,
+		del_flag
+		)
+		VALUES (
+		#{roleName}
+		,
+		#{roleDesc}
+		,
+		#{roleType}
+		,
+		#{roleOrder}
+		,
+		#{roleStatus}
+		,
+		#{roleFixed}
+		,
+		#{createdTime}
+		,
+		#{createdBy}
+		,
+		0
+		)
+
+	</insert>
+
+    <update id="update" parameterType="com.hngf.entity.sys.Role">
+		UPDATE sys_role
+		<trim suffixOverrides=",">
+		<set>
+		<if test="roleName != null and roleName != ''">
+			role_name = #{roleName} ,        </if>
+		<if test="roleDesc != null and roleDesc != ''">
+			role_desc = #{roleDesc} ,        </if>
+		<if test="roleType != null and roleType != ''">
+			role_type = #{roleType} ,        </if>
+		<if test="roleOrder != null and roleOrder != ''">
+			role_order = #{roleOrder} ,        </if>
+		<if test="roleStatus != null and roleStatus != ''">
+			role_status = #{roleStatus} ,        </if>
+		<if test="roleFixed != null and roleFixed != ''">
+			role_fixed = #{roleFixed} ,        </if>
+		<if test="updatedTime != null">
+			updated_time = #{updatedTime} ,        </if>
+		<if test="updatedBy != null">
+			updated_by = #{updatedBy}        </if>
+		</set>
+		</trim>
+		where role_id = #{roleId}
+	</update>
+
+    <update id="deleteById" parameterType="Long">
+		UPDATE sys_role SET
+		del_flag = 1
+		where role_id = #{id}
+	</update>
+
+    <update id="deleteByIds" parameterType="java.util.List">
+        UPDATE sys_role SET
+        del_flag = 1
+        where role_id in
+        <foreach collection="ids" item="id" open="(" close=")"
+                 separator="," index="idx">
+            #{id}
+        </foreach>
+    </update>
+
+	<select id="getListAllByMap" resultType="java.util.Map" parameterType="java.util.Map">
+		select
+		    role_id as roleId,
+            role_name as roleName ,
+            role_type as roleType,
+            role_status as roleStatus,
+            role_fixed as roleFixed
+		from sys_role
+		where del_flag = 0 and role_id <![CDATA[ <> ]]> 1
+		<if test="null != roleStatus and '' != roleStatus ">
+			and role_status = #{roleStatus}
+		</if>
+		<if test="null != roleFixed and '' != roleFixed ">
+			and role_fixed = #{roleFixed}
+		</if>
+		order by role_order asc
+	</select>
+
+</mapper>

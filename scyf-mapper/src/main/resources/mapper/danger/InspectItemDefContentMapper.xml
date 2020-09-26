@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.hngf.mapper.danger.InspectItemDefContentMapper">
+
+    <sql id="InspectItemDefContentColumns">
+        a.inspect_item_def_id AS inspectItemDefId,
+        a.company_id AS companyId,
+        a.inspect_item_def_content_name AS inspectItemDefContentName,
+        a.inspect_item_def_content_desc AS inspectItemDefContentDesc,
+        a.created_by AS createdBy,
+        a.created_time AS createdTime,
+        a.updated_by AS updatedBy,
+        a.updated_time AS updatedTime,
+        a.del_flag AS delFlag
+    </sql>
+
+    <select id="findList" resultType="com.hngf.entity.danger.InspectItemDefContent">
+        select
+        <include refid="InspectItemDefContentColumns"/>
+        from
+        scyf_inspect_item_def_content a
+        where
+        a.del_flag = 0
+    </select>
+
+    <select id="findById" resultType="com.hngf.entity.danger.InspectItemDefContent" parameterType="Long">
+        select
+        <include refid="InspectItemDefContentColumns"/>
+        from
+        scyf_inspect_item_def_content a
+        where
+        a.del_flag = 0 and a.inspect_item_def_content_id = #{id}
+    </select>
+
+    <insert id="add" parameterType="com.hngf.entity.danger.InspectItemDefContent">
+        INSERT INTO scyf_inspect_item_def_content (
+            inspect_item_def_id,
+            company_id,
+            inspect_item_def_content_name,
+            inspect_item_def_content_desc,
+            created_by,
+            created_time,
+            updated_by,
+            updated_time,
+            del_flag)
+        VALUES (
+            #{inspectItemDefId},
+            #{companyId},
+            #{inspectItemDefContentName},
+            #{inspectItemDefContentDesc},
+            #{createdBy},
+            #{createdTime},
+            #{updatedBy},
+            #{updatedTime},
+            #{delFlag}
+        )
+
+    </insert>
+
+    <update id="update" parameterType="com.hngf.entity.danger.InspectItemDefContent">
+        UPDATE scyf_inspect_item_def_content a SET
+        <if test="inspectItemDefId != null and inspectItemDefId != ''">
+            a.inspect_item_def_id = #{inspectItemDefId},
+        </if>
+        <if test="companyId != null and companyId != ''">
+            a.company_id = #{companyId},
+        </if>
+        <if test="inspectItemDefContentName != null and inspectItemDefContentName != ''">
+            a.inspect_item_def_content_name = #{inspectItemDefContentName},
+        </if>
+        <if test="inspectItemDefContentDesc != null and inspectItemDefContentDesc != ''">
+            a.inspect_item_def_content_desc = #{inspectItemDefContentDesc},
+        </if>
+        <if test="createdBy != null and createdBy != ''">
+            a.created_by = #{createdBy},
+        </if>
+        <if test="createdTime != null and createdTime != ''">
+            a.created_time = #{createdTime},
+        </if>
+        <if test="updatedBy != null and updatedBy != ''">
+            a.updated_by = #{updatedBy},
+        </if>
+        <if test="updatedTime != null and updatedTime != ''">
+            a.updated_time = #{updatedTime},
+        </if>
+        <if test="delFlag != null and delFlag != ''">
+            a.del_flag = #{delFlag}
+        </if>
+        where inspect_item_def_content_id = #{inspectItemDefContentId}
+    </update>
+
+    <update id="deleteById" parameterType="Long">
+        UPDATE scyf_inspect_item_def_content a SET
+            a.del_flag = 1
+        where a.inspect_item_def_content_id = #{id}
+    </update>
+
+    <update id="deleteByIds" parameterType="java.util.List">
+        UPDATE scyf_inspect_item_def_content a SET
+        a.del_flag = 1
+        where a.inspect_item_def_content_id in
+        <foreach collection="ids" item="id" open="(" close=")" separator="," index="idx">
+            #{id}
+        </foreach>
+    </update>
+
+</mapper>

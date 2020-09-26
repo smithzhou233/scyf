@@ -1,0 +1,209 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.hngf.mapper.exam.UserPaperAnswerMapper">
+
+    <sql id="UserPaperAnswerColumns">
+        a.user_paper_answer_id,
+        a.user_paper_id,
+        a.user_id,
+        a.paper_id,
+        a.questions_id,
+        a.def_answer,
+        a.answer,
+        a.questions_type,
+        a.mark,
+        a.score,
+        a.group_id,
+        a.company_id,
+        a.created_by,
+        a.created_time,
+        a.updated_by,
+        a.updated_time,
+        a.del_flag
+    </sql>
+
+    <select id="findList" resultType="UserPaperAnswer">
+        select
+            <include refid="UserPaperAnswerColumns"/>
+        from
+            scyf_user_paper_answer a
+        where
+            a.del_flag = 0
+	</select>
+
+    <select id="findById" resultType="UserPaperAnswer" parameterType="Long">
+        select
+            a.user_paper_answer_id as userPaperAnswerId ,
+            a.user_paper_id as userPaperId,
+            a.user_id as userId ,
+            a.paper_id as paperId ,
+            a.questions_id as questionsId ,
+            a.def_answer as defAnswer ,
+            a.answer as answer ,
+            a.questions_type as questionsType ,
+            a.mark as mark ,
+            a.score as score ,
+            a.group_id as groupId ,
+            a.company_id as companyId ,
+            a.created_by as createdBy ,
+            DATE_FORMAT( a.created_time, '%Y-%m-%d %H:%i' ) as createdTimeStr ,
+            a.created_time as createdTime ,
+            a.updated_by as updatedBy ,
+            DATE_FORMAT( a.updated_time, '%Y-%m-%d %H:%i' ) as updatedTimeStr ,
+            a.updated_time as updatedTime ,
+            a.del_flag as delFlag
+        from
+            scyf_user_paper_answer a
+        where
+            a.user_paper_answer_id = #{id} and a.del_flag = 0
+        order by created_time desc LIMIT  1
+	</select>
+
+    <insert id="add" parameterType="UserPaperAnswer" useGeneratedKeys="true" keyProperty="userPaperAnswerId">
+        INSERT INTO scyf_user_paper_answer (
+            user_paper_id,
+            user_id,
+            paper_id,
+            questions_id,
+            def_answer,
+            answer,
+            questions_type,
+            mark,
+            score,
+            group_id,
+            company_id,
+            created_by,
+            created_time,
+            updated_by,
+            updated_time,
+            del_flag)
+        VALUES (
+            #{userPaperId},
+            #{userId},
+            #{paperId},
+            #{questionsId},
+            #{defAnswer},
+            #{answer},
+            #{questionsType},
+            #{mark},
+            #{score},
+            #{groupId},
+            #{companyId},
+            #{createdBy},
+            #{createdTime},
+            #{updatedBy},
+            #{updatedTime},
+            #{delFlag}
+        )
+    </insert>
+
+    <update id="update" parameterType="UserPaperAnswer">
+        UPDATE scyf_user_paper_answer a
+        <trim prefix="set" suffixOverrides=","  suffix="where user_paper_answer_id = #{userPaperAnswerId}">
+            <if test=" null != userPaperId and '' != userPaperId ">
+                a.user_paper_id = #{userPaperId},
+            </if>
+            <if test=" null != userId and '' != userId">
+                a.user_id = #{userId},
+            </if>
+            <if test=" null != paperId and '' != paperId ">
+                a.paper_id = #{paperId},
+            </if>
+            <if test=" null != questionsId and '' != questionsId ">
+                a.questions_id = #{questionsId},
+            </if>
+            <if test=" null != defAnswer ">
+                a.def_answer = #{defAnswer},
+            </if>
+            <if test=" null != answer ">
+                a.answer = #{answer},
+            </if>
+            <if test=" null != questionsType ">
+                a.questions_type = #{questionsType},
+            </if>
+            <if test=" null != mark ">
+                a.mark = #{mark},
+            </if>
+            <if test=" null != score ">
+                a.score = #{score},
+            </if>
+            <if test=" null != groupId and '' != groupId ">
+                a.group_id = #{groupId},
+            </if>
+            <if test=" null != companyId and '' != companyId ">
+                a.company_id = #{companyId},
+            </if>
+            <if test=" null != updatedBy ">
+                a.updated_by = #{updatedBy},
+            </if>
+            <if test=" null != updatedTime ">
+                a.updated_time = #{updatedTime},
+            </if>
+        </trim>
+    </update>
+
+    <update id="deleteById" parameterType="Long">
+        UPDATE scyf_user_paper_answer a SET
+            a.del_flag = 1, a.updated_by = #{updatedBy}, a.updated_time = now()
+        where a.user_paper_answer_id = #{id}
+    </update>
+
+    <update id="deleteByIds" parameterType="java.util.List">
+        UPDATE scyf_user_paper_answer a SET
+            a.del_flag = 1, a.updated_by = #{updatedBy}, a.updated_time = now()
+        where a.user_paper_answer_id in
+        <foreach collection="ids" item="id" open="(" close=")" separator="," index="idx">
+            #{id}
+        </foreach>
+    </update>
+
+    <insert id="addBatch" parameterType="java.util.List">
+        INSERT INTO scyf_user_paper_answer (
+            user_paper_id,
+            user_id,
+            paper_id,
+            questions_id,
+            def_answer,
+            answer,
+            questions_type,
+            mark,
+            score,
+            group_id,
+            company_id,
+            created_by,
+            created_time,
+            del_flag)
+        VALUES
+        <foreach collection="userPaperAnswerList" item="userPaperAnswer" index="index"   separator="," >
+            (#{userPaperAnswer.userPaperId},
+            #{userPaperAnswer.userId},
+            #{userPaperAnswer.paperId},
+            #{userPaperAnswer.questionsId},
+            #{userPaperAnswer.defAnswer},
+            #{userPaperAnswer.answer},
+            #{userPaperAnswer.questionsType},
+            #{userPaperAnswer.mark},
+            #{userPaperAnswer.score},
+            #{userPaperAnswer.groupId},
+            #{userPaperAnswer.companyId},
+            #{userPaperAnswer.createdBy},
+            #{userPaperAnswer.createdTime},
+            #{userPaperAnswer.delFlag} )
+        </foreach>
+    </insert>
+
+    <select id="findListByUserPaperId" resultType="UserPaperAnswer">
+        select
+        a.user_paper_id,
+        a.user_id,
+        a.paper_id,
+        a.questions_id,
+        a.def_answer,
+        a.answer,
+        a.score
+        from scyf_user_paper_answer a
+        where a.user_paper_id = #{userPaperId}  and a.del_flag = 0
+    </select>
+
+</mapper>

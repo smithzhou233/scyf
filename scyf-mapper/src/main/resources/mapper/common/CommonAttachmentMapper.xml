@@ -1,0 +1,190 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.hngf.mapper.common.CommonAttachmentMapper">
+
+    <sql id="CommonAttachmentColumns">
+        a.owner_id,
+        a.owner_type,
+        a.attachment_name,
+        a.extend_name,
+        a.save_path,
+        a.thumbnail_url,
+        a.file_size,
+        a.mime_type,
+        a.image_width,
+        a.image_height,
+        a.created_time,
+        a.updated_time,
+        a.created_by,
+        a.updated_by,
+        a.del_flag
+    </sql>
+
+    <select id="findList" resultType="CommonAttachment">
+        select
+            <include refid="CommonAttachmentColumns"/>
+        from
+            scyf_common_attachment a
+        where
+            a.del_flag = 0
+	</select>
+
+    <select id="findById" resultType="CommonAttachment" parameterType="Long">
+        select
+            <include refid="CommonAttachmentColumns"/>
+        from
+            scyf_common_attachment a
+        where
+            a.del_flag = 0 and a.attachment_id = #{id}
+	</select>
+    <!--根据关联id查找附件-->
+    <select id="selectByOwnerKey" resultType="CommonAttachment">
+      select
+        <include refid="CommonAttachmentColumns"/>
+        from
+        scyf_common_attachment a
+        where a.del_flag = 0 and a.owner_id = #{ownerId}
+    </select>
+    <!--删除关联的附件-->
+    <delete id="deleteByOwnerId">
+        delete from scyf_common_attachment
+        where owner_id = #{ownerId}
+    </delete>
+    <insert id="add" parameterType="CommonAttachment">
+        INSERT INTO scyf_common_attachment (
+            owner_id,
+            owner_type,
+            attachment_name,
+            extend_name,
+            save_path,
+            thumbnail_url,
+            file_size,
+            mime_type,
+            image_width,
+            image_height,
+            created_time,
+            updated_time,
+            created_by,
+            updated_by,
+            del_flag)
+        VALUES (
+            #{ownerId},
+            #{ownerType},
+            #{attachmentName},
+            #{extendName},
+            #{savePath},
+            #{thumbnailUrl},
+            #{fileSize},
+            #{mimeType},
+            #{imageWidth},
+            #{imageHeight},
+            #{createdTime},
+            #{updatedTime},
+            #{createdBy},
+            #{updatedBy},
+            #{delFlag}
+        )
+
+    </insert>
+
+    <insert id="addForeach" parameterType="CommonAttachment">
+        INSERT INTO scyf_common_attachment (
+            owner_id,
+            owner_type,
+            attachment_name,
+            extend_name,
+            save_path,
+            thumbnail_url,
+            file_size,
+            mime_type,
+            image_width,
+            image_height,
+            created_time,
+            created_by,
+            del_flag)
+        VALUES
+        <foreach collection="list" item="item" index="index" separator=",">
+            (#{item.ownerId},
+            #{item.ownerType},
+            #{item.attachmentName},
+            #{item.extendName},
+            #{item.savePath},
+            #{item.thumbnailUrl},
+            #{item.fileSize},
+            #{item.mimeType},
+            #{item.imageWidth},
+            #{item.imageHeight},
+            #{item.createdTime}
+            #{item.createdBy},
+            ,0)
+        </foreach>
+
+    </insert>
+
+    <update id="update" parameterType="CommonAttachment">
+        UPDATE scyf_common_attachment a SET
+            <if test="ownerId != null and ownerId != ''">
+                a.owner_id = #{ownerId},
+            </if>
+            <if test="ownerType != null and ownerType != ''">
+                a.owner_type = #{ownerType},
+            </if>
+            <if test="attachmentName != null and attachmentName != ''">
+                a.attachment_name = #{attachmentName},
+            </if>
+            <if test="extendName != null and extendName != ''">
+                a.extend_name = #{extendName},
+            </if>
+            <if test="savePath != null and savePath != ''">
+                a.save_path = #{savePath},
+            </if>
+            <if test="thumbnailUrl != null and thumbnailUrl != ''">
+                a.thumbnail_url = #{thumbnailUrl},
+            </if>
+            <if test="fileSize != null and fileSize != ''">
+                a.file_size = #{fileSize},
+            </if>
+            <if test="mimeType != null and mimeType != ''">
+                a.mime_type = #{mimeType},
+            </if>
+            <if test="imageWidth != null and imageWidth != ''">
+                a.image_width = #{imageWidth},
+            </if>
+            <if test="imageHeight != null and imageHeight != ''">
+                a.image_height = #{imageHeight},
+            </if>
+            <if test="createdTime != null and createdTime != ''">
+                a.created_time = #{createdTime},
+            </if>
+            <if test="updatedTime != null and updatedTime != ''">
+                a.updated_time = #{updatedTime},
+            </if>
+            <if test="createdBy != null and createdBy != ''">
+                a.created_by = #{createdBy},
+            </if>
+            <if test="updatedBy != null and updatedBy != ''">
+                a.updated_by = #{updatedBy},
+            </if>
+            <if test="delFlag != null and delFlag != ''">
+                a.del_flag = #{delFlag}
+            </if>
+        where attachment_id = #{attachmentId}
+    </update>
+
+    <update id="deleteById" parameterType="Long">
+        UPDATE scyf_common_attachment a SET
+            a.del_flag = 1
+        where a.attachment_id = #{id}
+    </update>
+
+    <update id="deleteByIds" parameterType="java.util.List">
+        UPDATE scyf_common_attachment a SET
+            a.del_flag = 1
+        where a.attachment_id in
+        <foreach collection="ids" item="id" open="(" close=")" separator="," index="idx">
+            #{id}
+        </foreach>
+    </update>
+
+</mapper>

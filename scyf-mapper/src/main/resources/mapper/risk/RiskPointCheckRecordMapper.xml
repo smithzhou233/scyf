@@ -1,0 +1,276 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.hngf.mapper.risk.RiskPointCheckRecordMapper">
+
+	<sql id="RiskPointCheckRecordColumns">
+		a.check_record_no,
+		a.inspect_def_id,
+		a.inspect_schedule_id,
+		a.company_id,
+		a.risk_point_id,
+		a.checked_count,
+		a.group_id,
+		a.position_id,
+		a.status,
+		a.longitude,
+		a.latitude,
+		a.address,
+		a.phone_code,
+		a.evaluate_desc,
+		a.result,
+		a.created_by,
+		a.updated_by,
+		a.created_time,
+		a.updated_time
+	</sql>
+
+	<select id="findList" resultType="RiskPointCheckRecord">
+		select
+		<include refid="RiskPointCheckRecordColumns" />
+		from
+		scyf_risk_point_check_record a
+		where
+		a.del_flag = 0
+	</select>
+
+	<select id="findByMap" resultType="RiskPointCheckRecord">
+		select
+        ifnull(rp.risk_point_id,0) as riskPointId,
+		erpcr.inspect_schedule_id as inspectScheduleId,
+        ifnull(rp.risk_point_name,
+        concat(taskdef.risk_inspect_def_title,'（不涉及风险点）') ) as riskPointName,
+        rp.risk_point_img AS "riskPointImg",
+        rp.risk_point_type AS "riskPointType",
+        rp.risk_point_places AS "riskPointPlaces",
+        rp.is_out_of_control AS "isOutOfControl",
+        ifnull(rp.risk_point_level,0) as riskPointLevel,
+        ifnull(erpcr.evaluate_desc,'') AS evaluateDesc,
+        ifnull(erpcr.phone_code,'') as phoneCode,
+        erpcr.check_record_no AS "checkRecordNo",
+        erpcr.record_id AS "recordId",
+        erpcr.inspect_def_id AS "inspectDefId",
+        concat(
+        (SELECT
+        concat('【',sg.group_name,'】',IFNULL(psg.group_name,'')) as group_name
+        FROM sys_group sg
+        left join sys_group psg on (sg.group_parent = psg.group_id)
+        where erpcr.group_id = sg.group_id
+        )) as inspectGroupName,
+        acc.user_name as inspectUserName,
+		erpcr.created_time AS createdTime,
+        bcd.inspect_def_name as "inspectDefName",
+        ifnull(erpcr.address,'地址不详') as address,
+        erpcr.result as "result"
+        from scyf_risk_point_check_record erpcr
+        left join scyf_risk_point rp on( rp.risk_point_id = erpcr.risk_point_id and rp.company_id = erpcr.company_id)
+        left join scyf_inspect_def bcd on( erpcr.inspect_def_id = bcd.inspect_def_id and bcd.company_id = erpcr.company_id )
+        left join sys_user acc on( erpcr.created_by = acc.user_id)
+        left join sys_group sg on( erpcr.group_id = sg.group_id)
+        left join scyf_inspect_schdule task on(erpcr.inspect_schedule_id = task.inspect_schedule_id)
+        left join scyf_inspect_schdule_def taskdef on(taskdef.schdule_def_id = task.schdule_def_id)
+        where
+        erpcr.company_id = #{companyId}
+
+		<if test="keyword != null and keyword != ''">
+			and rp.risk_point_name like "%"#{keyword}"%"
+		</if>
+		<if test="riskPointId != null and riskPointId !=''">
+			and erpcr.risk_point_id = #{riskPointId}
+		</if>
+		<if test="riskPointLevel != null and riskPointLevel !=''">
+			and rp.risk_point_level = #{riskPointLevel}
+		</if>
+		<if test="isRiskPointCheck == 1">
+			and erpcr.risk_point_id IS NOT NULL
+			and erpcr.risk_point_id != 0
+		</if>
+		<if test="isRiskPointCheck == 0">
+			and (erpcr.risk_point_id IS NULL OR erpcr.risk_point_id = 0)
+		</if>
+		/**任务、历史任务下的风险点检查记录*/
+		<if test="module == 3">
+			and erpcr.inspect_schedule_id = #{inspectScheduleId}
+		</if>
+		<if test="inspectDefId != null and inspectDefId !=''">
+			and erpcr.inspect_def_id = #{inspectDefId}
+		</if>
+		<if test="result != null and result !=''">
+			and erpcr.result = #{result}
+		</if>
+		/**我的*/
+		<if test="userId != null and module == 1">
+			and erpcr.created_by = #{userId}
+		</if>
+		<if test="dutyGroupId != null and dutyGroupId !=''">
+			and erpcr.group_id=#{dutyGroupId}
+		</if>
+		<if test="groupId !=null and module == 2">
+			AND FIND_IN_SET(sg.group_id ,fu_getChildrenGroup(#{groupId}))
+		</if>
+		<if test="dateTime != null and dateTime != ''">
+			<![CDATA[
+                 AND DATE_FORMAT( erpcr.created_time, "%Y-%m-%d" ) = #{dateTime}
+            ]]>
+		</if>
+		<if test="startTime != null and startTime != '' and endTime != null and endTime != ''">
+			<![CDATA[
+                 AND DATE_FORMAT( erpcr.created_time, "%Y-%m-%d" ) >= #{startTime}
+                 AND DATE_FORMAT( erpcr.created_time, "%Y-%m-%d" ) <= #{endTime}
+            ]]>
+		</if>
+
+		order by erpcr.created_time desc
+	</select>
+
+	<select id="findById" resultType="RiskPointCheckRecord"
+		parameterType="Long">
+		select
+		<include refid="RiskPointCheckRecordColumns" />
+		from
+		scyf_risk_point_check_record a
+		where
+		a.del_flag = 0 and a.record_id = #{id}
+	</select>
+
+	<select id="weeklyCheck" resultType="map" parameterType="map">
+		SELECT
+		DATE_FORMAT( erpcr.created_time, '%m-%d' ) AS times,
+		DATE_FORMAT( erpcr.created_time, '%d' ) AS timep,
+		COUNT( erpcr.risk_point_id ) AS rpCount
+		FROM
+		scyf_risk_point_check_record erpcr
+		left join sys_group sg on erpcr.group_id = sg.group_id
+		<trim prefix="where" prefixOverrides="and">
+			erpcr.company_id = #{companyId}
+			<if test="groupId != null and groupId != ''">
+				AND FIND_IN_SET(sg.group_id ,fu_getChildrenGroup(#{groupId}))
+			</if>
+			<if test="startDate != null and startTime != '' and endDate != null and endDate != ''">
+				<![CDATA[
+                 AND erpcr.created_time >= #{startDate}
+                 AND erpcr.created_time <= #{endDate}
+            ]]>
+			</if>
+		</trim>
+		GROUP BY times
+	</select>
+
+	<insert id="add" parameterType="RiskPointCheckRecord" useGeneratedKeys="true" keyProperty="recordId">
+		INSERT INTO scyf_risk_point_check_record (
+		check_record_no,
+		inspect_def_id,
+		inspect_schedule_id,
+		company_id,
+		risk_point_id,
+		checked_count,
+		group_id,
+		position_id,
+		status,
+		longitude,
+		latitude,
+		address,
+		phone_code,
+		evaluate_desc,
+		result,
+		created_time,
+		created_by,
+		del_flag)
+		VALUES (
+		#{checkRecordNo},
+		#{inspectDefId},
+		#{inspectScheduleId},
+		#{companyId},
+		#{riskPointId},
+		#{checkedCount},
+		#{groupId},
+		#{positionId},
+		#{status},
+		#{longitude},
+		#{latitude},
+		#{address},
+		#{phoneCode},
+		#{evaluateDesc},
+		#{result},
+		#{createdTime},
+		#{createdBy},
+		0
+		)
+
+	</insert>
+
+	<update id="update" parameterType="RiskPointCheckRecord">
+		UPDATE scyf_risk_point_check_record a
+		<trim prefix="set" suffixOverrides=",">
+		<if test="checkRecordNo != null and checkRecordNo != ''">
+			a.check_record_no = #{checkRecordNo},
+		</if>
+		<if test="inspectDefId != null and inspectDefId != ''">
+			a.inspect_def_id = #{inspectDefId},
+		</if>
+		<if test="inspectScheduleId != null and inspectScheduleId != ''">
+			a.inspect_schedule_id = #{inspectScheduleId},
+		</if>
+		<if test="companyId != null and companyId != ''">
+			a.company_id = #{companyId},
+		</if>
+		<if test="riskPointId != null and riskPointId != ''">
+			a.risk_point_id = #{riskPointId},
+		</if>
+		<if test="checkedCount != null and checkedCount != ''">
+			a.checked_count = #{checkedCount},
+		</if>
+		<if test="groupId != null and groupId != ''">
+			a.group_id = #{groupId},
+		</if>
+		<if test="positionId != null and positionId != ''">
+			a.position_id = #{positionId},
+		</if>
+		<if test="status != null and status != ''">
+			a.status = #{status},
+		</if>
+		<if test="longitude != null and longitude != ''">
+			a.longitude = #{longitude},
+		</if>
+		<if test="latitude != null and latitude != ''">
+			a.latitude = #{latitude},
+		</if>
+		<if test="address != null and address != ''">
+			a.address = #{address},
+		</if>
+		<if test="phoneCode != null and phoneCode != ''">
+			a.phone_code = #{phoneCode},
+		</if>
+		<if test="evaluateDesc != null and evaluateDesc != ''">
+			a.evaluate_desc = #{evaluateDesc},
+		</if>
+		<if test="result != null and result != ''">
+			a.result = #{result},
+		</if>
+		<if test="updatedTime != null">
+			a.updated_time = #{updatedTime},
+		</if>
+		<if test="updatedBy != null and updatedBy != ''">
+			a.updated_by = #{updatedBy},
+		</if>
+		</trim>
+		where record_id = #{recordId}
+	</update>
+
+	<update id="deleteById" parameterType="Long">
+		UPDATE scyf_risk_point_check_record a SET
+		a.del_flag = 1
+		where a.record_id = #{id}
+	</update>
+
+	<update id="deleteByIds" parameterType="java.util.List">
+		UPDATE scyf_risk_point_check_record a SET
+		a.del_flag = 1
+		where a.record_id in
+		<foreach collection="ids" item="id" open="(" close=")"
+			separator="," index="idx">
+			#{id}
+		</foreach>
+	</update>
+
+</mapper>

@@ -1,0 +1,178 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.hngf.mapper.scyf.SecureProducMapper">
+
+
+    <select id="findList" resultType="com.hngf.entity.scyf.SecureProduc">
+		select * from scyf_secure_produc
+        where del_flag = 0
+	</select>
+
+    <select id="findById" resultType="com.hngf.entity.scyf.SecureProduc" parameterType="Long">
+		select * from scyf_secure_produc
+        where del_flag = 0 and company_id = #{id}
+	</select>
+
+    <insert id="add" parameterType="com.hngf.entity.scyf.SecureProduc">
+        INSERT INTO scyf_secure_produc (
+                                     company_id,
+                                     major_name,
+                                     major_telephone,
+                                     major_phone,
+                                     major_email,
+                                     secure_name,
+                                     secure_telephone,
+                                     secure_phone,
+                                     secure_email ,
+                                     secure_setting ,
+                                     employee_persons ,
+                                      special_work_persons,
+                                      fulltime_secure_persons,
+                                      fulltime_emergency_persons,
+                                      register_secure_engineer_persons,
+                                      secure_supervise_persons,
+                                      production_address,
+                                      scale_case,
+                                      company_scale,
+                                      supervise_classify,
+                                      hidden_check_govern,
+                                      hidden_check_plan,
+                                      created_time,
+                                       created_by,
+                                      updated_time,
+                                      updated_by,
+                                      del_flag)VALUES (
+                                           #{companyId},
+                                           #{majorName},
+                                           #{majorTelephone},
+                                            #{majorPhone},
+                                           #{majorEmail},
+                                           #{secureName},
+                                           #{secureTelephone},
+                                            #{securePhone},
+                                            #{secureEmail},
+                                           #{secureSetting},
+                                            #{employeePersons},
+                                            #{specialWorkPersons},
+                                            #{fulltimeSecurePersons},
+                                            #{fulltimeEmergencyPersons} ,
+                                            #{registerSecureEngineerPersons},
+                                           #{secureSupervisePersons},
+                                            #{productionAddress},
+                                           #{scaleCase},
+                                            #{companyScale},
+                                            #{superviseClassify} ,
+                                            #{hiddenCheckGovern},
+                                            #{hiddenCheckPlan},
+                                             #{createdTime} ,
+                                             #{createdBy},
+                                            #{updatedTime},
+                                             #{updatedBy},
+                                             #{delFlag})
+
+    </insert>
+
+    <update id="update" parameterType="com.hngf.entity.scyf.SecureProduc">
+                  UPDATE scyf_secure_produc
+                  <trim suffixOverrides=",">
+                      <set>
+                                <if test="majorName != null and majorName !=''">
+                                    major_name = #{majorName},
+                                </if>
+                                <if test="majorTelephone != null and majorTelephone !=''">
+                                    major_telephone = #{majorTelephone},
+                                </if>
+                                <if test="majorPhone != null and majorPhone !=''">
+                                    major_phone = #{majorPhone},
+                                </if>
+                                <if test="majorEmail != null and majorEmail !=''">
+                                    major_email = #{majorEmail},
+                                </if>
+                                <if test="secureName != null and secureName !=''">
+                                    secure_name = #{secureName},
+                                </if>
+                                <if test="secureTelephone != null and secureTelephone !=''">
+                                    secure_telephone = #{secureTelephone},
+                                </if>
+                                <if test="securePhone != null and securePhone !=''">
+                                    secure_phone = #{securePhone},
+                                </if>
+                                <if test="secureEmail != null and secureEmail !=''">
+                                    secure_email = #{secureEmail},
+                                </if>
+                                <if test="secureSetting != null and secureSetting !=''">
+                                    secure_setting = #{secureSetting},
+                                </if>
+                                <if test="employeePersons != null and employeePersons !=''">
+                                    employee_persons = #{employeePersons},
+                                </if>
+                                <if test="specialWorkPersons != null and specialWorkPersons !=''">
+                                    special_work_persons = #{specialWorkPersons},
+                                </if>
+                                <if test="fulltimeSecurePersons != null and fulltimeSecurePersons !=''">
+                                    fulltime_secure_persons = #{fulltimeSecurePersons},
+                                </if>
+                                <if test="fulltimeEmergencyPersons != null and fulltimeEmergencyPersons !=''">
+                                    fulltime_emergency_persons = #{fulltimeEmergencyPersons},
+                                </if>
+                                <if test="registerSecureEngineerPersons != null and registerSecureEngineerPersons !=''">
+                                    register_secure_engineer_persons = #{registerSecureEngineerPersons},
+                                </if>
+                                <if test="secureSupervisePersons != null and secureSupervisePersons !=''">
+                                    secure_supervise_persons = #{secureSupervisePersons},
+                                </if>
+                                <if test="productionAddress != null and productionAddress !=''">
+                                    production_address = #{productionAddress},
+                                </if>
+                                <if test="scaleCase != null and scaleCase !=''">
+                                    scale_case = #{scaleCase},
+                                </if>
+                                <if test="companyScale != null and companyScale !=''">
+                                    company_scale = #{companyScale},
+                                </if>
+                                <if test="superviseClassify != null and superviseClassify !=''">
+                                    supervise_classify = #{superviseClassify},
+                                </if>
+                                <if test="hiddenCheckGovern != null and hiddenCheckGovern !=''">
+                                    hidden_check_govern = #{hiddenCheckGovern},
+                                </if>
+                                <if test="hiddenCheckPlan != null and hiddenCheckPlan !=''">
+                                    hidden_check_plan = #{hiddenCheckPlan},
+                                </if>
+                                <if test="updatedTime != null">
+                                    updated_time = #{updatedTime},
+                                </if>
+                                <if test="updatedBy != null and updatedBy !=''">
+                                    updated_by = #{updatedBy},
+                                </if>
+
+                      </set>
+                  </trim>
+                            <where>
+                                    company_id = #{companyId}
+                            </where>
+            </update>
+
+    <update id="deleteById" parameterType="Long">
+        UPDATE scyf_secure_produc SET
+        del_flag = 1
+        where company_id = #{id}
+    </update>
+
+    <update id="deleteByIds" parameterType="java.util.List">
+        UPDATE scyf_secure_produc SET
+        del_flag = 1
+        where company_id in
+        <foreach collection="ids" item="id" open="(" close=")" separator="," index="idx">
+            #{id}
+        </foreach>
+    </update>
+
+    <update id="deleteWithCompanyIds">
+        UPDATE  scyf_secure_produc
+        SET del_flag = 1
+        WHERE FIND_IN_SET(company_id, #{value})
+    </update>
+
+</mapper>

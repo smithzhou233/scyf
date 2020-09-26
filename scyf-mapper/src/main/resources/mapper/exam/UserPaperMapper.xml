@@ -1,0 +1,257 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.hngf.mapper.exam.UserPaperMapper">
+
+    <sql id="UserPaperColumns">
+        a.user_paper_id,
+        a.user_id,
+        a.paper_id,
+        a.paper_name,
+        a.mark,
+        a.score,
+        a.group_id,
+        a.company_id,
+        a.user_paper_status,
+        a.created_by,
+        a.created_time,
+        a.updated_by,
+        a.updated_time,
+        a.del_flag
+    </sql>
+
+    <select id="findList" resultType="UserPaper">
+        select
+            <include refid="UserPaperColumns"/>
+        from
+            scyf_user_paper a
+        where
+            a.del_flag = 0
+        <if test=" null != groupId and '' != groupId ">
+            and a.group_id = #{groupId}
+        </if>
+        <if test=" null != companyId and '' != companyId ">
+            and a.company_id = #{companyId}
+        </if>
+        <if test=" null != userId and '' != userId ">
+            and a.user_id = #{userId}
+        </if>
+        <if test=" null != paperId and '' != paperId ">
+            and a.paper_id = #{paperId}
+        </if>
+        <if test=" null != userPaperStatus ">
+            and a.user_paper_status = #{userPaperStatus}
+        </if>
+	</select>
+
+    <select id="findById" resultType="UserPaper" parameterType="Long">
+        select
+            a.user_paper_id as userPaperId ,
+            a.user_id as userId ,
+            a.paper_id as paperId ,
+            a.paper_name as paperName ,
+            a.mark as mark ,
+            a.score as score ,
+            a.group_id as groupId ,
+            a.company_id as companyId ,
+            a.user_paper_status as userPaperStatus ,
+            a.created_by as createdBy ,
+            DATE_FORMAT( a.created_time, '%Y-%m-%d %H:%i' ) as createdTimeStr ,
+            a.created_time as createdTime ,
+            a.updated_by as updatedBy ,
+            DATE_FORMAT( a.updated_time, '%Y-%m-%d %H:%i' ) as updatedTimeStr ,
+            a.updated_time as updatedTime ,
+            a.del_flag as delFlag
+        from
+            scyf_user_paper a
+        where
+            a.user_paper_id = #{id} and a.del_flag = 0
+        order by created_time desc LIMIT  1
+	</select>
+
+    <insert id="add" parameterType="UserPaper" useGeneratedKeys="true" keyProperty="userPaperId">
+        INSERT INTO scyf_user_paper (
+            user_id,
+            paper_id,
+            paper_name,
+            mark,
+            score,
+            group_id,
+            company_id,
+            user_paper_status,
+            created_by,
+            created_time,
+            updated_by,
+            updated_time,
+            del_flag)
+        VALUES (
+            #{userId},
+            #{paperId},
+            #{paperName},
+            #{mark},
+            #{score},
+            #{groupId},
+            #{companyId},
+            #{userPaperStatus},
+            #{createdBy},
+            #{createdTime},
+            #{updatedBy},
+            #{updatedTime},
+            #{delFlag}
+        )
+    </insert>
+
+    <update id="update" parameterType="UserPaper">
+        UPDATE scyf_user_paper a
+        <trim prefix="set" suffixOverrides=","  suffix="where user_paper_id = #{userPaperId}">
+            <if test=" null != userId ">
+                a.user_id = #{userId},
+            </if>
+            <if test=" null != paperId ">
+                a.paper_id = #{paperId},
+            </if>
+            <if test=" null != paperName ">
+                a.paper_name = #{paperName},
+            </if>
+            <if test=" null != mark ">
+                a.mark = #{mark},
+            </if>
+            <if test=" null != score ">
+                a.score = #{score},
+            </if>
+            <if test=" null != groupId ">
+                a.group_id = #{groupId},
+            </if>
+            <if test=" null != userPaperStatus ">
+                a.user_paper_status = #{userPaperStatus},
+            </if>
+            <if test=" null != updatedBy ">
+                a.updated_by = #{updatedBy},
+            </if>
+            <if test=" null != updatedTime ">
+                a.updated_time = #{updatedTime},
+            </if>
+        </trim>
+    </update>
+
+    <update id="deleteById" parameterType="Long">
+        UPDATE scyf_user_paper a SET
+            a.del_flag = 1, a.updated_by = #{updatedBy}, a.updated_time = now()
+        where a.user_paper_id = #{id}
+    </update>
+
+    <update id="deleteByIds" parameterType="java.util.List">
+        UPDATE scyf_user_paper a SET
+            a.del_flag = 1, a.updated_by = #{updatedBy}, a.updated_time = now()
+        where a.user_paper_id in
+        <foreach collection="ids" item="id" open="(" close=")" separator="," index="idx">
+            #{id}
+        </foreach>
+    </update>
+    <!-- 试卷撤销发布 -->
+    <update id="deleteByPaperId" >
+        UPDATE scyf_user_paper a SET
+           a.del_flag = 1 , a.updated_by = #{updatedBy} , a.updated_time = #{updatedTime}
+        WHERE NOT EXISTS ( select b.paper_id from (SELECT up.paper_id FROM scyf_user_paper up WHERE up.paper_id =  #{paperId} AND up.user_paper_status = 1 AND up.del_flag = 0 ) b )
+        AND a.company_id = #{companyId} AND a.del_flag = 0
+    </update>
+    <!-- 批量增加 试卷试题关联 -->
+    <insert id="addBatch" parameterType="java.util.List" >
+        INSERT INTO scyf_user_paper (
+            user_id,
+            paper_id,
+            paper_name,
+            mark,
+            group_id,
+            company_id,
+            user_paper_status,
+            created_by,
+            created_time,
+            del_flag)
+        VALUES
+        <foreach collection="userPaperList" item="item" index="index"   separator="," >
+            (#{item.userId},
+            #{item.paperId},
+            #{item.paperName},
+            #{item.mark},
+            #{item.groupId},
+            #{item.companyId},
+            0,
+            #{item.createdBy},
+            #{item.createdTime},
+            0)
+        </foreach>
+    </insert>
+
+    <!-- 根据用户试卷id查询试卷内容，用来进行考试 -->
+    <resultMap id="userPaperDtoMap" type="com.hngf.dto.exam.UserPaperDto">
+        <id column="paperId" jdbcType="INTEGER" property="paperId" javaType="Long"></id>
+        <result column="paperName" jdbcType="VARCHAR" property="paperName" javaType="String"></result>
+        <result column="answerTime" jdbcType="INTEGER" property="answerTime" javaType="Integer"></result>
+        <result column="userPaperId" jdbcType="INTEGER" property="userPaperId" javaType="Long"></result>
+        <result column="userPaperStatus" jdbcType="INTEGER" property="userPaperStatus" javaType="Integer"></result>
+        <collection  javaType="List" property="userPaperMarkDtoList" ofType="com.hngf.dto.exam.UserPaperMarkDto" select="getUserPaperMarkDtoList" column="paperId">
+        </collection>
+    </resultMap>
+    <resultMap id="userPaperMarkDtoMap" type="com.hngf.dto.exam.UserPaperMarkDto">
+        <id column="paperMarkId" jdbcType="INTEGER" property="paperMarkId" javaType="Long"></id>
+        <result column="questionsType" jdbcType="INTEGER" property="questionsType" javaType="Integer"></result>
+        <result column="mark" jdbcType="INTEGER" property="mark" javaType="Integer"></result>
+        <collection  javaType="List" property="questionsDtoList" ofType="com.hngf.dto.exam.UserQuestionsDto" select="getUserQuestionsDtoList" column="paperMarkId">
+        </collection>
+    </resultMap>
+    <resultMap id="userQuestionsDtoMap" type="com.hngf.dto.exam.UserQuestionsDto">
+        <result column="questionsId" jdbcType="INTEGER" property="questionsId" javaType="Long"></result>
+        <result column="questionsName" jdbcType="VARCHAR" property="questionsName" javaType="String"></result>
+        <result column="questionsType" jdbcType="INTEGER" property="questionsType" javaType="Integer"></result>
+        <result column="answerContent" jdbcType="VARCHAR" property="answerContent" javaType="String"></result>
+    </resultMap>
+    <select id="findDtoById" parameterType="Long" resultMap="userPaperDtoMap" >
+        select
+            a.paper_id as paperId ,
+            a.paper_name as paperName ,
+            a.paper_info as paperInfo ,
+            a.answer_time as answerTime,
+            up.user_paper_id as userPaperId ,
+            up.user_paper_status as userPaperStatus
+        from  scyf_paper a , scyf_user_paper  up
+        where up.user_paper_id = #{id} and up.paper_id = a.paper_id and up.del_flag=0
+            and a.del_flag = 0
+    </select>
+    <select id="getUserPaperMarkDtoList" parameterType="Long" resultMap="userPaperMarkDtoMap">
+        select
+            a.paper_mark_id as paperMarkId ,
+            a.questions_type as questionsType ,
+            a.mark as mark
+        from
+            scyf_paper_mark a
+        where a.paper_id = #{paperId} and  a.del_flag = 0
+    </select>
+    <select id="getUserQuestionsDtoList" parameterType="Long" resultMap="userQuestionsDtoMap">
+        select
+            a.questions_id as questionsId ,
+            a.questions_name as questionsName ,
+            a.questions_type as questionsType ,
+            a.answer_content as answerContent
+        from scyf_questions a
+        where EXISTS( select pg.paper_questions_id  from scyf_paper_questions pg where  pg.paper_mark_id = #{paperMarkId} AND pg.questions_id = a.questions_id  AND pg.del_flag = 0 )  order by a.questions_id
+    </select>
+
+    <!-- 根据试卷来更新用户试卷的状态user_paper_status 0未提交，1提交 -->
+    <update id="updateUserPaperStatusByUserPaperId" >
+        UPDATE scyf_user_paper a SET
+            a.user_paper_status =  #{userPaperStatus}, a.updated_by = #{updatedBy}, a.updated_time = now()
+        where a.user_paper_id = #{userPaperId}  and a.user_paper_status = 0 and  a.del_flag = 0
+    </update>
+    <!-- 根据试卷来更新用户试卷的状态user_paper_status 0未提交，1提交 -->
+    <select id="usedPaperIdList" parameterType="Long" resultType="Long" >
+        select user_paper_id from scyf_user_paper where paper_id = #{paperId} and user_paper_status = 1 and del_flag = 0
+    </select>
+
+    <update id="updateUserScoreByUserPaperId" >
+        UPDATE scyf_user_paper a SET
+            a.score =  #{score}
+        where  a.user_paper_id = #{userPaperId} and a.user_paper_status = 1 and  a.del_flag = 0
+    </update>
+
+</mapper>

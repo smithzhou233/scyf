@@ -1,0 +1,171 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.hngf.mapper.danger.InspectSchduleCheckRecordMapper">
+
+    <sql id="InspectSchduleCheckRecordColumns">
+        a.check_record_no,
+        a.schdule_def_id,
+        a.inspect_def_id,
+        a.inspect_schedule_id,
+        a.company_id,
+        a.risk_point_id,
+        a.checked_count,
+        a.group_id,
+        a.position_id,
+        a.status,
+        a.created_by,
+        a.updated_by,
+        a.created_time,
+        a.updated_time
+    </sql>
+
+    <select id="findList" resultType="InspectSchduleCheckRecord">
+        select
+            <include refid="InspectSchduleCheckRecordColumns"/>
+        from
+            scyf_inspect_schdule_check_record a
+        where
+            a.del_flag = 0
+	</select>
+
+    <select id="findByScheduleId" resultType="InspectSchduleCheckRecord">
+        select
+            <include refid="InspectSchduleCheckRecordColumns"/>
+        from
+            scyf_inspect_schdule_check_record a
+        where
+            a.del_flag = 0
+            and a.created_by = #{userId}
+            and a.company_id = #{companyId}
+        <if test="scheduleId != null and scheduleId != '' " >
+            and a.schdule_def_id = #{scheduleId}
+        </if>
+	</select>
+
+    <select id="findOne" resultType="InspectSchduleCheckRecord">
+        select
+        <include refid="InspectSchduleCheckRecordColumns"/>
+        from
+        scyf_inspect_schdule_check_record a
+        where
+        a.del_flag = 0
+        and a.created_by = #{userId}
+        and a.company_id = #{companyId}
+        <if test="riskPointId != null and riskPointId != '' " >
+            and risk_point_id = #{riskPointId}
+        </if>
+        <if test="scheduleId != null and scheduleId != '' " >
+            and schdule_def_id = #{scheduleId}
+        </if>
+        <if test="checkedCount != null " >
+            and checked_count = #{checkedCount}
+        </if>
+    </select>
+
+    <select id="findById" resultType="InspectSchduleCheckRecord" parameterType="Long">
+        select
+            <include refid="InspectSchduleCheckRecordColumns"/>
+        from
+            scyf_inspect_schdule_check_record a
+        where
+            a.del_flag = 0 and a.record_id = #{id}
+	</select>
+
+    <insert id="add" parameterType="InspectSchduleCheckRecord">
+        INSERT INTO scyf_inspect_schdule_check_record (
+            check_record_no,
+            schdule_def_id,
+            inspect_def_id,
+            inspect_schedule_id,
+            company_id,
+            risk_point_id,
+            checked_count,
+            group_id,
+            position_id,
+            status,
+            created_by,
+            created_time,
+            del_flag)
+        VALUES (
+            #{checkRecordNo},
+            #{schduleDefId},
+            #{inspectDefId},
+            #{inspectScheduleId},
+            #{companyId},
+            #{riskPointId},
+            #{checkedCount},
+            #{groupId},
+            #{positionId},
+            #{status},
+            #{createdBy},
+            #{createdTime},
+            0
+        )
+
+    </insert>
+
+    <update id="update" parameterType="InspectSchduleCheckRecord">
+        UPDATE scyf_inspect_schdule_check_record a
+        <trim prefix="set" suffixOverrides=",">
+            <if test="checkRecordNo != null and checkRecordNo != ''">
+                a.check_record_no = #{checkRecordNo},
+            </if>
+            <if test="schduleDefId != null and schduleDefId != ''">
+                a.schdule_def_id = #{schduleDefId},
+            </if>
+            <if test="inspectDefId != null and inspectDefId != ''">
+                a.inspect_def_id = #{inspectDefId},
+            </if>
+            <if test="inspectScheduleId != null and inspectScheduleId != ''">
+                a.inspect_schedule_id = #{inspectScheduleId},
+            </if>
+            <if test="companyId != null and companyId != ''">
+                a.company_id = #{companyId},
+            </if>
+            <if test="riskPointId != null and riskPointId != ''">
+                a.risk_point_id = #{riskPointId},
+            </if>
+            <if test="checkedCount != null and checkedCount != ''">
+                a.checked_count = #{checkedCount},
+            </if>
+            <if test="groupId != null and groupId != ''">
+                a.group_id = #{groupId},
+            </if>
+            <if test="positionId != null and positionId != ''">
+                a.position_id = #{positionId},
+            </if>
+            <if test="status != null and status != ''">
+                a.status = #{status},
+            </if>
+            <if test="updatedBy != null and updatedBy != ''">
+                a.updated_by = #{updatedBy},
+            </if>
+            <if test="updatedTime != null and updatedTime != ''">
+                a.updated_time = #{updatedTime},
+            </if>
+        </trim>
+        where record_id = #{recordId}
+    </update>
+
+    <update id="deleteById" parameterType="Long">
+        UPDATE scyf_inspect_schdule_check_record a SET
+            a.del_flag = 1
+        where a.record_id = #{id}
+    </update>
+
+    <update id="deleteByIds" parameterType="java.util.List">
+        UPDATE scyf_inspect_schdule_check_record a SET
+            a.del_flag = 1
+        where a.record_id in
+        <foreach collection="ids" item="id" open="(" close=")" separator="," index="idx">
+            #{id}
+        </foreach>
+    </update>
+
+
+    <delete id="emptyScheduleCheckRecord">
+        delete from  scyf_inspect_schdule_check_record
+        where status = 1
+    </delete>
+</mapper>

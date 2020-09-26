@@ -1,0 +1,233 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.hngf.mapper.exam.QuestionsMapper">
+
+    <sql id="QuestionsColumns">
+        a.questions_id,
+        a.questions_name,
+        a.questions_type,
+        a.answer_content,
+        a.right_answer,
+        a.questions_status,
+        a.group_id,
+        a.company_id,
+        a.created_by,
+        a.created_time,
+        a.updated_by,
+        a.updated_time,
+        a.del_flag
+    </sql>
+
+    <select id="findList" resultType="Questions">
+        select
+            <include refid="QuestionsColumns"/>
+        from
+            scyf_questions a
+        where
+            a.del_flag = 0
+	</select>
+    <!-- 查看试卷详情时显示的试题列表 -->
+    <select id="findToPaperInfoList" resultType="Questions">
+        select
+        a.questions_id ,
+        a.questions_name,
+        a.questions_type,
+        a.questions_status
+        from
+        scyf_questions a
+        where
+        a.del_flag = 0
+        <if test=" null != companyId and '' != companyId ">
+            and a.company_id = #{companyId}
+        </if>
+        order by  a.questions_id asc
+    </select>
+
+    <!-- 组卷时显示的试题列表 -->
+    <select id="findPageList" resultType="Questions">
+        select
+        a.questions_id , a.questions_name, a.questions_type, a.questions_status
+        from scyf_questions a
+        where
+        a.del_flag = 0 and a.questions_status = 0
+        <if test=" null != questionsType and '' != questionsType ">
+            and a.questions_type = #{questionsType}
+        </if>
+        <if test=" null != companyId and '' != companyId ">
+            and a.company_id = #{companyId}
+        </if>
+        <if test=" null != groupId and '' != groupId ">
+            and a.group_id = #{groupId}
+        </if>
+        order by  a.questions_id asc
+    </select>
+
+    <select id="findGroupList" resultType="Questions" parameterType="Map">
+        select
+            a.questions_id as questionsId ,
+            a.questions_name as questionsName ,
+            a.questions_type as questionsType ,
+            sdqt.dict_name as questionsTypeName ,
+            a.answer_content as answerContent ,
+            a.right_answer as rightAnswer ,
+            a.questions_status as questionsStatus ,
+            sdqs.dict_name as questionsStatusName ,
+            a.group_id as groupId ,
+            a.company_id as companyId ,
+            a.created_by as createdBy,
+            DATE_FORMAT( a.created_time, '%Y-%m-%d %H:%i' ) as createdTimeStr ,
+            concat(
+            (
+            SELECT
+            concat( '【', sg.group_name, '】', IFNULL( psg.group_name, '' ) ) AS group_name
+            FROM
+            sys_group sg
+            LEFT JOIN sys_group psg ON ( sg.group_parent = psg.group_id )
+            WHERE
+            b.group_id = sg.group_id
+            )
+            ) AS groupName
+        from ( select * from scyf_questions
+                <trim prefix="where" prefixOverrides="and">
+                    <if test=" null != questionsName and '' != questionsName ">
+                        and locate(#{questionsName}, questions_name )  &gt; 0
+                    </if>
+                    <if test=" null != questionsType and '' != questionsType ">
+                        and questions_type = #{questionsType}
+                    </if>
+                    <if test=" null != questionsStatus and '' != questionsStatus ">
+                        and questions_status = #{questionsStatus}
+                    </if>
+                    <if test=" null != groupId and '' != groupId ">
+                        and group_id = #{groupId}
+                    </if>
+                    <if test=" null != companyId and '' != companyId ">
+                        and company_id = #{companyId}
+                    </if>
+                    and del_flag = 0
+                </trim>
+              )a
+        LEFT JOIN sys_group b ON a.group_id = b.group_id
+        LEFT JOIN sys_dict sdqt ON sdqt.dict_type = 'questions_type' and sdqt.dict_code = a.questions_type
+        LEFT JOIN sys_dict sdqs ON sdqs.dict_type = 'questions_status' and sdqs.dict_code = a.questions_status
+        order by a.questions_id asc
+    </select>
+
+    <select id="findById" resultType="Questions" parameterType="Long">
+        select
+            a.questions_id as questionsId ,
+            a.questions_name as questionsName ,
+            a.questions_type as questionsType ,
+            sdqt.dict_name as questionsTypeName ,
+            a.answer_content as answerContent ,
+            a.right_answer as rightAnswer ,
+            a.questions_status as questionsStatus ,
+            sdqs.dict_name as questionsStatusName ,
+            a.group_id as groupId ,
+            a.company_id as companyId ,
+            a.created_by as createdBy,
+            DATE_FORMAT( a.created_time, '%Y-%m-%d %H:%i' ) as createdTimeStr,
+            concat(
+            (SELECT
+            concat('【',sg.group_name,'】',IFNULL(psg.group_name,'')) as group_name
+            FROM sys_group sg
+            left join sys_group psg on (sg.group_parent = psg.group_id)
+            where b.group_id = sg.group_id
+            )) as groupName,
+            comp.company_name as companyName
+        from ( select * from scyf_questions where questions_id = #{id}  and del_flag = 0 order by created_time desc LIMIT 1 ) a
+        LEFT JOIN sys_group b ON a.group_id = b.group_id
+        LEFT JOIN sys_company comp ON a.company_id = comp.company_id
+        LEFT JOIN sys_dict sdqt ON sdqt.dict_type = 'questions_type' and sdqt.dict_code = a.questions_type
+        LEFT JOIN sys_dict sdqs ON sdqs.dict_type = 'questions_status' and sdqs.dict_code = a.questions_status
+	</select>
+
+    <insert id="add" parameterType="Questions" useGeneratedKeys="true" keyProperty="questionsId">
+        INSERT INTO scyf_questions (
+            questions_name,
+            questions_type,
+            answer_content,
+            right_answer,
+            questions_status,
+            group_id,
+            company_id,
+            created_by,
+            created_time,
+            updated_by,
+            updated_time,
+            del_flag)
+        VALUES (
+            #{questionsName},
+            #{questionsType},
+            #{answerContent},
+            #{rightAnswer},
+            #{questionsStatus},
+            #{groupId},
+            #{companyId},
+            #{createdBy},
+            #{createdTime},
+            #{updatedBy},
+            #{updatedTime},
+            #{delFlag}
+        )
+    </insert>
+
+    <update id="update" parameterType="Questions">
+        UPDATE scyf_questions a
+        <trim prefix="set" suffixOverrides=","  suffix="where a.questions_id = #{questionsId}">
+            <if test=" null != questionsName and '' != questionsName ">
+                a.questions_name = #{questionsName},
+            </if>
+            <if test=" null != questionsType and '' != questionsType ">
+                a.questions_type = #{questionsType},
+            </if>
+            <if test=" null != answerContent ">
+                a.answer_content = #{answerContent},
+            </if>
+            <if test=" null != rightAnswer and '' != rightAnswer ">
+                a.right_answer = #{rightAnswer},
+            </if>
+            <if test=" null != groupId and '' != groupId ">
+                a.group_id = #{groupId},
+            </if>
+            <if test=" null != updatedBy and '' != updatedBy ">
+                a.updated_by = #{updatedBy},
+            </if>
+            <if test=" null != updatedTime ">
+                a.updated_time = #{updatedTime},
+            </if>
+        </trim>
+    </update>
+
+    <update id="deleteById" parameterType="Long">
+        UPDATE scyf_questions a SET
+            a.del_flag = 1, a.updated_by = #{updatedBy}, a.updated_time = now()
+        where a.questions_id = #{id}
+    </update>
+
+    <update id="deleteByIds" parameterType="java.util.List">
+        UPDATE scyf_questions a SET
+            a.del_flag = 1, a.updated_by = #{updatedBy}, a.updated_time = now()
+        where a.questions_id in
+        <foreach collection="ids" item="id" open="(" close=")" separator="," index="idx">
+            #{id}
+        </foreach>
+    </update>
+
+    <update id="updateQuestionsStatusByIds"  >
+        UPDATE scyf_questions a SET a.questions_status = #{questionsStatus} , a.updated_by = #{updatedBy}, a.updated_time = now()
+        where a.questions_id in
+        <foreach collection="ids" item="id" open="(" close=")" separator="," index="idx">
+            #{id}
+        </foreach>
+        and a.del_flag = 0
+        <if test=" 0 == questionsStatus ">
+            and a.questions_status = 1
+        </if>
+        <if test=" 1 == questionsStatus ">
+            and a.questions_status = 0
+        </if>
+    </update>
+
+</mapper>

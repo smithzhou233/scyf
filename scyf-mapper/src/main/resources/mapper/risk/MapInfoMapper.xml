@@ -1,0 +1,206 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.hngf.mapper.risk.MapInfoMapper">
+
+    <sql id="mapColumns">
+               a.map_id AS "mapId",
+               a.company_id AS "companyId",
+               a.group_id AS "groupId",
+               a.map_name AS "mapName",
+               a.map_type AS "mapType",
+               a.map_logo AS "mapLogo",
+               a.map_background AS "mapBackground",
+               a.map_remark AS "mapRemark",
+               a.status AS "status",
+               a.use_type AS "useType",
+               a.map_url AS "mapurl",
+               a.x_min   AS "xMin",
+               a.y_min   AS "yMin",
+               a.x_max   AS "xMax",
+               a.y_max   AS "yMax",
+               a.spatial_reference  AS "spatialReference",
+               a.created_time AS "createdTime",
+               a.created_by AS "createdBy",
+               a.updated_time AS "updatedTime",
+               a.updated_by AS "updatedBy",
+               a.del_flag as "delFlag"
+         </sql>
+
+    <select id="findList" resultType="com.hngf.entity.risk.MapInfo">
+		select
+        <include refid="mapColumns"/>
+		from scyf_map_info a
+        <where>
+            a.del_flag = 0
+            <if test="keyword != null and keyword != ''">
+              AND  a.map_name like "%"#{keyword}"%"
+            </if>
+            <if test="companyId != null and companyId != ''">
+                AND  a.company_id =#{companyId}
+            </if>
+            <if test="groupId!=null and groupId!='' and groupId != 0">
+                AND FIND_IN_SET(a.group_id ,fu_getChildrenGroup(#{groupId}))
+            </if>
+        </where>
+	</select>
+
+    <select id="findById" resultType="com.hngf.entity.risk.MapInfo" parameterType="Long">
+		select
+        <include refid="mapColumns"/>
+		from scyf_map_info a
+        where a.del_flag = 0 and a.map_id = #{id}
+	</select>
+    <select id="getMapType" resultType="java.util.Map">
+        SELECT
+        a.dict_code AS "dictCode",
+        a.dict_name AS "dictName"
+        FROM sys_dict a
+        <where>
+            a.del_flag=0
+            and a.dict_type=#{dictType}
+        </where>
+    </select>
+
+    <insert id="add" parameterType="com.hngf.entity.risk.MapInfo">
+        INSERT INTO scyf_map_info (
+                                                                company_id
+        ,                                group_id
+        ,                                map_name
+        ,                                map_type
+        ,                                map_logo
+        ,                                map_background
+        ,                                map_remark
+        ,                                status
+        ,                                use_type
+        ,                                map_url
+        ,                                x_min
+        ,                                y_min
+        ,                                x_max
+        ,                                y_max
+        ,                                spatial_reference
+        ,                                created_time
+        ,                                created_by
+        ,                                updated_time
+        ,                                updated_by
+        ,                                del_flag
+                                )
+        VALUES (
+                                                            #{companyId}
+        ,                                  #{groupId}
+        ,                                  #{mapName}
+        ,                                  #{mapType}
+        ,                                  #{mapLogo}
+        ,                                  #{mapBackground}
+        ,                                  #{mapRemark}
+        ,                                  #{status}
+        ,                                  #{useType}
+        ,                                  #{mapUrl}
+        ,                                  #{xMin}
+        ,                                  #{yMin}
+        ,                                  #{xMax}
+        ,                                  #{yMax}
+        ,                                  #{spatialReference}
+        ,                                  #{createdTime}
+        ,                                  #{createdBy}
+        ,                                  #{updatedTime}
+        ,                                  #{updatedBy}
+        ,                                  #{delFlag}
+                                  )
+
+    </insert>
+
+    <update id="update" parameterType="com.hngf.entity.risk.MapInfo">
+                      UPDATE scyf_map_info
+                        <trim prefix="set" suffixOverrides=",">
+                        <if test="companyId != null and companyId != ''">
+                        company_id = #{companyId} ,
+                        </if>
+                        <if test="groupId != null and groupId != ''">
+                        group_id = #{groupId} ,
+                         </if>
+                        <if test="mapName != null and mapName != ''">
+                        map_name = #{mapName} ,
+                        </if>
+                        <if test="mapType != null and mapType != ''">
+                        map_type = #{mapType} ,
+                         </if>
+                        <if test="mapLogo != null and mapLogo != ''">
+                        map_logo = #{mapLogo} ,
+                         </if>
+                        <if test="mapBackground != null and mapBackground != ''">
+                        map_background = #{mapBackground} ,
+                         </if>
+                        <if test="mapRemark != null and mapRemark != ''">
+                        map_remark = #{mapRemark} ,
+                         </if>
+                        <if test="status != null and status != ''">
+                        status = #{status} ,
+                         </if>
+                        <if test="useType != null and useType != ''">
+                        use_type = #{useType} ,
+                         </if>
+                        <if test="mapUrl != null and mapUrl != ''">
+                        map_url = #{mapUrl} ,
+                         </if>
+                        <if test="xMin != null and xMin != ''">
+                        x_min = #{xMin} ,
+                         </if>
+                        <if test="yMin != null and yMin != ''">
+                        y_min = #{yMin} ,
+                        </if>
+                        <if test="xMax != null and xMax != ''">
+                        x_max = #{xMax} ,
+                        </if>
+                        <if test="yMax != null and yMax != ''">
+                        y_max = #{yMax} ,
+                        </if>
+                        <if test="spatialReference != null and spatialReference != ''">
+                        spatial_reference = #{spatialReference} ,
+                        </if>
+                        <if test="updatedTime != null">
+                        updated_time = #{updatedTime} ,
+                        </if>
+                        <if test="updatedBy != null and updatedBy != ''">
+                        updated_by = #{updatedBy},
+                        </if>
+                        </trim>
+                            where map_id = #{mapId}
+    </update>
+
+    <update id="deleteById" parameterType="Long">
+        UPDATE scyf_map_info SET
+        del_flag = 1
+        where map_id = #{id}
+    </update>
+
+    <update id="deleteByIds" parameterType="java.util.List">
+        UPDATE scyf_map_info SET
+        del_flag = 1
+        where map_id in
+        <foreach collection="ids" item="id" open="(" close=")" separator="," index="idx">
+            #{id}
+        </foreach>
+    </update>
+
+    <select id="getAllMapList" parameterType="java.util.Map" resultType="java.util.Map">
+        select
+        a.map_id AS "mapId",
+        a.company_id AS "companyId",
+        a.group_id AS "groupId",
+        a.map_name AS "mapName",
+        a.map_type AS "mapType",
+        a.map_background AS "mapBackground",
+        a.x_min   AS "xMin",
+        a.y_min   AS "yMin",
+        a.x_max   AS "xMax",
+        a.y_max   AS "yMax",
+        a.spatial_reference  AS "spatialReference"
+        from scyf_map_info a
+        where  a.company_id =#{companyId} and a.del_flag = 0
+        <if test="groupId!=null and groupId!='' and groupId != 0">
+            AND FIND_IN_SET(a.group_id ,fu_getChildrenGroup(#{groupId}))
+        </if>
+    </select>
+
+</mapper>

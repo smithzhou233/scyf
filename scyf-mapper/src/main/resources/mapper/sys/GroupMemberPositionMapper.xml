@@ -1,0 +1,201 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.hngf.mapper.sys.GroupMemberPositionMapper">
+	<resultMap id="GetResultMap" type="com.hngf.dto.sys.GroupMemberPositionDto" >
+		<result column="group_name" property="groupName" jdbcType="VARCHAR"/>
+		<result column="group_left" property="groupLeft" jdbcType="BIGINT"/>
+		<result column="group_right" property="groupRight" jdbcType="BIGINT"/>
+		<result column="position_title" property="positionTitle" jdbcType="VARCHAR"/>
+		<result column="position_desc" property="positionDesc" jdbcType="VARCHAR"/>
+		<result column="user_name" property="accountRealName" jdbcType="VARCHAR"/>
+	</resultMap>
+	<sql id="Ext_Column_List">
+        A.group_member_position_id,
+        A.company_id,
+        A.group_id,
+        A.user_id,
+        B.group_name,
+        B.group_left,
+        B.group_right,
+
+        C.position_title,
+        C.position_desc,
+
+        D.user_name,
+        D.user_mobile
+
+    </sql>
+    <select id="findList"
+            resultType="com.hngf.entity.sys.GroupMemberPosition">
+		select * from sys_group_member_position
+		where del_flag = 0
+	</select>
+
+    <select id="findById"
+            resultType="com.hngf.entity.sys.GroupMemberPosition"
+            parameterType="Long">
+		select * from sys_group_member_position
+		where del_flag = 0 and group_member_position_id = #{id}
+	</select>
+
+    <select id="findByMap" resultType="GroupMemberPositionDto">
+        select * from sys_group_member_position
+        where del_flag = 0
+        <if test="groupMemberPositionId != null">
+            and group_member_position_id = #{groupMemberPositionId}
+        </if>
+        <if test="groupId != null">
+            and group_id = #{groupId}
+        </if>
+        <if test="userId != null">
+            and user_id = #{userId}
+        </if>
+        <if test="companyId != null">
+            and company_id = #{companyId}
+        </if>
+		<if test="positionId!=null">
+			and position_id = #{positionId}
+		</if>
+    </select>
+
+    <select id="findGrantGroupByUserId"
+            resultType="GroupMemberPositionDto">
+		SELECT
+		gp.group_left as grantGroupLeft,
+		gp.group_right as grantGroupRight,
+		gp.group_name as grantGroupName
+		FROM
+		sys_group_member_position_grant sgmpg
+		LEFT JOIN sys_group gp ON (sgmpg.group_id = gp.group_id)
+		WHERE 1 = 1
+		AND sgmpg.del_flag = 0
+		AND sgmpg.user_id = #{userId, jdbcType=BIGINT}
+		AND sgmpg.company_id = #{companyId,jdbcType=BIGINT}
+
+	</select>
+
+	<!--根据条件获取List getGroupMemberPositionList-->
+	<select id="getGroupMemberPositionList" parameterType="java.util.Map" resultMap="GetResultMap">
+		SELECT
+		 <include refid="Ext_Column_List"></include>
+
+		FROM
+		sys_group_member_position A
+		LEFT JOIN sys_group B ON A.group_id = B.group_id
+		LEFT JOIN sys_position C ON A.position_id = C.position_id
+		LEFT JOIN sys_user D ON A.user_id = D.user_id
+		WHERE 1 = 1 AND A.del_flag = 0
+
+		<if test="companyOrOrgId != null">
+			AND A.companyId = #{companyOrOrgId,jdbcType=BIGINT}
+		</if>
+
+		<if test="groupId != null">
+			AND A.group_id = #{groupId,jdbcType=BIGINT}
+		</if>
+
+		<if test="userId != null">
+			AND A.user_id = #{userId ,jdbcType=BIGINT}
+		</if>
+
+		<if test="positionId != null">
+			and A.position_id = #{positionId ,jdbcType=BIGINT}
+		</if>
+
+		<if test="gLId != null and gLId != '' and gRId != null and gRId != ''">
+			<![CDATA[
+                 AND
+                 B.group_left >= #{gLId,jdbcType=BIGINT}
+                 AND
+                 B.group_right <= #{gRId,jdbcType=BIGINT}
+                ]]>
+		</if>
+
+		<if test="positions != null and positions !=''">
+			<foreach collection="positions" item="item" open="and A.position_id in (" separator="," close=")">
+				#{item}
+			</foreach>
+		</if>
+		GROUP BY A.group_id
+	</select>
+
+    <insert id="add"
+            parameterType="com.hngf.entity.sys.GroupMemberPosition">
+		INSERT INTO sys_group_member_position (
+		company_id
+		,
+		group_id
+		,
+		user_id
+		,
+		position_id
+		,
+		created_time
+		,
+		created_by
+		,
+		del_flag
+		)
+		VALUES (
+		#{companyId}
+		,
+		#{groupId}
+		,
+		#{userId}
+		,
+		#{positionId}
+		,
+		#{createdTime}
+		,
+		#{createdBy}
+		,
+		0
+		)
+
+	</insert>
+
+    <update id="update"
+            parameterType="com.hngf.entity.sys.GroupMemberPosition">
+		UPDATE sys_group_member_position SET
+		company_id = #{companyId}
+		,
+		group_id = #{groupId}
+		,
+		user_id = #{userId}
+		,
+		position_id = #{positionId}
+		,
+		updated_by = #{updatedBy}
+		where user_id = #{userId}
+	</update>
+
+    <update id="deleteByUserId" parameterType="Long">
+		UPDATE sys_group_member_position SET
+		del_flag = 1
+		where user_id = #{value}
+	</update>
+
+    <update id="deleteById" parameterType="Long">
+		UPDATE sys_group_member_position SET
+		del_flag = 1
+		where group_member_position_id = #{id}
+	</update>
+
+    <update id="deleteByIds" parameterType="java.util.List">
+        UPDATE sys_group_member_position SET
+        del_flag = 1
+        where group_member_position_id in
+        <foreach collection="ids" item="id" open="(" close=")"
+                 separator="," index="idx">
+            #{id}
+        </foreach>
+    </update>
+
+	<update id="deleteByCompanyId" parameterType="java.lang.Long">
+        UPDATE sys_group_member_position SET
+		del_flag = 1 , updated_by = #{updatedBy}, updated_time = now()
+		where company_id = #{companyId}
+    </update>
+
+</mapper>

@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE configuration
+        PUBLIC "-//mybatis.org//DTD Config 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-config.dtd">
+<configuration>
+
+    <settings>
+        <!--将以下画线方式命名的数据库列映射到 Java 对象的驼峰式命名属性中-->
+        <setting name="mapUnderscoreToCamelCase" value="true" />
+        <!--输出详细的mybatis的sql语句和查询结果-->
+        <setting name="logImpl" value="org.apache.ibatis.logging.stdout.StdOutImpl" />
+    </settings>
+
+    <!-- 设置类的别名 -->
+    <typeAliases>
+        <typeAlias alias="Long" type="java.lang.Long"/>
+        <typeAlias alias="Integer" type="java.lang.Integer"/>
+        <typeAlias alias="Double" type="java.lang.Double"/>
+        <typeAlias alias="Map" type="java.util.Map"/>
+        <typeAlias alias="List" type="java.util.List"/>
+        <typeAlias alias="Date" type="java.util.Date"/>
+
+        <package name="com.hngf.dto"/>
+        <package name="com.hngf.entity"/>
+    </typeAliases>
+
+    <!-- pageHelper插件 -->
+    <plugins>
+        <plugin interceptor="com.github.pagehelper.PageInterceptor">
+            <!--reasonable：分页合理化参数，默认值为false,直接根据参数进行查询。
+              当该参数设置为 true 时，pageNum<=0 时会查询第一页， pageNum>pages（超过总数时），会查询最后一页。-->
+            <!--<property name="reasonable" value="true"/>-->
+        </plugin>
+    </plugins>
+</configuration>

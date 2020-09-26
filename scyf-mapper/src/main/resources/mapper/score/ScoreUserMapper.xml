@@ -1,0 +1,118 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.hngf.mapper.score.ScoreUserMapper">
+
+
+    <select id="findList" resultType="com.hngf.entity.score.ScoreUser">
+		select * from scyf_score_user
+        where del_flag = 0
+	</select>
+
+    <select id="findById" resultType="com.hngf.entity.score.ScoreUser" parameterType="Long">
+		select * from scyf_score_user
+        where del_flag = 0 and score_user_id = #{id}
+	</select>
+
+    <select id="getMyScoreRecord" resultType="com.hngf.entity.score.ScoreUser" parameterType="Map">
+		select * from scyf_score_user
+        where del_flag = 0
+        and company_id = #{companyId}
+        <if test="userId != null ">
+            and user_id = #{userId}
+        </if>
+        <if test="scoreType != null ">
+            and score_type = #{scoreType}
+        </if>
+        <if test="createdTime != null and createdTime != ''">
+            and ( DATE_FORMAT( created_time, '%Y-%m' ) ) = #{createdTime}
+        </if>
+        <if test="year != null and year != ''">
+            and ( DATE_FORMAT( created_time, '%Y' ) ) = #{year}
+        </if>
+	</select>
+
+    <insert id="add" parameterType="com.hngf.entity.score.ScoreUser">
+        INSERT INTO scyf_score_user (
+                                                                company_id
+        ,                                group_id
+        ,                                user_id
+        ,                                score_type
+        ,                                gross_score
+        ,                                remark
+        ,                                updated_time
+        ,                                updated_by
+        ,                                created_time
+        ,                                created_by
+        ,                                del_flag
+                                )
+        VALUES (
+                                                            #{companyId}
+        ,                                  #{groupId}
+        ,                                  #{userId}
+        ,                                  #{scoreType}
+        ,                                  #{grossScore}
+        ,                                  #{remark}
+        ,                                  #{updatedTime}
+        ,                                  #{updatedBy}
+        ,                                  #{createdTime}
+        ,                                  #{createdBy}
+        ,                                  #{delFlag}
+                                  )
+
+    </insert>
+
+    <update id="update" parameterType="com.hngf.entity.score.ScoreUser">
+                       UPDATE scyf_score_user SET
+                            <if test="companyId != null and companyId != ''">
+                            company_id = #{companyId} ,
+                            </if>
+                            <if test="groupId != null and groupId != ''">
+                            group_id = #{groupId} ,
+                            </if>
+                            <if test="userId != null and userId != ''">
+                            user_id = #{userId} ,
+                            </if>
+                            <if test="scoreType != null and scoreType != ''">
+                            score_type = #{scoreType} ,
+                            </if>
+                            <if test="grossScore != null and grossScore != ''">
+                            gross_score = #{grossScore} ,
+                            </if>
+                            <if test="remark != null and remark != ''">
+                            remark = #{remark} ,
+                            </if>
+                            <if test="updatedTime != null">
+                            updated_time = #{updatedTime} ,
+                            </if>
+                            <if test="updatedBy != null and updatedBy != ''">
+                            updated_by = #{updatedBy} ,
+                            </if>
+                            <if test="createdTime != null">
+                            created_time = #{createdTime} ,
+                            </if>
+                            <if test="createdBy != null and createdBy != ''">
+                            created_by = #{createdBy} ,
+                            </if>
+                            <if test="delFlag != null and delFlag != ''">
+                            del_flag = #{delFlag}
+                            </if>
+                            where score_user_id = #{scoreUserId}
+    </update>
+
+    <update id="deleteById" parameterType="Long">
+        UPDATE scyf_score_user SET
+        del_flag = 1
+        where score_user_id = #{id}
+    </update>
+
+    <update id="deleteByIds" parameterType="java.util.List">
+        UPDATE scyf_score_user SET
+        del_flag = 1
+        where score_user_id in
+        <foreach collection="ids" item="id" open="(" close=")" separator="," index="idx">
+            #{id}
+        </foreach>
+    </update>
+
+</mapper>

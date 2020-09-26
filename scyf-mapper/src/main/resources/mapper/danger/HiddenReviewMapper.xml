@@ -1,0 +1,140 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.hngf.mapper.danger.HiddenReviewMapper">
+
+    <sql id="HiddenReviewColumns">
+        a.company_id,
+        a.group_id,
+        a.hidden_id,
+        a.hidden_review_by,
+        a.hidden_review_time,
+        a.hidden_review_result,
+        a.hidden_review_remark,
+        a.created_by,
+        a.created_time,
+        a.updated_by,
+        a.updated_time,
+        a.sign_url
+    </sql>
+
+    <select id="findList" resultType="HiddenReview">
+        select
+            <include refid="HiddenReviewColumns"/>
+        from
+            scyf_hidden_review a
+        where
+            a.del_flag = 0
+	</select>
+
+    <select id="findByHiddenId" resultType="HiddenReview" parameterType="Long">
+        SELECT
+            a.hidden_review_id,
+            ( CASE a.hidden_review_result WHEN 1 THEN '通过' WHEN 0 THEN '未通过' ELSE '未知' END ) AS hidden_review_result_str,
+            a.hidden_review_result,
+            a.hidden_review_remark,
+            a.hidden_review_time,
+            DATE_FORMAT(a.hidden_review_time, "%Y-%m-%d %H:%i:%s" )  as hiddenReviewTimeStr,
+            a.created_time,
+            b.group_name as hidden_review_group_name,
+            c.user_name as hidden_review_by_name,
+
+            a.sign_url
+        FROM
+            scyf_hidden_review a
+            LEFT JOIN sys_group b ON a.group_id = b.group_id
+            LEFT JOIN sys_user c ON c.user_id = a.hidden_review_by
+            LEFT JOIN scyf_hidden_attach hdatt ON a.hidden_review_id = hdatt.hidden_detail_id
+        WHERE
+            a.hidden_id = #{value}
+        GROUP BY
+            a.hidden_review_id
+        ORDER BY
+            a.created_time DESC
+	</select>
+
+    <select id="findById" resultType="HiddenReview" parameterType="Long">
+        select
+            <include refid="HiddenReviewColumns"/>
+        from
+            scyf_hidden_review a
+        where
+            a.del_flag = 0 and a.hidden_review_id = #{id}
+	</select>
+
+    <insert id="add" parameterType="HiddenReview" useGeneratedKeys="true" keyProperty="hiddenReviewId">
+        INSERT INTO scyf_hidden_review (
+            company_id,
+            group_id,
+            hidden_id,
+            hidden_review_by,
+            hidden_review_time,
+            hidden_review_result,
+            hidden_review_remark,
+            created_by,
+            created_time,
+            del_flag,
+            sign_url)
+        VALUES (
+            #{companyId},
+            #{groupId},
+            #{hiddenId},
+            #{hiddenReviewBy},
+            #{hiddenReviewTime},
+            #{hiddenReviewResult},
+            #{hiddenReviewRemark},
+            #{createdBy},
+            #{createdTime},
+            0,
+            #{signUrl}
+        )
+
+    </insert>
+
+    <update id="update" parameterType="HiddenReview">
+        UPDATE scyf_hidden_review a
+        <trim prefix="set" suffixOverrides=",">
+            <if test="companyId != null and companyId != ''">
+                a.company_id = #{companyId},
+            </if>
+            <if test="groupId != null and groupId != ''">
+                a.group_id = #{groupId},
+            </if>
+            <if test="hiddenId != null and hiddenId != ''">
+                a.hidden_id = #{hiddenId},
+            </if>
+            <if test="hiddenReviewBy != null and hiddenReviewBy != ''">
+                a.hidden_review_by = #{hiddenReviewBy},
+            </if>
+            <if test="hiddenReviewTime != null and hiddenReviewTime != ''">
+                a.hidden_review_time = #{hiddenReviewTime},
+            </if>
+            <if test="hiddenReviewResult != null and hiddenReviewResult != ''">
+                a.hidden_review_result = #{hiddenReviewResult},
+            </if>
+            <if test="hiddenReviewRemark != null and hiddenReviewRemark != ''">
+                a.hidden_review_remark = #{hiddenReviewRemark},
+            </if>
+            <if test="updatedBy != null and updatedBy != ''">
+                a.updated_by = #{updatedBy},
+            </if>
+        </trim>
+        where hidden_review_id = #{hiddenReviewId}
+    </update>
+
+    <update id="deleteById" parameterType="Long">
+        UPDATE scyf_hidden_review a SET
+            a.del_flag = 1
+        where a.hidden_review_id = #{id}
+    </update>
+
+    <update id="deleteByIds" parameterType="java.util.List">
+        UPDATE scyf_hidden_review a SET
+            a.del_flag = 1
+        where a.hidden_review_id in
+        <foreach collection="ids" item="id" open="(" close=")" separator="," index="idx">
+            #{id}
+        </foreach>
+    </update>
+
+</mapper>

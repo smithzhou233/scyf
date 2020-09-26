@@ -1,0 +1,264 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.hngf.mapper.common.CommonPostMapper">
+
+    <sql id="CommonPostColumns">
+		a.post_id,
+		a.company_id,
+		a.group_id,
+		a.category_id,
+		a.post_title,
+		a.post_type,
+		a.post_content_type,
+		a.post_author,
+		a.post_source,
+		a.post_desc,
+		a.post_pic_url,
+		a.view_url,
+		a.post_content,
+		a.is_publish,
+		a.publish_time,
+		a.created_time,
+		a.created_by,
+		a.updated_time,
+		a.updated_by
+	</sql>
+
+    <select id="findList" resultType="CommonPost">
+        SELECT
+            a.post_id AS "postId",
+            a.company_id AS "companyId",
+            a.post_title AS "postTitle",
+            a.post_type AS "postType",
+            a.post_content_type AS "postContentType",
+            a.post_author AS "postAuthor",
+            a.post_source AS "postSource",
+            a.post_desc AS "postDesc",
+            a.post_pic_url AS "postPicUrl",
+            a.created_time AS "createdTime",
+            a.created_by AS "createdBy",
+            a.updated_time AS "updatedTime",
+            a.updated_by AS "updatedBy",
+            a.del_flag AS "delFlag",
+            a.is_publish AS "isPublish",
+            a.view_url AS "viewUrl",
+            a.publish_time AS "publishTime",
+            a.post_content AS "postContent",
+            acc.user_name AS "userName",
+            DATE_FORMAT(a.publish_time, '%Y-%m-%d %H:%i' ) AS publishTimeStr
+        FROM
+            scyf_common_post a
+            LEFT JOIN sys_user acc ON acc.user_id = a.created_by
+            LEFT JOIN sys_group sg ON sg.group_id = a.group_id
+
+        <where>
+            a.del_flag = 0
+            <if test="companyId != null">
+                and a.company_id = #{companyId}
+            </if>
+            <if test="createdBy != null">
+                and a.created_by = #{createdBy}
+            </if>
+            <if test="postType != null and postType != '' ">
+                and a.post_type = #{postType}
+            </if>
+            <if test="keyword != null and keyword != '' ">
+                AND a.post_title LIKE CONCAT('%', #{keyword}, '%')
+            </if>
+            <if test='postType != null and postType == 5'>
+                <if test='showType != null and showType != "" and showType == "already"'>
+                    <if test="postIds != null and postIds.size > 0">
+                        and a.post_id in
+                        <foreach collection="postIds" index="index" item="item" open="(" separator="," close=")">
+                            #{item}
+                        </foreach>
+                    </if>
+                </if>
+                <if test='showType != null and showType != "" and showType == "select"'>
+                    <if test="postIds != null and postIds.size > 0">
+                        and a.post_id not in
+                        <foreach collection="postIds" index="index" item="item" open="(" separator="," close=")">
+                            #{item}
+                        </foreach>
+                    </if>
+                </if>
+            </if>
+        </where>
+        group by a.post_id
+        order by a.created_time desc
+    </select>
+     <!--查询风险规章制度-->
+    <select id="queryInstitution" resultType="CommonPostDto">
+         SELECT
+            a.post_id,
+            a.company_id,
+            a.post_title,
+            a.post_type,
+            a.post_content_type,
+            a.post_author,
+            a.post_source,
+            a.post_desc,
+            a.post_pic_url,
+            a.created_time,
+            a.created_by,
+            a.updated_time,
+            a.updated_by,
+            a.del_flag,
+            a.is_publish,
+            a.view_url,
+            a.publish_time,
+            acc.user_name,
+            sg.group_name
+        FROM
+            scyf_common_post a
+            LEFT JOIN sys_user acc ON acc.user_id = a.created_by
+            LEFT JOIN sys_group sg ON sg.group_id = a.group_id
+            <where>
+                a.del_flag=0 and acc.del_flag=0 and sg.del_flag=0
+                <if test="companyId != null">
+                    and a.company_id = #{companyId}
+                </if>
+                <if test="isPublish != null">
+                    and a.is_publish = #{isPublish}
+                </if>
+                <if test="postType != null and postType !='' ">
+                    and a.post_type = #{postType}
+                </if>
+                <if test="groupId != null and groupId != ''">
+                    AND FIND_IN_SET(sg.group_id ,fu_getChildrenGroup(#{groupId}))
+                </if>
+                <if test="keyword != null and keyword != '' ">
+                    AND a.post_title LIKE CONCAT('%', #{keyword}, '%')
+                </if>
+            </where>
+            group by a.post_id
+            order by a.created_time desc
+    </select>
+    <select id="findById" resultType="CommonPost"
+            parameterType="Long">
+        select
+        <include refid="CommonPostColumns" />
+        from
+        scyf_common_post a
+        where
+        a.del_flag = 0 and a.post_id = #{id}
+    </select>
+
+    <insert id="add" parameterType="CommonPost" keyProperty="postId" useGeneratedKeys="true">
+		INSERT INTO scyf_common_post (
+		company_id,
+		group_id,
+		category_id,
+		post_title,
+		post_type,
+		post_content_type,
+		post_author,
+		post_source,
+		post_desc,
+		post_pic_url,
+		view_url,
+		post_content,
+		is_publish,
+		publish_time,
+		created_by,
+		del_flag)
+		VALUES (
+		#{companyId},
+		#{groupId},
+		#{categoryId},
+		#{postTitle},
+		#{postType},
+		#{postContentType},
+		#{postAuthor},
+		#{postSource},
+		#{postDesc},
+		#{postPicUrl},
+		#{viewUrl},
+		#{postContent},
+		#{isPublish},
+		#{publishTime},
+		#{createdBy},
+		#{delFlag}
+		)
+
+	</insert>
+
+    <update id="update" parameterType="CommonPost">
+        UPDATE scyf_common_post a SET
+        <if test="companyId != null">
+            a.company_id = #{companyId},
+        </if>
+        <if test="groupId != null">
+            a.group_id = #{groupId},
+        </if>
+        <if test="categoryId != null">
+            a.category_id = #{categoryId},
+        </if>
+        <if test="postTitle != null and postTitle != ''">
+            a.post_title = #{postTitle},
+        </if>
+        <if test="postType != null and postType != ''">
+            a.post_type = #{postType},
+        </if>
+        <if test="postContentType != null and postContentType != ''">
+            a.post_content_type = #{postContentType},
+        </if>
+        <if test="postAuthor != null and postAuthor != ''">
+            a.post_author = #{postAuthor},
+        </if>
+        <if test="postSource != null and postSource != ''">
+            a.post_source = #{postSource},
+        </if>
+        <if test="postDesc != null and postDesc != ''">
+            a.post_desc = #{postDesc},
+        </if>
+        <if test="postPicUrl != null and postPicUrl != ''">
+            a.post_pic_url = #{postPicUrl},
+        </if>
+        <if test="viewUrl != null and viewUrl != ''">
+            a.view_url = #{viewUrl},
+        </if>
+        <if test="postContent != null and postContent != ''">
+            a.post_content = #{postContent},
+        </if>
+        <if test="isPublish != null">
+            a.is_publish = #{isPublish},
+        </if>
+        <if test="publishTime != null">
+            a.publish_time = #{publishTime},
+        </if>
+        <if test="updatedBy != null">
+            a.updated_by = #{updatedBy}
+        </if>
+        where post_id = #{postId}
+    </update>
+
+    <update id="deleteById" parameterType="Long">
+		UPDATE scyf_common_post a SET
+		a.del_flag = 1
+		where a.post_id = #{id}
+	</update>
+
+    <update id="deleteByIds" parameterType="java.util.List">
+        UPDATE scyf_common_post a SET
+        a.del_flag = 1
+        where a.post_id in
+        <foreach collection="ids" item="id" open="(" close=")"
+                 separator="," index="idx">
+            #{id}
+        </foreach>
+    </update>
+    <!-- 知识点发布   -->
+    <update id="publishByIds" >
+        UPDATE scyf_common_post a SET
+        a.is_publish = 1 , a.publish_time = now(), a.updated_by = #{publishBy}, a.updated_time = now()
+        where a.post_id in
+        <foreach collection="ids" item="id" open="(" close=")"
+                 separator="," index="idx">
+            #{id}
+        </foreach>
+        and a.is_publish = 0 and a.del_flag = 0
+    </update>
+
+</mapper>

@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.hngf.mapper.sys.CompanySeoMapper">
+
+    <sql id="CompanySeoColumns">
+        a.company_id,
+        a.seo_logo,
+        a.seo_title,
+        a.seo_ws,
+        a.have_new_home_page,
+        a.app_hide_show,
+        a.rong_app_key,
+        a.rong_app_secret,
+        a.big_screen_title,
+        a.big_screen_score
+    </sql>
+
+    <select id="findList" resultType="CompanySeo">
+        select
+            <include refid="CompanySeoColumns"/>
+        from
+            sys_company_seo a
+
+	</select>
+
+    <select id="findById" resultType="CompanySeo" parameterType="Long">
+        select
+            <include refid="CompanySeoColumns"/>
+        from
+            sys_company_seo a
+        where
+            a.company_id = #{id}
+	</select>
+
+    <insert id="add" parameterType="CompanySeo">
+        INSERT INTO sys_company_seo (
+            company_id,
+            seo_logo,
+            seo_title,
+            seo_ws,
+            have_new_home_page,
+            app_hide_show,
+            rong_app_key,
+            rong_app_secret,
+            big_screen_title,
+            big_screen_score)
+        VALUES (
+            #{companyId},
+            #{seoLogo},
+            #{seoTitle},
+            #{seoWs},
+            #{haveNewHomePage},
+            #{appHideShow},
+            #{rongAppKey},
+            #{rongAppSecret},
+            #{bigScreenTitle},
+            #{bigScreenScore}
+        )
+
+    </insert>
+
+    <update id="update" parameterType="CompanySeo">
+        UPDATE sys_company_seo a
+        <trim prefix="set" suffixOverrides=",">
+            <if test="seoLogo != null and seoLogo != ''">
+                a.seo_logo = #{seoLogo},
+            </if>
+            <if test="seoTitle != null and seoTitle != ''">
+                a.seo_title = #{seoTitle},
+            </if>
+            <if test="seoWs != null and seoWs != ''">
+                a.seo_ws = #{seoWs},
+            </if>
+            <if test="haveNewHomePage != null and haveNewHomePage != ''">
+                a.have_new_home_page = #{haveNewHomePage},
+            </if>
+            <if test="appHideShow != null and appHideShow != ''">
+                a.app_hide_show = #{appHideShow},
+            </if>
+            <if test="rongAppKey != null and rongAppKey != ''">
+                a.rong_app_key = #{rongAppKey},
+            </if>
+            <if test="rongAppSecret != null and rongAppSecret != ''">
+                a.rong_app_secret = #{rongAppSecret},
+            </if>
+            <if test="bigScreenTitle != null and bigScreenTitle != ''">
+                a.big_screen_title = #{bigScreenTitle},
+            </if>
+            <if test="bigScreenScore != null and bigScreenScore != ''">
+                a.big_screen_score = #{bigScreenScore},
+            </if>
+        </trim>
+        where company_id = #{companyId}
+    </update>
+
+</mapper>

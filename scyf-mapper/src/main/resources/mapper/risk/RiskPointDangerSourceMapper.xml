@@ -1,0 +1,140 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.hngf.mapper.risk.RiskPointDangerSourceMapper">
+
+    <update id="delDangerSource">
+        UPDATE scyf_risk_point_danger_source
+        SET del_flag=1
+        <where>
+            risk_danger_id=#{dangerSrcId}
+            and company_id=#{companyId}
+        </where>
+    </update>
+
+    <select id="findList" resultType="RiskPointDangerSource">
+		select * from
+		scyf_risk_point_danger_source
+		where del_flag = 0
+	</select>
+
+    <select id="findById" resultType="RiskPointDangerSource"
+            parameterType="Long">
+		select * from scyf_risk_point_danger_source
+		where del_flag = 0 and risk_point_id = #{id}
+	</select>
+
+    <select id="listMaps" resultType="java.util.Map">
+        SELECT
+        *
+        FROM scyf_risk_point_danger_source
+        <where>
+            del_flag=0
+            and risk_danger_id=#{parentRiskDangerId}
+            and company_id=#{companyId}
+        </where>
+        GROUP BY risk_point_id
+    </select>
+
+    <insert id="add" parameterType="RiskPointDangerSource">
+		INSERT INTO scyf_risk_point_danger_source (
+		risk_point_id
+		,risk_danger_id
+		, company_id
+		, del_flag
+		)
+		VALUES (
+		 #{riskPointId}
+		,#{riskDangerId}
+		, #{companyId}
+		, #{delFlag}
+		)
+
+	</insert>
+
+    <insert id="addForeach" parameterType="List" useGeneratedKeys="false">
+		INSERT INTO scyf_risk_point_danger_source (
+		risk_point_id
+		,risk_danger_id
+		, company_id
+		, del_flag
+		)
+		VALUES
+        <foreach collection="list" item="item" index="index" separator=",">
+            (
+            #{item.riskPointId},
+            #{item.riskDangerId},
+            #{item.companyId},
+            #{item.delFlag}
+            )
+        </foreach>
+	</insert>
+
+    <update id="update" parameterType="RiskPointDangerSource">
+        UPDATE scyf_risk_point_danger_source SET
+        <if test="riskPointId != null and riskPointId != ''">
+            risk_point_id = #{riskPointId} ,
+        </if>
+        <if test="riskDangerId != null and riskDangerId != ''">
+            risk_danger_id = #{riskDangerId} ,
+        </if>
+        <if test="companyId != null and companyId != ''">
+            company_id = #{companyId}
+        </if>
+        where risk_point_id = #{riskPointId}
+    </update>
+
+    <update id="deleteById" parameterType="Long">
+		UPDATE scyf_risk_point_danger_source SET
+		del_flag = 1
+		where risk_point_id = #{id}
+	</update>
+
+    <update id="deleteByIds" parameterType="java.util.List">
+        UPDATE scyf_risk_point_danger_source SET
+        del_flag = 1
+        where risk_point_id in
+        <foreach collection="ids" item="id" open="(" close=")"
+                 separator="," index="idx">
+            #{id}
+        </foreach>
+    </update>
+
+    <update id="deleteByMap" parameterType="Map">
+        UPDATE scyf_risk_point_danger_source SET
+        del_flag = 1
+        where 1=1
+        <if test="riskPointId != null and riskPointId != ''">
+            and risk_point_id = #{riskPointId}
+        </if>
+        <if test="companyId != null and companyId != ''">
+            and company_id = #{companyId}
+        </if>
+        <if test="riskDangerId != null and riskDangerId != ''">
+            and risk_danger_id = #{riskDangerId}
+        </if>
+    </update>
+    <select id="selectRiskAndRiskSourceList" parameterType="java.util.Map" resultType="Map">
+        SELECT
+        srs.risk_danger_id riskDangerId ,
+        srs.risk_danger_name riskDangerName,
+        srs.risk_danger_level riskDangerLevel,
+        srs.risk_danger_type riskDangerType,
+        sr.risk_id riskId,
+        sr.risk_name riskName,
+        sr.risk_code riskCode,
+        sr.risk_desc riskDesc,
+        sr.risk_hram_factor riskHramFactor,
+        sr.risk_level riskLevel,
+        sr.risk_consequence riskConsequence
+        FROM scyf_risk_point_danger_source srpds
+        LEFT JOIN scyf_risk_source srs on (srs.risk_danger_id = srpds.risk_danger_id)
+        LEFT JOIN scyf_risk_source psrs on (psrs.parent_risk_danger_id = srs.risk_danger_id)
+        LEFT JOIN scyf_risk sr on (sr.risk_id = psrs.risk_danger_id and sr.del_flag = 0)
+        WHERE srs.del_flag = 0
+        and srpds.risk_point_id =#{riskPointId}
+        <if test="ctlLevel != null">
+            and sr.risk_level &lt;= #{ctlLevel}
+        </if>
+    </select>
+</mapper>

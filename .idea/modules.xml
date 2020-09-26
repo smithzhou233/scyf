@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ProjectModuleManager">
+    <modules>
+      <module fileurl="file://$PROJECT_DIR$/scyf.iml" filepath="$PROJECT_DIR$/scyf.iml" />
+      <module fileurl="file://$PROJECT_DIR$/scyf-api/scyf-api.iml" filepath="$PROJECT_DIR$/scyf-api/scyf-api.iml" />
+      <module fileurl="file://$PROJECT_DIR$/scyf-common/scyf-common.iml" filepath="$PROJECT_DIR$/scyf-common/scyf-common.iml" />
+      <module fileurl="file://$PROJECT_DIR$/scyf-entity/scyf-entity.iml" filepath="$PROJECT_DIR$/scyf-entity/scyf-entity.iml" />
+      <module fileurl="file://$PROJECT_DIR$/scyf-mapper/scyf-mapper.iml" filepath="$PROJECT_DIR$/scyf-mapper/scyf-mapper.iml" />
+      <module fileurl="file://$PROJECT_DIR$/scyf-service/scyf-service.iml" filepath="$PROJECT_DIR$/scyf-service/scyf-service.iml" />
+      <module fileurl="file://$PROJECT_DIR$/scyf-web/scyf-web.iml" filepath="$PROJECT_DIR$/scyf-web/scyf-web.iml" />
+    </modules>
+  </component>
+</project>

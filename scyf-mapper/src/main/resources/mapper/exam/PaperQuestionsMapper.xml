@@ -1,0 +1,150 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.hngf.mapper.exam.PaperQuestionsMapper">
+
+    <sql id="PaperQuestionsColumns">
+        a.paper_questions_id,
+        a.paper_mark_id,
+        a.questions_id,
+        a.group_id,
+        a.company_id,
+        a.created_by,
+        a.updated_by,
+        a.created_time,
+        a.updated_time,
+        a.del_flag
+    </sql>
+
+    <select id="findList" resultType="PaperQuestions">
+        select
+            <include refid="PaperQuestionsColumns"/>
+        from
+            scyf_paper_questions a
+        where
+            a.del_flag = 0
+	</select>
+
+    <select id="findById" resultType="PaperQuestions" parameterType="Long">
+        select
+            a.paper_questions_id as paperQuestionsId ,
+            a.paper_mark_id as paperMarkId ,
+            a.questions_id as questionsId ,
+            a.group_id as groupId ,
+            a.company_id as companyId ,
+            a.created_by as createdBy ,
+            a.updated_by as updatedBy ,
+            DATE_FORMAT( a.created_time, '%Y-%m-%d %H:%i' ) as createdTimeStr ,
+            a.created_time as createdTime
+        from
+            scyf_paper_questions a
+        where
+            a.paper_questions_id = #{id} and a.del_flag = 0
+        order by created_time desc LIMIT  1
+	</select>
+
+    <insert id="add" parameterType="PaperQuestions" useGeneratedKeys="true" keyProperty="paperQuestionsId">
+        INSERT INTO scyf_paper_questions (
+            paper_mark_id,
+            questions_id,
+            group_id,
+            company_id,
+            created_by,
+            updated_by,
+            created_time,
+            updated_time,
+            del_flag)
+        VALUES (
+            #{paperMarkId},
+            #{questionsId},
+            #{groupId},
+            #{companyId},
+            #{createdBy},
+            #{updatedBy},
+            #{createdTime},
+            #{updatedTime},
+            #{delFlag}
+        )
+    </insert>
+
+    <update id="update" parameterType="PaperQuestions">
+        UPDATE scyf_paper_questions a
+        <trim prefix="set" suffixOverrides=","  suffix="where a.paper_questions_id = #{paperQuestionsId}">
+            <if test=" null != paperMarkId ">
+                a.paper_mark_id = #{paperMarkId},
+            </if>
+            <if test=" null != questionsId ">
+                a.questions_id = #{questionsId},
+            </if>
+            <if test=" null != groupId ">
+                a.group_id = #{groupId},
+            </if>
+            <if test=" null != companyId ">
+                a.company_id = #{companyId},
+            </if>
+            <if test=" null != updatedBy ">
+                a.updated_by = #{updatedBy},
+            </if>
+            <if test=" null != updatedTime ">
+                a.updated_time = #{updatedTime},
+            </if>
+        </trim>
+    </update>
+
+    <update id="deleteById" parameterType="Long">
+        UPDATE scyf_paper_questions a SET
+            a.del_flag = 1, a.updated_by = #{updatedBy}, a.updated_time = now()
+        where a.paper_questions_id = #{id}
+    </update>
+
+    <update id="deleteByIds" parameterType="java.util.List">
+        UPDATE scyf_paper_questions a SET
+            a.del_flag = 1, a.updated_by = #{updatedBy}, a.updated_time = now()
+        where a.paper_questions_id in
+        <foreach collection="ids" item="id" open="(" close=")" separator="," index="idx">
+            #{id}
+        </foreach>
+    </update>
+
+    <!-- 批量增加 试卷试题关联 -->
+    <insert id="addBatch" parameterType="java.util.List">
+        INSERT INTO scyf_paper_questions (
+            paper_mark_id,
+            questions_id,
+            group_id,
+            company_id,
+            created_by,
+            created_time,
+            del_flag)
+        VALUES
+        <foreach collection="paperQuestionsList" item="item" index="index"  separator="," >
+            (#{item.paperMarkId},
+            #{item.questionsId},
+            #{item.groupId},
+            #{item.companyId},
+            #{item.createdBy},
+            #{item.createdTime},
+            #{item.delFlag})
+        </foreach>
+    </insert>
+    <!-- 批量删除 试卷试题关联 -->
+    <update id="deleteBatch" parameterType="java.util.List">
+        UPDATE scyf_paper_questions a SET
+        a.del_flag = 1, a.updated_by = #{updatedBy}, a.updated_time = now()
+        where a.paper_mark_id in
+        <foreach collection="paperMarkIds" item="id" open="(" close=")" separator="," index="idx">
+            #{id}
+        </foreach>
+    </update>
+
+    <select id="getCountByQuestionsId" parameterType="Long" resultType="Long" >
+        select COUNT(a.paper_questions_id) from scyf_paper_questions a where a.questions_id = #{questionsId} and a.del_flag = 0
+    </select>
+
+    <update id="deleteBatchByPaperId" parameterType="Long" >
+        UPDATE scyf_paper_questions a
+        SET a.del_flag = 1, a.updated_by = #{updatedBy}, a.updated_time = now()
+        WHERE EXISTS ( SELECT pm.paper_mark_id FROM scyf_paper_mark pm where pm.paper_id = #{paperId} and pm.paper_mark_id = a.paper_mark_id and pm.del_flag = 0  )
+    </update>
+
+</mapper>

@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="Encoding">
+    <file url="file://$PROJECT_DIR$" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/scyf-api" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/scyf-common" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/scyf-entity" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/scyf-mapper" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/scyf-service" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/scyf-web" charset="UTF-8" />
+  </component>
+</project>

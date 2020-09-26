@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.hngf.mapper.sys.UserSiteMapper">
+
+    <sql id="UserSiteColumns">
+        a.site_id,
+        a.user_id,
+        a.company_id,
+        a.group_id,
+        a.longitude,
+        a.latitude,
+        a.phone_code,
+        a.site_time,
+        a.created_time
+    </sql>
+
+    <select id="findList" resultType="UserSite">
+        select
+            <include refid="UserSiteColumns"/>
+        from
+            sys_user_site a
+	</select>
+
+    <select id="findById" resultType="UserSite" parameterType="Long">
+        select
+            <include refid="UserSiteColumns"/>
+        from
+            sys_user_site a
+        where
+            a.site_id = #{id}
+	</select>
+
+    <select id="findByMap" resultType="UserSite" parameterType="map">
+        select
+            <include refid="UserSiteColumns"/>
+        from
+            sys_user_site a
+        where
+            a.user_id = #{userId}
+            and a.company_id = #{companyId}
+            and a.group_id = #{groupId}
+        <if test="phoneCode != null and phoneCode != ''">
+            and a.phone_code = #{phoneCode}
+        </if>
+	</select>
+
+    <insert id="add" parameterType="UserSite">
+        INSERT INTO sys_user_site (
+            user_id,
+            company_id,
+            group_id,
+            longitude,
+            latitude,
+            phone_code,
+            site_time,
+            created_time)
+        VALUES (
+            #{userId},
+            #{companyId},
+            #{groupId},
+            #{longitude},
+            #{latitude},
+            #{phoneCode},
+            #{siteTime},
+            #{createdTime}
+        )
+
+    </insert>
+
+    <update id="update" parameterType="UserSite">
+        UPDATE sys_user_site a
+        <trim prefix="set" suffixOverrides=",">
+            <if test="longitude != null and longitude != ''">
+                a.longitude = #{longitude},
+            </if>
+            <if test="latitude != null and latitude != ''">
+                a.latitude = #{latitude},
+            </if>
+            <if test="phoneCode != null and phoneCode != ''">
+                a.phone_code = #{phoneCode},
+            </if>
+            <if test="siteTime != null">
+                a.site_time = #{siteTime},
+            </if>
+        </trim>
+        where site_id = #{siteId}
+    </update>
+
+</mapper>

@@ -1,0 +1,165 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.hngf.mapper.risk.RiskCtrlLevelMapper">
+    <sql id="Base_Column_List">
+             risk_ctrl_level_id as "riskCtrlLevelId",
+             company_id as "companyId",
+             risk_ctrl_level_title as "riskCtrlLevelTitle",
+             risk_ctrl_level_value as "riskCtrlLevelValue",
+             risk_ctrl_level_desc as "riskCtrlLevelDesc",
+             risk_ctrl_level_fixed as "riskCtrlLevelFixed",
+             risk_ctrl_level_status as "riskCtrlLevelStatus",
+             created_by as "createdBy",
+             created_time as "createdTime",
+             updated_by as "updatedBy",
+             updated_time as "updatedTime",
+             del_flag as "delFlag"
+    </sql>
+    <!--根据条件返回相应的列表-->
+    <select id="findList" resultType="com.hngf.entity.risk.RiskCtrlLevel">
+		select
+		<include refid="Base_Column_List"/>
+        from scyf_risk_ctrl_level
+        <where>
+            del_flag = 0
+            <if test="companyId != null and companyId != ''">
+                and company_id=#{companyId}
+            </if>
+            <if test="riskCtrlLevelId != null and riskCtrlLevelId != ''">
+                and risk_ctrl_level_id=#{riskCtrlLevelId}
+            </if>
+            <if test="keyword != null and keyword != ''">
+                and (risk_ctrl_level_title like "%"#{keyword}"%")
+            </if>
+        </where>
+        ORDER BY risk_ctrl_level_value DESC
+
+	</select>
+    <!--通过企业id查询统计是否存在-->
+    <select id="count" resultType="java.lang.Integer">
+        select count(company_id) as "Count" from scyf_risk_ctrl_level where company_id=#{companyId}
+    </select>
+
+    <select id="findById" resultType="com.hngf.entity.risk.RiskCtrlLevel" parameterType="Long">
+		select * from scyf_risk_ctrl_level
+        where del_flag = 0 and risk_ctrl_level_id = #{id}
+	</select>
+    <!--根据企业id 获取企业管控层级信息-->
+    <select id="getRiskCtrlLevelList" resultType="java.util.Map">
+        SELECT
+        <include refid="Base_Column_List"/>
+        FROM
+        scyf_risk_ctrl_level
+        WHERE  del_flag = 0
+        <if test="companyId != null">
+            AND company_id = #{companyId, jdbcType=BIGINT}
+        </if>
+        ORDER BY risk_ctrl_level_value DESC
+    </select>
+
+    <insert id="add" parameterType="com.hngf.entity.risk.RiskCtrlLevel">
+        INSERT INTO scyf_risk_ctrl_level (
+        company_id,
+        risk_ctrl_level_title,
+        risk_ctrl_level_value,
+        risk_ctrl_level_desc,
+        risk_ctrl_level_fixed,
+        risk_ctrl_level_status,
+        created_by,
+        created_time,
+        updated_by,
+        updated_time,
+        del_flag
+        )
+        VALUES (
+        #{companyId},
+        #{riskCtrlLevelTitle},
+        #{riskCtrlLevelValue},
+        #{riskCtrlLevelDesc},
+        #{riskCtrlLevelFixed},
+        #{riskCtrlLevelStatus},
+        #{createdBy},
+        #{createdTime},
+        #{updatedBy},
+        #{updatedTime},
+        #{delFlag}
+        )
+
+    </insert>
+
+    <update id="update" parameterType="com.hngf.entity.risk.RiskCtrlLevel">
+        UPDATE scyf_risk_ctrl_level
+        <trim suffixOverrides=",">
+        <set>
+        <if test="companyId != null and companyId != ''">
+        company_id = #{companyId},
+        </if>
+        <if test="riskCtrlLevelTitle != null and riskCtrlLevelTitle != ''">
+        risk_ctrl_level_title = #{riskCtrlLevelTitle},
+        </if>
+        <if test="riskCtrlLevelValue != null ">
+        risk_ctrl_level_value = #{riskCtrlLevelValue},
+        </if>
+        <if test="riskCtrlLevelDesc != null ">
+        risk_ctrl_level_desc = #{riskCtrlLevelDesc},
+        </if>
+        <if test="riskCtrlLevelFixed != null ">
+        risk_ctrl_level_fixed = #{riskCtrlLevelFixed},
+        </if>
+        <if test="riskCtrlLevelStatus != null ">
+        risk_ctrl_level_status = #{riskCtrlLevelStatus},
+        </if>
+        <if test="updatedBy != null and updatedBy != ''">
+        updated_by = #{updatedBy},
+        </if>
+        <if test="updatedTime != null">
+        updated_time = #{updatedTime},
+        </if>
+        </set>
+        </trim>
+        where risk_ctrl_level_id = #{riskCtrlLevelId}
+    </update>
+
+    <update id="deleteById" parameterType="Long">
+        UPDATE scyf_risk_ctrl_level a SET
+        a.del_flag = 1 , a.updated_by = #{updatedBy}, a.updated_time = now()
+        where a.risk_ctrl_level_id = #{id}
+        AND NOT EXISTS ( SELECT rc.risk_id FROM scyf_risk_ctrl rc WHERE rc.risk_ctrl_level_id =  #{id}  AND rc.del_flag = 0 )
+    </update>
+
+    <update id="deleteByIds" parameterType="java.util.List">
+        UPDATE scyf_risk_ctrl_level SET
+        del_flag = 1
+        where risk_ctrl_level_id in
+        <foreach collection="ids" item="id" open="(" close=")" separator="," index="idx">
+            #{id}
+        </foreach>
+    </update>
+
+    <!--管控层级-->
+    <select id="getCurrentUserCtlLevel" resultType="java.lang.Integer">
+		SELECT
+	        max( ercl.risk_ctrl_level_value ) AS ctl_level
+        FROM
+            ent_risk_ctrl def,
+            ent_risk_ctrl_level ercl,
+            ent_risk r
+        where def.risk_ctrl_position_id = #{pId}
+        and def.c_id = #{cId}
+        and ercl.c_id = def.c_id
+        and ercl.risk_ctrl_level_id = def.risk_ctrl_level_id and ercl.risk_ctrl_level_value is not null
+        AND def.risk_id = r.risk_id
+	    and r.deleted_flag= 0
+    </select>
+
+    <select id="getUsedCount" parameterType="Long" resultType="java.lang.Long">
+        select count(risk_id) from scyf_risk_ctrl  where risk_ctrl_level_id = #{riskCtrlLevelId} and del_flag = 0
+    </select>
+
+    <update id="deleteBatchByCompanyId" parameterType="java.lang.Long">
+        UPDATE scyf_risk_ctrl_level SET
+        del_flag = 1 , updated_by = #{updatedBy} ,updated_time = now()
+        WHERE company_id = #{companyId}
+    </update>
+</mapper>

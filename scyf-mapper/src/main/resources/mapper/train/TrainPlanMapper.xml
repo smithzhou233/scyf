@@ -1,0 +1,230 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.hngf.mapper.train.TrainPlanMapper">
+
+     <!--手机查询培训计划列表-->
+    <select id="findList" resultType="java.util.Map">
+		select
+        a.train_plan_id       AS  "trainPlanId",
+        a.train_plan_name     AS   "trainPlanName",
+        a.train_type          AS   "trainType",
+        DATE_FORMAT(a.train_plan_date,'%Y-%m-%d %H:%i:%s') trainPlanDate,
+        DATE_FORMAT(a.train_plan_end_date,'%Y-%m-%d %H:%i:%s') trainPlanEndDate,
+        a.train_plan_content  AS   "trainPlanContent",
+        a.train_plan_address  AS   "trainPlanAddress",
+        a.warn_flag           AS    "warnFlag",
+        a.train_group_ids     AS    "trainGroupIds",
+        DATE_FORMAT(a.created_time,'%Y-%m-%d %H:%i:%s') createdTime,
+        a.created_by          AS    "createdBy",
+        b.dict_name           AS     "dictName",
+        CASE
+        WHEN (now() > a.train_plan_date) THEN "1"
+        ELSE "0" END
+        as "planStatus"
+		from scyf_train_plan a LEFT JOIN sys_dict b on a.train_type=b.dict_code
+        <where>
+            a.del_flag = 0
+            AND b.dict_type='train_type'
+            <if test="groupId != null and groupId != ''">
+                AND a.train_plan_date >= now()
+            </if>
+            <if test="companyId != null and companyId != ''">
+                AND a.company_id = #{companyId}
+            </if>
+            <if test="groupId != null and groupId != ''">
+                AND find_in_set(#{groupId},a.train_group_ids)
+            </if>
+            <if test="keyword != null and keyword != ''">
+                AND a.train_plan_name like "%"#{keyword}"%"
+            </if>
+        </where>
+	</select>
+    <!--PC查询培训计划列表-->
+    <select id="findListPc" resultType="java.util.Map">
+        select
+        a.train_plan_id       AS  "trainPlanId",
+        a.train_plan_name     AS   "trainPlanName",
+        a.train_type          AS   "trainType",
+        DATE_FORMAT(a.train_plan_date,'%Y-%m-%d %H:%i:%s') trainPlanDate,
+        DATE_FORMAT(a.train_plan_end_date,'%Y-%m-%d %H:%i:%s') trainPlanEndDate,
+        a.train_plan_content  AS   "trainPlanContent",
+        a.train_plan_address  AS   "trainPlanAddress",
+        a.warn_flag           AS    "warnFlag",
+        a.train_group_ids     AS    "trainGroupIds",
+        DATE_FORMAT(a.created_time,'%Y-%m-%d %H:%i:%s') createdTime,
+        a.created_by          AS    "createdBy",
+        CASE
+        WHEN (now() > a.train_plan_date) THEN "1"
+        ELSE "0" END
+        as "planStatus",
+        CASE
+        WHEN a.created_by=#{userId} THEN "1"
+        ELSE "0" END
+        as "belongMe"
+        from scyf_train_plan a
+        <where>
+            a.del_flag = 0
+            <if test="companyId != null and companyId != ''">
+                AND a.company_id = #{companyId}
+            </if>
+            <if test="groupId != null and groupId != ''">
+                AND find_in_set(#{groupId},a.train_group_ids)
+            </if>
+            <if test="keyword != null and keyword != ''">
+                AND  LOCATE(#{keyword},a.train_plan_name)  &gt; 0
+            </if>
+        </where>
+    </select>
+    <!--根据培训计划id回显培训计划-->
+    <select id="findById" resultType="java.util.Map" parameterType="Integer">
+		select
+		a.train_plan_id       AS  "trainPlanId",
+        a.train_plan_name     AS   "trainPlanName",
+        a.train_type          AS   "trainType",
+        a.train_plan_date     AS   "trainPlanDate",
+        a.train_plan_end_date AS   "trainPlanEndDate",
+        a.train_plan_content  AS   "trainPlanContent",
+        a.train_plan_address  AS   "trainPlanAddress",
+        a.train_group_ids     AS    "trainGroupIds",
+        a.warn_flag           AS    "warnFlag",
+        b.dict_name           AS     "dictName",
+		GROUP_CONCAT(sg.group_name) as trainGroupNames
+		from scyf_train_plan a
+		LEFT JOIN sys_dict b on a.train_type=b.dict_code
+		LEFT JOIN 	sys_group             AS  sg on FIND_IN_SET( sg. group_id ,a.train_group_ids)
+        where a.del_flag = 0 and a.train_plan_id = #{id} and b.dict_type='train_type'
+       	GROUP BY a.train_plan_id
+	</select>
+    <select id="isDel" resultType="java.util.Map">
+        SELECT
+        a.train_info_id
+        FROM scyf_train_info a
+        <where>
+            a.del_flag=0
+            and a.train_plan_id=#{trainPlanId,jdbcType=BIGINT}
+        </where>
+    </select>
+    <!--查看培训计划类型-->
+    <select id="selectTrainType" resultType="java.util.Map">
+        SELECT
+        a.dict_name AS "dictName",
+        a.dict_code AS "dictCode"
+        FROM sys_dict  a
+        <where>
+            a.del_flag=0
+            and a.dict_type=#{trainType}
+        </where>
+    </select>
+    <!--查看字典类型-->
+    <select id="getType" resultType="java.lang.String">
+        SELECT
+        dict_name
+        FROM sys_dict
+        where dict_type=#{dictType} and dict_code=#{trainType}
+    </select>
+    <!--新增培训计划-->
+    <insert id="add" parameterType="com.hngf.entity.train.TrainPlan" useGeneratedKeys="true" keyProperty="trainPlanId">
+        INSERT INTO scyf_train_plan (
+                                         company_id
+        ,                                group_id
+        ,                                train_plan_name
+        ,                                train_type
+        ,                                train_plan_date
+        ,train_plan_end_date
+        ,                                train_plan_content
+        ,                                train_plan_address
+        ,                                warn_flag
+        ,                                train_group_ids
+        ,                                created_time
+        ,                                created_by
+        ,                                updated_time
+        ,                                updated_by
+        ,                                del_flag
+                                )
+        VALUES (
+                                           #{companyId}
+        ,                                  #{groupId}
+        ,                                  #{trainPlanName}
+        ,                                  #{trainType}
+        ,                                  #{trainPlanDate}
+        ,#{trainPlanEndDate}
+        ,                                  #{trainPlanContent}
+        ,                                  #{trainPlanAddress}
+        ,                                  #{warnFlag}
+        ,                                  #{trainGroupIds}
+        ,                                  #{createdTime}
+        ,                                  #{createdBy}
+        ,                                  #{updatedTime}
+        ,                                  #{updatedBy}
+        ,                                  0
+                                  )
+
+    </insert>
+    <!--修改培训计划-->
+    <update id="update" parameterType="com.hngf.entity.train.TrainPlan">
+                UPDATE scyf_train_plan SET
+                    <if test="trainPlanName != null and trainPlanName != ''">
+                    train_plan_name = #{trainPlanName} ,
+                     </if>
+                     <if test="trainType != null and trainType != ''">
+                    train_type = #{trainType} ,
+                     </if>
+                     <if test="trainPlanDate != null">
+                    train_plan_date = #{trainPlanDate,jdbcType=TIMESTAMP} ,
+                     </if>
+                     <if test="trainPlanEndDate != null">
+                         train_plan_end_date = #{trainPlanEndDate,jdbcType=TIMESTAMP} ,
+                     </if>
+                     <if test="trainPlanContent != null and trainPlanContent != ''">
+                    train_plan_content = #{trainPlanContent} ,
+                     </if>
+                     <if test="trainPlanAddress != null and trainPlanAddress != ''">
+                    train_plan_address = #{trainPlanAddress} ,
+                    </if>
+                    <if test="trainGroupIds != null and trainGroupIds != ''">
+                     train_group_ids = #{trainGroupIds} ,
+                    </if>
+                    <if test=" warnFlag != null and warnFlag != '' ">
+                    warn_flag = #{warnFlag} ,
+                    </if>
+                    <if test=" 0 ==  warnFlag ">
+                        warn_flag = #{warnFlag} ,
+                    </if>
+                    <if test="updatedTime != null">
+                    updated_time = #{updatedTime} ,
+                    </if>
+                    <if test="updatedBy != null and updatedBy != ''">
+                    updated_by = #{updatedBy}
+                    </if>
+                    <where>
+                        train_plan_id = #{trainPlanId}
+                    </where>
+
+    </update>
+    <!--单个删除培训计划-->
+    <update id="deleteById" parameterType="Long">
+        UPDATE scyf_train_plan SET
+        del_flag = 1, updated_by = #{updatedBy}, updated_time = now()
+        where train_plan_id = #{id}
+    </update>
+    <!--批量删除培训计划-->
+    <update id="deleteByIds" parameterType="java.util.List">
+        UPDATE scyf_train_plan SET
+        del_flag = 1
+        where train_plan_id in
+        <foreach collection="ids" item="id" open="(" close=")" separator="," index="idx">
+            #{id}
+        </foreach>
+    </update>
+   <!-- 修改培训计划 是否提前一天预警-->
+    <update id="updateWarnFlag">
+        UPDATE scyf_train_plan SET
+        warn_flag = #{warnFlag} , updated_by = #{updatedBy}, updated_time = now()
+        <where>
+            del_flag = 0
+           and train_plan_id=#{trainPlanId}
+        </where>
+    </update>
+
+</mapper>

@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.hngf.mapper.sys.CompanyIndustryMapper">
+
+
+    <select id="findList" resultType="com.hngf.entity.sys.CompanyIndustry">
+		select * from sys_company_industry
+        where del_flag = 0
+	</select>
+
+    <select id="findById" resultType="com.hngf.entity.sys.CompanyIndustry" parameterType="Long">
+		select * from sys_company_industry
+        where del_flag = 0 and company_id = #{id}
+	</select>
+
+    <insert id="add" parameterType="com.hngf.entity.sys.CompanyIndustry">
+        INSERT INTO sys_company_industry (
+                                                                                                                industry_id
+                                            ,
+                                                                                    org_id
+                                            ,
+                                                                                    created_by
+                                            ,
+                                                                                    created_time
+                                            ,
+                                                                                    updated_by
+                                            ,
+                                                                                    updated_time
+                                            ,
+                                                                                    del_flag
+                                                        )
+        VALUES (
+                                                                                                                #{industryId}
+
+                                            ,
+                                                                                    #{orgId}
+
+                                            ,
+                                                                                    #{createdBy}
+
+                                            ,
+                                                                                    #{createdTime}
+
+                                            ,
+                                                                                    #{updatedBy}
+
+                                            ,
+                                                                                    #{updatedTime}
+
+                                            ,
+                                                                                    #{delFlag}
+
+                                                        )
+
+    </insert>
+
+    <update id="update" parameterType="com.hngf.entity.sys.CompanyIndustry">
+        UPDATE sys_company_industry SET
+
+                                                        industry_id = #{industryId}
+
+                                    ,
+                                                                org_id = #{orgId}
+
+                                    ,
+                                                                created_by = #{createdBy}
+
+                                    ,
+                                                                created_time = #{createdTime}
+
+                                    ,
+                                                                updated_by = #{updatedBy}
+
+                                    ,
+                                                                updated_time = #{updatedTime}
+
+                                    ,
+                                                                del_flag = #{delFlag}
+
+                                    
+        where company_id = #{companyId}
+    </update>
+
+    <update id="deleteById" parameterType="Long">
+        UPDATE sys_company_industry SET
+        del_flag = 1
+        where company_id = #{id}
+    </update>
+
+    <update id="deleteByIds" parameterType="java.util.List">
+        UPDATE sys_company_industry SET
+        del_flag = 1
+        where company_id in
+        <foreach collection="ids" item="id" open="(" close=")" separator="," index="idx">
+            #{id}
+        </foreach>
+    </update>
+
+
+
+</mapper>

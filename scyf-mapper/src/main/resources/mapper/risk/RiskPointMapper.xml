@@ -1,0 +1,949 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.hngf.mapper.risk.RiskPointMapper">
+
+
+    <select id="findList" resultType="java.util.Map">
+		SELECT
+            rp.risk_point_id AS "riskPointId",
+            rp.company_id AS "companyId",
+            rp.risk_point_name AS "riskPointName",
+            rp.duty_group_id AS "dutyGroupId",
+            rp.duty_person AS "dutyPerson",
+            rp.is_active AS "isActive",
+            rp.nfc_bind AS "nfcBind",
+            rp.qrCode_bind AS "qrCodeBind",
+            rp.risk_point_level AS "riskPointLevel",
+            rp.risk_tag_list AS "riskTagList",
+            rp.is_ip_camera AS "isIpCamera",
+            rp.ip_camera_url AS "ipCameraUrl",
+            rp.risk_point_desc AS "riskPointDesc",
+            rp.start_time AS "startTime",
+            rp.end_time AS "endTime",
+            rp.risk_point_img AS "riskPointImg",
+            rp.danger_src_id AS "dangerSrcId",
+            rp.is_out_of_control AS "isOutOfControl",
+            rp.risk_point_places AS "riskPointPlaces",
+            rp.risk_point_type AS "riskPointType",
+            IFNULL(rp.danger_source_number,"") AS "dangerSourceNumber",
+            IFNULL(rp.hdanger_number,"") AS "hdangerNumber",
+            rp.risk_number AS "riskNumber",
+            group_concat( DISTINCT acc.user_name ) AS dutyPersonNames,
+            g.group_name AS dutyGroupName,
+            count( erpm.map_id ) AS mapCount,
+            cbi.company_name AS "companyName"
+        FROM
+            scyf_risk_point rp
+            LEFT JOIN scyf_risk_record risk ON risk.risk_point_id = rp.risk_point_id
+            LEFT JOIN sys_group g ON rp.duty_group_id = g.group_id
+            AND rp.company_id = g.company_id
+            LEFT JOIN scyf_risk_point_person_liable pl ON rp.company_id = pl.company_id
+            AND rp.risk_point_id = pl.risk_point_id
+            LEFT JOIN sys_user acc ON pl.user_id = acc.user_id
+            AND pl.company_id = acc.company_id
+            LEFT JOIN scyf_risk_point_map erpm ON erpm.risk_point_id = rp.risk_point_id
+            AND erpm.company_id = rp.company_id
+            LEFT JOIN sys_company cbi ON cbi.company_id = rp.company_id
+        WHERE
+            IF ( rp.is_active = 1, ( rp.end_time > now() OR rp.end_time IS NULL ), '1 = 1' )
+            AND rp.del_flag = 0
+        <if test="keyword != null and keyword != ''">
+            and (
+            rp.risk_point_name like "%"#{keyword}"%"
+            )
+        </if>
+        <if test="isOutOfControl != null and isOutOfControl !=''">
+            AND rp.is_out_of_control = #{isOutOfControl}
+        </if>
+        <if test="isActive != null and isActive != '' ">
+            AND rp.is_active = #{isActive}
+        </if>
+        <if test="riskPointLevel != null and riskPointLevel != ''">
+            AND rp.risk_point_level = #{riskPointLevel}
+        </if>
+        <if test="dutyGroupId != null and dutyGroupId != ''">
+            AND FIND_IN_SET(rp.duty_group_id ,fu_getChildrenGroup(#{dutyGroupId}))
+        </if>
+        <if test="riskPointType != null and riskPointType != ''">
+            AND rp.risk_point_type=#{riskPointType}
+        </if>
+        <if test="companyId != null and companyId != ''">
+            AND rp.company_id=#{companyId}
+        </if>
+        GROUP BY rp.risk_point_id
+        ORDER BY rp.is_active DESC,rp.is_out_of_control DESC,rp.risk_point_level ASC
+	</select>
+
+    <select id="findRiskPointList" resultType="RiskPoint">
+        SELECT
+            rp.risk_point_id AS "riskPointId",
+            rp.risk_point_name AS "riskPointName",
+            rp.qrCode_bind AS "qrCodeBind",
+            rp.nfc_bind AS "nfcBind",
+            rp.risk_point_level AS "riskPointLevel",
+            rp.risk_point_type AS "riskPointType",
+            g.group_name as dutyGroupName,
+            sg.group_name AS parentGroupName
+        FROM
+            scyf_risk_point rp
+            LEFT JOIN sys_group g ON g.company_id = rp.company_id AND rp.duty_group_id = g.group_id
+            LEFT JOIN sys_group sg ON sg.company_id = g.company_id AND sg.group_id = g.group_parent
+        WHERE
+            IF ( rp.is_active = 1, ( rp.end_time > now( ) OR rp.end_time IS NULL ), '1=1' )
+            AND rp.del_flag =0
+        <if test="companyId != null">
+            AND rp.company_id = #{companyId}
+        </if>
+        <if test="keyword != null and keyword != ''">
+            and (rp.risk_point_name like "%"#{keyword}"%")
+        </if>
+        <if test="riskPointType != null and riskPointType != ''">
+            and rp.risk_point_type = #{riskPointType}
+        </if>
+        <if test="dutyGroupId != null  and dutyGroupId != ''">
+            AND FIND_IN_SET(rp.duty_group_id ,fu_getChildrenGroup(#{dutyGroupId}))
+        </if>
+        GROUP BY rp.risk_point_id
+        ORDER BY rp.is_active DESC,rp.is_out_of_control DESC,rp.risk_point_level ASC
+    </select>
+    <!--风险点信息回显-->
+    <select id="findById" resultType="RiskPoint" parameterType="Long">
+		SELECT
+            rp.risk_point_id AS "riskPointId",
+            rp.company_id AS "companyId",
+            rp.risk_point_name AS "riskPointName",
+            rp.duty_group_id AS "dutyGroupId",
+            rp.duty_person AS "dutyPerson",
+            rp.nfc_bind AS "nfcBind",
+            rp.qrCode_bind AS "qrCodeBind",
+            rp.risk_point_level AS "riskPointLevel",
+            rp.is_great_danger_src AS "isGreatDangerSrc",
+            rp.risk_tag_list AS "riskTagList",
+            rp.is_ip_camera AS "isIpCamera",
+            rp.ip_camera_url AS "ipCameraUrl",
+            rp.risk_point_desc AS "riskPointDesc",
+            rp.is_active AS "isActive",
+            rp.start_time AS "startTime",
+            rp.end_time AS "endTime",
+            rp.risk_point_img AS "riskPointImg",
+            rp.danger_src_id AS "dangerSrcId",
+            IFNULL(rp.danger_source_number,"") AS "dangerSourceNumber",
+            IFNULL(rp.hdanger_number,"") AS "hdangerNumber",
+            rp.risk_number AS "riskNumber",
+            rp.risk_point_type AS "riskPointType",
+            rp.is_out_of_control AS "isOutOfControl",
+            rp.risk_point_places AS "riskPointPlaces",
+            ( SELECT cbi.company_name FROM sys_company cbi WHERE cbi.company_id = rp.company_id and cbi.del_flag=0) AS companyName,
+            GROUP_CONCAT(distinct erppl.user_id ) AS dutyPersons,
+            GROUP_CONCAT(distinct a.user_name ) AS dutyPersonNames,
+            GROUP_CONCAT(distinct erpct.inspect_type_id ) AS checkedTable,
+            g.group_name AS dutyGroupName,
+            ( SELECT GROUP_CONCAT( risk_danger_id ) FROM scyf_risk_point_danger_source WHERE risk_point_id = rp.risk_point_id and del_flag=0) AS dangerSourceIds,
+            ( SELECT risk_danger_name FROM scyf_risk_source WHERE risk_danger_id = rp.danger_src_id and del_flag=0) AS dangerSrcName
+        FROM
+            scyf_risk_point rp
+            LEFT JOIN scyf_risk_point_person_liable erppl ON rp.company_id = erppl.company_id
+            AND erppl.risk_point_id = rp.risk_point_id
+            LEFT JOIN sys_user AS a ON a.user_id = erppl.user_id
+            AND a.company_id = erppl.company_id
+            LEFT JOIN sys_group g ON g.group_id = rp.duty_group_id
+            AND g.company_id = rp.company_id
+            LEFT JOIN scyf_inspect_point_rel erpct ON erpct.risk_point_id = rp.risk_point_id
+            AND erpct.company_id = rp.company_id
+        WHERE rp.del_flag = 0
+        and rp.risk_point_id = #{id}
+	</select>
+     <!--风险，风险点统计柱形图-->
+     <select id="riskPointLvCount" resultType="String">
+         SELECT
+        IFNULL(count(rp.risk_point_id),'0') as lvCount
+        from scyf_risk_point rp
+        LEFT JOIN sys_group g on g.company_id=rp.company_id and rp.duty_group_id=g.group_id
+        LEFT JOIN sys_group sg on sg.company_id=g.company_id and sg.group_id=g.group_parent
+        where
+        IF (rp.is_active = 1,(rp.end_time > now() OR rp.end_time IS NULL),'1=1')
+        and rp.del_flag=0
+        AND rp.company_id = #{companyId}
+         <if test="riskPointLevel != null and riskPointLevel != ''">
+             and rp.risk_point_level=#{riskPointLevel}
+         </if>
+     </select>
+    <select id="findRiskPointById" resultType="RiskPoint" parameterType="Long">
+		SELECT
+            *
+        FROM
+            scyf_risk_point rp
+        WHERE rp.del_flag = 0
+        and rp.risk_point_id = #{value}
+	</select>
+
+
+    <select id="countByMap"
+            resultType="Integer" parameterType="Map">
+		select count(1)
+		from scyf_risk_point
+		where del_flag = 0
+        <if test="riskPointId != null and riskPointId != ''">
+            and risk_point_id not in(#{riskPointId})
+        </if>
+        <if test="companyId != null and companyId != ''">
+            and company_id = #{companyId}
+        </if>
+        <if test="riskPointName != null and riskPointName != ''">
+            and risk_point_name = #{riskPointName}
+        </if>
+	</select>
+
+    <update id="updateIsActive">
+		UPDATE scyf_risk_point SET
+		    is_active = #{isActive}
+		where 1=1
+        <if test="riskPointIdList != null and riskPointIdList.size()>0">
+            and risk_point_id in
+            <foreach collection="riskPointIdList" item="id" open="(" close=")"
+                     separator="," index="idx">
+                #{id}
+            </foreach>
+        </if>
+
+	</update>
+
+    <insert id="add" parameterType="RiskPoint" useGeneratedKeys="true" keyProperty="riskPointId">
+		INSERT INTO scyf_risk_point (
+		company_id
+		, risk_point_name
+		, duty_group_id
+		, duty_person
+		, nfc_bind
+		, qrCode_bind
+		, risk_point_level
+		, is_great_danger_src
+		, risk_tag_list
+		, is_ip_camera
+		, ip_camera_url
+		, risk_point_desc
+		, is_active
+		, start_time
+		, end_time
+		, risk_point_img
+		, danger_src_id
+		, danger_source_number
+		, hdanger_number
+		, risk_number
+		, risk_point_type
+		, is_out_of_control
+		, risk_point_places
+		, created_time
+		, created_by
+		, del_flag
+		)
+		VALUES (
+		#{companyId}
+		, #{riskPointName}
+		, #{dutyGroupId}
+		, #{dutyPerson}
+		, #{nfcBind}
+		, #{qrcodeBind}
+		, #{riskPointLevel}
+		, #{isGreatDangerSrc}
+		, #{riskTagList}
+		, #{isIpCamera}
+		, #{ipCameraUrl}
+		, #{riskPointDesc}
+		, #{isActive}
+		, #{startTime}
+		, #{endTime}
+		, #{riskPointImg}
+		, #{dangerSrcId}
+		, #{dangerSourceNumber}
+		, #{hdangerNumber}
+		, #{riskNumber}
+		, #{riskPointType}
+		, #{isOutOfControl}
+		, #{riskPointPlaces}
+		, #{createdTime}
+		, #{createdBy}
+		, 0
+		)
+
+	</insert>
+
+    <update id="update"
+            parameterType="RiskPoint">
+        UPDATE scyf_risk_point
+        <trim prefix="set" suffixOverrides=",">
+        <if test="companyId != null and companyId != ''">
+            company_id = #{companyId} ,
+        </if>
+        <if test="riskPointName != null and riskPointName != ''">
+            risk_point_name = #{riskPointName} ,
+        </if>
+        <if test="dutyGroupId != null and dutyGroupId != ''">
+            duty_group_id = #{dutyGroupId} ,
+        </if>
+        <if test="dutyPerson != null and dutyPerson != ''">
+            duty_person = #{dutyPerson} ,
+        </if>
+        <if test="nfcBind != null and nfcBind != ''">
+            nfc_bind = #{nfcBind} ,
+        </if>
+        <if test="qrcodeBind != null and qrcodeBind != ''">
+            qrCode_bind = #{qrcodeBind} ,
+        </if>
+        <if test="riskPointLevel != null and riskPointLevel != ''">
+            risk_point_level = #{riskPointLevel} ,
+        </if>
+        <if test="isGreatDangerSrc != null and isGreatDangerSrc != ''">
+            is_great_danger_src = #{isGreatDangerSrc} ,
+        </if>
+        <if test="riskTagList != null and riskTagList != ''">
+            risk_tag_list = #{riskTagList} ,
+        </if>
+        <if test="isIpCamera != null and isIpCamera != '' or isIpCamera==0 ">
+            is_ip_camera = #{isIpCamera} ,
+        </if>
+        <if test="ipCameraUrl != null and ipCameraUrl != ''">
+            ip_camera_url = #{ipCameraUrl} ,
+        </if>
+        <if test="riskPointDesc != null and riskPointDesc != ''">
+            risk_point_desc = #{riskPointDesc} ,
+        </if>
+        <if test="isActive != null and isActive != ''">
+            is_active = #{isActive} ,
+        </if>
+        <if test="startTime != null">
+            start_time = #{startTime} ,
+        </if>
+        <if test="endTime != null">
+            end_time = #{endTime} ,
+        </if>
+        <if test="riskPointImg != null">
+            risk_point_img = #{riskPointImg} ,
+        </if>
+        <if test="dangerSrcId != null and dangerSrcId != ''">
+            danger_src_id = #{dangerSrcId} ,
+        </if>
+        <if test="dangerSourceNumber != null and dangerSourceNumber != ''">
+            danger_source_number = #{dangerSourceNumber} ,
+        </if>
+        <if test="hdangerNumber != null and hdangerNumber != '' or hdangerNumber==0 ">
+            hdanger_number = #{hdangerNumber} ,
+        </if>
+        <if test="riskNumber != null and riskNumber != ''">
+            risk_number = #{riskNumber} ,
+        </if>
+        <if test="riskPointType != null and riskPointType != ''">
+            risk_point_type = #{riskPointType} ,
+        </if>
+        <if test="isOutOfControl != null and isOutOfControl !='' or isOutOfControl==0 ">
+            is_out_of_control = #{isOutOfControl} ,
+        </if>
+        <if test="riskPointPlaces != null and riskPointPlaces != ''">
+            risk_point_places = #{riskPointPlaces} ,
+        </if>
+        <if test="updatedTime != null">
+            updated_time = #{updatedTime},
+        </if>
+        <if test="updatedBy != null">
+            updated_by = #{updatedBy},
+        </if>
+        </trim>
+        where risk_point_id = #{riskPointId}
+    </update>
+
+    <update id="deleteById" parameterType="Long">
+		UPDATE scyf_risk_point SET
+		del_flag = 1
+		where risk_point_id = #{id}
+	</update>
+
+    <update id="deleteByIds" parameterType="java.util.List">
+        UPDATE scyf_risk_point SET
+        del_flag = 1
+        where risk_point_id in
+        <foreach collection="ids" item="id" open="(" close=")"
+                 separator="," index="idx">
+            #{id}
+        </foreach>
+    </update>
+    <update id="updateBatchById">
+        <foreach collection="list" item="emp" separator=";">
+            UPDATE scyf_risk_point
+            <set>
+                <if test="emp.riskNumber != null">
+                    risk_number = #{emp.riskNumber},
+                </if>
+                <if test="emp.riskPointLevel != null">
+                    risk_point_level = #{emp.riskPointLevel},
+                </if>
+            </set>
+            WHERE risk_point_id = #{emp.riskPointId}
+        </foreach>
+    </update>
+
+    <!--任务下的风险点列表-->
+    <select id="findSchduleRiskPoint" resultType="map">
+        <if test="ctlLevel != null and ctlLevel != ''">
+            select * from (
+        </if>
+        SELECT
+        rp.risk_point_id as riskPointId,
+        rp.company_id as companyId,
+        rp.risk_point_name AS riskPointName,
+        rp.risk_point_level riskPointLevel,
+        ifnull(rp.risk_point_img,'') as riskPointImg,
+        rp.is_out_of_control AS isOutOfControl,
+        rp.risk_point_type AS riskPointType,
+        #{scheduleId} AS scheduleId,
+        <if test="type != null and type != ''">
+        #{type} as isChecktype,
+        </if>
+        ifnull(
+        (select ifnull(erpcrl.checked_count,0)
+        from scyf_inspect_schdule_check_record erpcrl
+        where erpcrl.risk_point_id = rp.risk_point_id
+        and erpcrl.company_id = rp.company_id
+        and erpcrl.inspect_schedule_id = #{scheduleId}
+        <if test="userId != null">
+            and erpcrl.created_by = #{userId}
+        </if>
+        ),0) as checkedCount,
+        ifnull(
+        (select ifnull(erpcrl.check_record_no,0)
+        from scyf_inspect_schdule_check_record erpcrl
+        where erpcrl.risk_point_id = rp.risk_point_id
+        and erpcrl.company_id = rp.company_id
+        and erpcrl.inspect_schedule_id = #{scheduleId}
+        <if test="userId != null">
+            and erpcrl.created_by = #{userId}
+        </if>
+        ),0) as checkRecordNo
+        FROM scyf_risk_point rp
+        LEFT JOIN sys_group g ON rp.duty_group_id = g.group_id AND rp.company_id = g.company_id
+        LEFT JOIN scyf_risk_point_person_liable pl ON rp.company_id = pl.company_id AND rp.risk_point_id = pl.risk_point_id
+        LEFT JOIN scyf_inspect_schdule_check_record erpcr ON (erpcr.risk_point_id = rp.risk_point_id
+        AND erpcr.inspect_schedule_id = #{scheduleId}
+        <!--AND erpcr.checked_count = #{checkNumber}-->
+        and erpcr.created_by = #{userId} AND erpcr.company_id = #{companyId})
+        where
+        IF (rp.is_active = 1,(rp.end_time > now() OR rp.end_time IS NULL),'1=1')
+        and rp.del_flag = 0
+        AND rp.company_id = #{companyId}
+        <!--任务下的风险点 已检查-->
+        <if test="type == 1">
+            AND erpcr.risk_point_id is not null
+            AND erpcr.risk_point_id = rp.risk_point_id
+            AND erpcr.inspect_schedule_id = #{scheduleId}
+            <!--AND erpcr.checked_count = #{checkNumber} -->
+        </if>
+
+        <!--任务下的风险点 未检查-->
+        <if test='type == 0'>
+            AND erpcr.risk_point_id is null
+        </if>
+        <if test="keyword != null and keyword != ''">
+            and (rp.risk_point_name like "%"#{keyword}"%")
+        </if>
+        <if test="isOutOfControl != null and isOutOfControl !=-1">
+            and rp.is_out_of_control = #{isOutOfControl}
+        </if>
+        <if test="isActive != null and isActive !=-1">
+            and rp.is_active = #{isActive}
+        </if>
+        <if test="riskPointLevel != null and riskPointLevel != '' and riskPointLevel !=-1">
+            and rp.risk_point_level = #{riskPointLevel}
+        </if>
+        <if test="riskPointType != null and riskPointType != '' and riskPointType != 'null' ">
+            and rp.risk_point_type = #{riskPointType}
+        </if>
+
+        <if test="userId != null">
+            and pl.user_id=#{userId}
+        </if>
+        <if test="isGreatDangerSrc != null">
+            and rp.is_great_danger_src=#{isGreatDangerSrc}
+        </if>
+        GROUP BY rp.risk_point_id
+        ORDER BY rp.risk_point_id
+        <if test="ctlLevel != null and ctlLevel != ''">
+            ) as tempa
+        </if>
+        <if test="ctlLevel != null and ctlLevel != ''">
+            right join (
+            SELECT
+            rcd.company_id ,
+            risk.risk_point_id as rpId
+            FROM
+            scyf_risk_ctrl rcd
+            left join scyf_risk_ctrl_level ercl on rcd.risk_ctrl_level_id = ercl.risk_ctrl_level_id and
+            rcd.company_id=ercl.company_id
+            LEFT JOIN scyf_risk_record risk ON risk.risk_id = rcd.risk_id and risk.company_id = #{companyId}
+            WHERE
+            rcd.company_id = #{companyId}
+            <![CDATA[
+                AND ercl.risk_ctrl_level_value <= #{ctlLevel}
+             ]]>
+            and risk.risk_point_id is not null
+            group by risk.risk_point_id
+            )as c ON (tempa.riskPointId=c.rpId AND tempa.companyId = c.company_id)
+            where
+            tempa.riskPointId IS NOT NULL
+            GROUP BY tempa.riskPointId
+            order by tempa.isOutOfControl desc
+        </if>
+    </select>
+
+    <!--no  App查询我管控风险点 off 登录人部门风险点-->
+    <select id="queryRiskPointPage" resultType="map">
+        <if test="ctlLevel != null and ctlLevel != ''">
+            select * from (
+        </if>
+        SELECT
+        rp.risk_point_id     AS  "risk_point_id",
+        rp.company_id        AS  "company_id",
+        rp.risk_point_name   AS  "riskPointName",
+        rp.duty_group_id     AS  "dutGroupId",
+        rp.duty_person       AS  "dutyPerson",
+        rp.is_active         AS  "isActive",
+        rp.nfc_bind          AS  "nfcBind",
+        rp.qrCode_bind       AS  "qrCodeBind",
+        rp.risk_point_level  AS  "riskPointLevel",
+        rp.risk_tag_list     AS  "riskTagList",
+        rp.is_ip_camera      AS  "isIpCamera",
+        rp.ip_camera_url     AS  "ipCameraUrl",
+        rp.risk_point_desc   AS  "riskPointDesc",
+        rp.start_time        AS  "startTime",
+        rp.end_time          AS  "endTime",
+        rp.risk_point_img    AS  "riskPointImg",
+        rp.danger_src_id     AS  "dangerSrcId",
+        rp.is_out_of_control AS  "is_out_of_control",
+        rp.risk_point_places AS  "riskPointPlaces",
+        rp.risk_point_type   AS  "riskPointType",
+        rp.danger_source_number  AS  "dangerSourceNumber",
+        rp.hdanger_number   AS   "hdangerNumber",
+        rp.risk_number      AS   "riskNumber",
+        rp.created_by       AS   "createdBy",
+        (select count(erpcrl.record_id)
+        from scyf_risk_point_check_record_log erpcrl
+        where erpcrl.risk_point_id = rp.risk_point_id
+        and erpcrl.company_id = rp.company_id
+        <if test="createdBy != null and createdBy != '' and module == 1">
+            and erpcrl.created_by = #{createdBy}
+        </if>
+        ) as checkNumberToday,
+        group_concat(DISTINCT acc.user_name ) AS userName,
+        g.group_name AS groupName,
+        count(DISTINCT erpwp.user_id) as spotUserCount,
+        count(erpm.map_id) as mapCount
+        FROM scyf_risk_point rp
+        LEFT JOIN scyf_risk_record risk ON risk.risk_point_id = rp.risk_point_id and risk.company_id = #{companyId}
+        LEFT JOIN sys_group g ON rp.duty_group_id = g.group_id AND rp.company_id = g.company_id
+        LEFT JOIN scyf_risk_point_person_liable pl ON rp.company_id = pl.company_id AND rp.risk_point_id = pl.risk_point_id
+        LEFT JOIN sys_user acc ON pl.user_id = acc.user_id AND pl.company_id = acc.company_id
+        LEFT JOIN scyf_risk_point_map erpm on erpm.risk_point_id = rp.risk_point_id and erpm.company_id=rp.company_id
+        LEFT JOIN scyf_risk_point_scene_person erpwp on (erpwp.risk_point_id = rp.risk_point_id)
+        where
+        IF (rp.is_active = 1,(rp.end_time > now()OR rp.end_time IS NULL),'1=1')
+        AND rp.del_flag = 0
+        AND rp.company_id = #{companyId}
+
+        <if test="isOutOfControl != null and isOutOfControl != '' ">
+            and rp.is_out_of_control = #{isOutOfControl}
+        </if>
+        <if test="isActive != null and isActive != '' ">
+            and rp.is_active = #{isActive}
+        </if>
+        <if test="riskPointLevel != null and riskPointLevel != '' and riskPointLevel != ''">
+            and rp.risk_point_level = #{riskPointLevel}
+        </if>
+        <if test="riskPointType != null and riskPointType != '' and riskPointType != 'null' ">
+            and rp.risk_point_type = #{riskPointType}
+        </if>
+        <if test="aId != null and aId != ''">
+            and pl.user_id=#{aId}
+        </if>
+        /*责任部门检索*/
+        <if test="dutyGroupId != null and dutyGroupId != ''">
+            and rp.duty_group_id=#{dutyGroupId}
+        </if>
+        GROUP BY rp.risk_point_id
+        ORDER BY rp.is_active desc,rp.is_out_of_control DESC,rp.risk_point_level asc
+        <if test="ctlLevel != null and ctlLevel != ''">
+            ) as tempa
+        </if>
+        <if test="ctlLevel != null and ctlLevel != ''">
+            right join (
+            SELECT
+            rcd.company_id as companyId,
+            risk.risk_point_id as rpId
+            FROM
+            scyf_risk_ctrl rcd
+            left join scyf_risk_ctrl_level ercl on rcd.risk_ctrl_level_id = ercl.risk_ctrl_level_id and
+            rcd.company_id=ercl.company_id
+            LEFT JOIN scyf_risk_record risk ON risk.risk_id = rcd.risk_id and risk.company_id = #{companyId}
+            WHERE
+            rcd.company_id = #{companyId}
+            <![CDATA[
+                AND ercl.risk_ctrl_level_value <= #{ctlLevel}
+             ]]>
+            and risk.risk_point_id is not null
+            group by risk.risk_point_id
+            )as c ON tempa.risk_point_id=c.rpId
+            AND tempa.company_id = c.companyId
+            where
+            tempa.risk_point_id IS NOT NULL
+            GROUP BY tempa.risk_point_id
+            order by tempa.is_out_of_control desc
+        </if>
+    </select>
+
+    <select id="findRiskPointDangerSrc" resultType="RiskSource">
+        SELECT
+            eds.risk_danger_id,
+            eds.risk_danger_name,
+            eds.risk_danger_img,
+            eds.risk_danger_level,
+            (
+            CASE
+            eds.risk_danger_level
+            WHEN 1 THEN '（重大）'
+            WHEN 2 THEN '（较大）'
+            WHEN 3 THEN '（一般）'
+            WHEN 4 THEN '（低）'
+            ELSE ''
+            END
+            ) AS risk_danger_level_name,
+            eds.risk_danger_type
+        from scyf_risk_record err
+        left join scyf_risk_source eds on (eds.risk_danger_id = err.risk_danger_id and eds.del_flag = 0)
+        left join scyf_risk risk on (risk.risk_id = err.risk_id and risk.del_flag = 0)
+        where
+        err.company_id = #{companyId}
+        and err.risk_point_id = #{riskPointId}
+        and err.del_flag = 0
+        <if test="ctlLevel == 3">
+            AND risk.risk_level in (1,2,3)
+        </if>
+        <if test="ctlLevel == 2">
+            AND risk.risk_level in (1,2)
+        </if>
+        <if test="ctlLevel == 1">
+            AND risk.risk_level = 1
+        </if>
+        GROUP BY eds.risk_danger_id
+        order by eds.risk_danger_level
+    </select>
+
+    <!--风险分级责任台账-->
+    <select id="findAllListByType" resultType="java.util.Map">
+        SELECT
+        rp.risk_point_name as riskPointName,
+        rp.risk_point_type as riskPointType,
+        r.risk_id as riskId,
+        r.risk_name as riskName,
+        r.risk_code as riskCode,
+        r.risk_hram_factor as riskHramFactor,
+        r.risk_consequence as riskConsequence,
+        r.risk_type_id as riskTypeId,
+        r.risk_level as riskLevel,
+        group_concat(DISTINCT acc.user_name ) AS personLiableName,
+        sds.node_level AS riskDangerLevel,
+        sds.risk_danger_name AS riskDangerName,
+        dsp.risk_danger_name AS parentRiskDangerName,
+        rds.risk_danger_name AS rootRiskDangerName,
+        temp.s_position_title AS positionTitle,
+        temp.level_title AS riskCtrlLevelTitle
+        <if test="controlMeasure != null and controlMeasure != ''">
+            ,
+            MAX(CASE WHEN erm.risk_measure_type_id = '1' THEN erm.risk_measure_content ELSE '' END) AS "project",
+            MAX(CASE WHEN erm.risk_measure_type_id = '2' THEN erm.risk_measure_content ELSE '' END) AS "manage",
+            MAX(CASE WHEN erm.risk_measure_type_id = '3' THEN erm.risk_measure_content ELSE '' END) AS "education",
+            MAX(CASE WHEN erm.risk_measure_type_id = '4' THEN erm.risk_measure_content ELSE '' END) AS "emergency",
+            MAX(CASE WHEN erm.risk_measure_type_id = '5' THEN erm.risk_measure_content ELSE '' END) AS "protection"
+        </if>
+        FROM scyf_risk_point rp
+        LEFT JOIN sys_group g ON rp.duty_group_id = g.group_id AND rp.company_id = g.company_id
+        LEFT JOIN scyf_risk_record rr on rr.risk_point_id = rp.risk_point_id
+        left join scyf_risk r on r.risk_id = rr.risk_id
+        LEFT JOIN scyf_risk_source sds ON r.risk_danger_id = sds.risk_danger_id
+        LEFT JOIN scyf_risk_source dsp ON dsp.risk_danger_id = sds.parent_risk_danger_id
+        LEFT JOIN scyf_risk_source rds ON sds.root_node = rds.risk_danger_id
+        LEFT JOIN (
+        SELECT GROUP_CONCAT(sp.position_title) AS s_position_title,ercl.risk_ctrl_level_title as level_title,e.risk_id as risk_id FROM scyf_risk_ctrl e
+        LEFT JOIN sys_position sp ON sp.position_id = e.risk_ctrl_position_id
+        LEFT JOIN scyf_risk_ctrl_level ercl ON ercl.risk_ctrl_level_id = e.risk_ctrl_level_id GROUP BY risk_id )temp ON temp.risk_id = r.risk_id
+
+        LEFT JOIN scyf_risk_point_person_liable pl ON rp.company_id = pl.company_id AND rp.risk_point_id = pl.risk_point_id
+        LEFT JOIN sys_user acc ON pl.user_id = acc.user_id AND pl.company_id = acc.company_id
+        <if test="controlMeasure != null and controlMeasure != ''">
+            LEFT JOIN scyf_risk_measure erm on erm.risk_id = r.risk_id and erm.company_id = rp.company_id
+        </if>
+
+        WHERE r.del_flag = 0 AND rr.risk_id IS NOT NULL
+        AND rp.del_flag = 0
+        AND rp.company_id = #{companyId}
+        <if test="groupId != null and groupId != '' ">
+            AND rp.duty_group_id=#{groupId}
+        </if>
+        group by rp.risk_point_id,temp.risk_id
+        ORDER BY rp.risk_point_id ,r.risk_code ASC
+    </select>
+    <!--预警产生原因-->
+    <select id="causeReasons" resultType="java.util.Map">
+        SELECT
+        a.dict_name  AS "causeReason",
+        a.dict_code AS "causeValue"
+        FROM sys_dict a
+        where
+         a.del_flag=0
+         AND a.dict_type=#{type}
+        ORDER BY dict_id
+    </select>
+    <!--风险分布图 风险点数量总计-->
+    <select id="riskPointCount" resultType="java.lang.String">
+        SELECT
+        IFNULL(count(rp.risk_point_id),'0') as lvCount
+        from scyf_risk_point rp
+        LEFT JOIN sys_group g on g.company_id=rp.company_id and rp.duty_group_id=g.group_id
+        LEFT JOIN sys_group sg on sg.company_id=g.company_id and sg.group_id=g.group_parent
+        where
+        IF (rp.is_active = 1,(rp.end_time > now() OR rp.end_time IS NULL),'1=1')
+        and rp.del_flag=0
+        AND rp.company_id = #{companyId}
+        <if test="groupId != null and groupId != ''">
+            and rp.duty_group_id=#{groupId}
+        </if>
+    </select>
+
+    <!--风险点数量总计 - 大屏-->
+    <select id="riskPointLvCountBigScreen" resultType="Map">
+        SELECT
+        rp.risk_point_level as riskPointLevel,COUNT(rp.risk_point_id ) as lvCount
+        from scyf_risk_point rp
+        LEFT JOIN sys_group g on g.company_id=rp.company_id and rp.duty_group_id=g.group_id
+        LEFT JOIN sys_group sg on sg.company_id=g.company_id and sg.group_id=g.group_parent
+        where
+        IF (rp.is_active = 1,(rp.end_time > now() OR rp.end_time IS NULL),'1=1')
+        and rp.del_flag=0
+        AND rp.company_id = #{companyId}
+        <if test="keyword != null and keyword != ''">
+            and (rp.risk_point_name like "%"#{keyword}"%")
+        </if>
+        <if test="riskPointType != null and riskPointType != ''and riskPointType != -1">
+            and rp.risk_point_type = #{riskPointType}
+        </if>
+        <if test="groupId != null and groupId != ''">
+            AND FIND_IN_SET(g.group_id ,fu_getChildrenGroup(#{groupId}))
+        </if>
+        group by rp.risk_point_level
+    </select>
+
+    <select id="warningRiskPoint" resultType="map" parameterType="map">
+        SELECT
+        rp.risk_point_level rPlv,
+        count( 0 ) rpCount
+        FROM
+        scyf_risk_point rp
+        left join sys_group g on g.group_id = rp.duty_group_id and rp.company_id = g.company_id
+        WHERE
+        IF
+        ( rp.is_active = 1, ( rp.end_time > now( ) OR rp.end_time IS NULL ), '1=1' )
+        AND rp.del_flag = 0
+        <if test="groupId != null and groupId != ''">
+            AND FIND_IN_SET(g.group_id ,fu_getChildrenGroup(#{groupId}))
+        </if>
+        AND rp.company_id = #{companyId}
+        AND rp.is_out_of_control = 1
+        GROUP BY
+        rp.risk_point_level
+    </select>
+    <select id="findAllRiskPoint" resultType="Map">
+        SELECT
+        rp.risk_point_id as riskPointId,
+        rp.risk_point_name AS riskPointName,
+        g.group_name AS groupName,
+        rp.risk_point_level AS riskPointLevel,
+        rp.is_out_of_control AS isOutOfControl,
+        group_concat( DISTINCT acc.user_name ) AS userName,
+        rp.risk_point_img AS riskPointImg,
+        rp.risk_point_type AS riskPointType,
+        rp.risk_number AS riskNumber
+        FROM
+        scyf_risk_point rp
+        LEFT JOIN sys_group g ON ( g.company_id = rp.company_id AND rp.duty_group_id = g.group_id )
+        LEFT JOIN scyf_risk_point_person_liable pl ON ( rp.company_id = pl.company_id AND rp.risk_point_id = pl.risk_point_id )
+        LEFT JOIN sys_user acc ON ( pl.user_id = acc.user_id AND pl.company_id = acc.company_id )
+        WHERE IF( rp.is_active = 1, ( rp.end_time > now() OR rp.end_time IS NULL ), '1=1' )
+        AND rp.del_flag = 0
+        <if test="companyId != null and companyId != ''">
+            AND rp.company_id = #{companyId}
+        </if>
+        <if test="groupId != null and groupId != ''">
+            AND FIND_IN_SET(g.group_id ,fu_getChildrenGroup(#{groupId}))
+        </if>
+        GROUP BY rp.risk_point_id
+        ORDER BY
+        rp.is_out_of_control DESC,
+        rp.risk_point_level
+    </select>
+
+    <!-- 查询集团下的企业的风险点列表 -->
+    <select id="findRiskPointForGent" parameterType="map" resultType="map">
+        SELECT
+        rp.risk_point_id     AS  "risk_point_id",
+        rp.company_id        AS  "company_id",
+        rp.risk_point_name   AS  "riskPointName",
+        rp.duty_group_id     AS  "dutGroupId",
+        rp.duty_person       AS  "dutyPerson",
+        rp.is_active         AS  "isActive",
+        rp.nfc_bind          AS  "nfcBind",
+        rp.qrCode_bind       AS  "qrCodeBind",
+        rp.risk_point_level  AS  "riskPointLevel",
+        rp.risk_tag_list     AS  "riskTagList",
+        rp.is_ip_camera      AS  "isIpCamera",
+        rp.ip_camera_url     AS  "ipCameraUrl",
+        rp.risk_point_desc   AS  "riskPointDesc",
+        rp.start_time        AS  "startTime",
+        rp.end_time          AS  "endTime",
+        rp.risk_point_img    AS  "riskPointImg",
+        rp.danger_src_id     AS  "dangerSrcId",
+        rp.is_out_of_control AS  "is_out_of_control",
+        rp.risk_point_places AS  "riskPointPlaces",
+        rp.risk_point_type   AS  "riskPointType",
+        rp.danger_source_number  AS  "dangerSourceNumber",
+        rp.hdanger_number   AS   "hdangerNumber",
+        rp.risk_number      AS   "riskNumber",
+        rp.created_by       AS   "createdBy",
+        (SELECT COUNT(erpcrl.record_id)
+        FROM scyf_risk_point_check_record_log erpcrl
+        where erpcrl.risk_point_id = rp.risk_point_id
+        and erpcrl.company_id = rp.company_id
+        ) AS checkNumberToday,
+        group_concat(DISTINCT acc.user_name ) AS userName,
+        g.group_name AS groupName,
+        count(DISTINCT erpwp.user_id) as spotUserCount,
+        count(erpm.map_id) as mapCount
+        ,cbi.company_name as companyName
+        FROM scyf_risk_point rp
+        LEFT JOIN scyf_risk_record risk ON risk.risk_point_id = rp.risk_point_id and risk.company_id = #{companyId}
+        LEFT JOIN sys_group g ON rp.duty_group_id = g.group_id AND rp.company_id = g.company_id
+        LEFT JOIN scyf_risk_point_person_liable pl ON rp.company_id = pl.company_id AND rp.risk_point_id = pl.risk_point_id
+        LEFT JOIN sys_user acc ON pl.user_id = acc.user_id AND pl.company_id = acc.company_id
+        LEFT JOIN scyf_risk_point_map erpm on erpm.risk_point_id = rp.risk_point_id and erpm.company_id=rp.company_id
+        LEFT JOIN scyf_risk_point_scene_person erpwp on (erpwp.risk_point_id = rp.risk_point_id)
+        LEFT JOIN sys_company cbi on cbi.company_id = rp.company_id
+        WHERE
+        IF (rp.is_active = 1,(rp.end_time > now()OR rp.end_time IS NULL),'1=1')
+        AND rp.del_flag = 0
+        AND cbi.company_root_id = #{companyRootId}
+
+        <if test="keyword != null and keyword != ''">
+            AND (rp.risk_point_name LIKE "%"#{keyword}"%")
+        </if>
+        <if test="isOutOfControl != null and isOutOfControl !=-1">
+            AND rp.is_out_of_control = #{isOutOfControl}
+        </if>
+        <if test="isActive != null and isActive != '' ">
+            and rp.is_active = #{isActive}
+        </if>
+        <if test="riskPointLevel != null and riskPointLevel != '' and riskPointLevel !=-1">
+            AND rp.risk_point_level = #{riskPointLevel}
+        </if>
+        GROUP BY rp.risk_point_id
+        ORDER BY rp.is_active DESC,rp.is_out_of_control DESC,rp.risk_point_level ASC
+    </select>
+
+    <!--查询监管级 重大风险点-->
+    <select id="getRiskPointListByCompanyId" resultType="java.util.Map">
+        SELECT
+        rp.risk_point_id     AS  "riskPointId",
+        rp.company_id        AS  "companyId",
+        rp.risk_point_name   AS  "riskPointName",
+        rp.duty_group_id     AS  "dutGroupId",
+        rp.duty_person       AS  "dutyPerson",
+        rp.is_active         AS  "isActive",
+        rp.nfc_bind          AS  "nfcBind",
+        rp.qrCode_bind       AS  "qrCodeBind",
+        rp.risk_point_level  AS  "riskPointLevel",
+        rp.risk_tag_list     AS  "riskTagList",
+        rp.is_ip_camera      AS  "isIpCamera",
+        rp.ip_camera_url     AS  "ipCameraUrl",
+        rp.risk_point_desc   AS  "riskPointDesc",
+        rp.start_time        AS  "startTime",
+        rp.end_time          AS  "endTime",
+        rp.risk_point_img    AS  "riskPointImg",
+        rp.danger_src_id     AS  "dangerSrcId",
+        rp.is_out_of_control AS  "isOutOfControl",
+        rp.risk_point_places AS  "riskPointPlaces",
+        rp.risk_point_type   AS  "riskPointType",
+        rp.danger_source_number  AS  "dangerSourceNumber",
+        rp.hdanger_number   AS   "hdangerNumber",
+        rp.risk_number      AS   "riskNumber",
+        rp.created_by       AS   "createdBy",
+        sc.company_name as companyName,
+        si.industry_name as industryName
+        FROM scyf_risk_point rp
+        left join sys_company sc on sc.company_id = rp.company_id
+        left join sys_industry si on si.industry_code = sc.industry_type_coe
+        where
+        IF (rp.is_active = 1,(rp.end_time > now()OR rp.end_time IS NULL),'1=1')
+        AND rp.del_flag = 0
+        <if test="industyTypeCodeList != null and industyTypeCodeList.size>0">
+               and sc.industry_type_coe in (
+            <foreach collection="industyTypeCodeList" item="item" separator=",">
+                #{item.industryCode}
+            </foreach>
+            )
+        </if>
+        <if test="industryCode != null and industryCode != ''">
+            and sc.industry_type_coe = #{industryCode}
+        </if>
+        <if test="keyword != null and keyword != ''">
+            and (rp.risk_point_name like "%"#{keyword}"%")
+        </if>
+        <if test="isOutOfControl != null and isOutOfControl !=-1">
+            and rp.is_out_of_control = #{isOutOfControl}
+        </if>
+        <if test="companyId != null and companyId != ''">
+            and rp.company_id=#{companyId}
+        </if>
+        <if test="riskPointLevel != null and riskPointLevel != '' and riskPointLevel !=-1">
+            and rp.risk_point_level = #{riskPointLevel}
+        </if>
+    </select>
+
+    <select id="findByQrCode" parameterType="String" resultType="RiskPoint">
+  select
+        rp.*
+        from scyf_risk_point rp
+        where
+        rp.qrCode_bind = #{qrCode,jdbcType=VARCHAR}
+    </select>
+    <!--风险点子部门总数 - 风险点总数鼠标悬浮使用-->
+    <select id="findRiskPointChuldrenCount" parameterType="map" resultType="map">
+        SELECT
+            count( 1 ) riskCount,
+            r.risk_point_level AS riskPointLevel,
+            sg.group_id as groupId,
+            sg.group_name AS groupName
+        FROM
+            scyf_risk_point r
+            left join sys_group sg on sg.group_id = r.duty_group_id
+        WHERE
+        IF
+            ( r.is_active = 1, ( r.end_time > now( ) OR r.end_time IS NULL ), '1 = 1' )
+            and r.company_id = #{companyId}
+            AND FIND_IN_SET( sg.group_id, fu_getChildrenGroup (#{groupId}))
+            AND r.del_flag = 0
+        <if test="riskPointLevel != null and riskPointLevel != '' and riskPointLevel !=-1">
+            AND r.risk_point_level = #{riskPointLevel}
+        </if>
+        GROUP BY
+            r.duty_group_id
+        ORDER BY
+        r.duty_group_id
+    </select>
+
+
+</mapper>

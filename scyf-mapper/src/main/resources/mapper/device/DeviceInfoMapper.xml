@@ -1,0 +1,344 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.hngf.mapper.device.DeviceInfoMapper">
+
+    <sql id="DeviceInfoColumns">
+        a.device_id,
+        a.company_id,
+        a.group_id,
+        a.device_type_id,
+        a.risk_point_id,
+        a.device_name,
+        a.device_number,
+        a.device_model,
+        a.device_brand,
+        a.device_position,
+        a.responsible,
+        a.device_remark,
+        a.device_status,
+        a.backup2,
+        a.backup3,
+        a.created_time,
+        a.updated_time,
+        a.created_by,
+        a.updated_by,
+        a.del_flag,
+        a.responsible_phone,
+        a.operating_personnel,
+        a.device_acceptor,
+        a.acceptor_time,
+        a.security_number,
+        a.security_time,
+        a.device_unit,
+        a.device_time,
+        a.proactively_time,
+        a.exit_time,
+        a.device_info,
+        a.device_personnel_info,
+        a.device_register_info,
+        a.device_acceptance_info
+    </sql>
+    <!--查看设备管理列表-->
+    <select id="findList" resultType="DeviceInfo">
+       select
+        a.device_id,
+        a.company_id,
+        a.group_id,
+        sd.dict_name as deviceTypeId,
+        a.risk_point_id,
+        a.device_name,
+        a.device_number,
+        a.device_model,
+        a.device_brand,
+        a.device_position,
+        a.device_remark,
+        a.device_status,
+        a.backup2,
+        a.backup3,
+        a.created_time,
+        a.updated_time,
+        a.created_by,
+        a.updated_by,
+        a.del_flag,
+        a.responsible_phone,
+        a.acceptor_time,
+        a.security_number,
+        a.security_time,
+        a.device_unit,
+        a.device_time,
+        a.proactively_time,
+        a.exit_time,
+        a.device_info,
+        a.device_personnel_info,
+        a.device_register_info,
+        a.device_acceptance_info,
+        sg.group_name,
+    (select GROUP_CONCAT(user_name) from sys_user where del_flag=0 and FIND_IN_SET(user_id,a.responsible)) as responsible,
+    (select GROUP_CONCAT(user_name) from sys_user where del_flag=0 and FIND_IN_SET(user_id,a.operating_personnel)) as operatingPersonnel,
+    (select GROUP_CONCAT(user_name) from sys_user where del_flag=0 and FIND_IN_SET(user_id,a.device_acceptor)) as deviceAcceptor
+    from scyf_device_info a LEFT JOIN sys_dict sd ON a.device_type_id=sd.dict_code and sd.dict_type='device_info'
+    left join sys_group sg on sg.group_id=a.group_id
+    <where>
+        a.del_flag=0
+       <if test="companyId != null">
+          and a.company_id=#{companyId}
+       </if>
+        <if test="groupId != null">
+            and a.group_id=#{groupId}
+        </if>
+        <if test="deviceTypeId != null and deviceTypeId != ''">
+            and a.device_type_id=#{deviceTypeId}
+        </if>
+        <if test="deviceStatus != null">
+            and a.device_status=#{deviceStatus}
+        </if>
+        <if test="keyword != null and keyword != ''">
+            and (
+            a.device_model like "%"#{keyword}"%"
+            or a.device_number like "%"#{keyword}"%"
+            or a.device_position like "%"#{keyword}"%"
+            or a.device_remark like "%"#{keyword}"%"
+            or a.device_name like "%"#{keyword}"%"
+            )
+        </if>
+    </where>
+        ORDER BY a.created_time
+	</select>
+
+    <select id="findById" resultType="DeviceInfo" parameterType="Long">
+      select
+        a.device_id,
+        a.company_id,
+        a.group_id,
+        sd.dict_name as deviceTypeId,
+        a.risk_point_id,
+        a.device_name,
+        a.device_number,
+        a.device_model,
+        a.device_brand,
+        a.device_position,
+        a.device_remark,
+        a.device_status,
+        a.backup2,
+        a.backup3,
+        a.created_time,
+        a.updated_time,
+        a.created_by,
+        a.updated_by,
+        a.del_flag,
+        a.responsible_phone,
+        a.acceptor_time,
+        a.security_number,
+        a.security_time,
+        a.device_unit,
+        a.device_time,
+        a.proactively_time,
+        a.exit_time,
+        a.device_info,
+        a.device_personnel_info,
+        a.device_register_info,
+        a.device_acceptance_info,
+        sg.group_name,
+    (select GROUP_CONCAT(user_name) from sys_user where del_flag=0 and FIND_IN_SET(user_id,a.responsible)) as responsible,/*责任人*/
+    (select GROUP_CONCAT(user_name) from sys_user where del_flag=0 and FIND_IN_SET(user_id,a.operating_personnel)) as operatingPersonnel,
+    (select GROUP_CONCAT(user_name) from sys_user where del_flag=0 and FIND_IN_SET(user_id,a.device_acceptor)) as deviceAcceptor
+    from scyf_device_info a LEFT JOIN sys_dict sd ON a.device_type_id=sd.dict_code and sd.dict_type='device_info'
+    left join sys_group sg on sg.group_id=a.group_id
+    where
+            a.del_flag = 0 and a.device_id = #{id}
+	</select>
+
+    <insert id="add" parameterType="DeviceInfo">
+        INSERT INTO scyf_device_info (
+            company_id,
+            group_id,
+            device_type_id,
+            risk_point_id,
+            device_name,
+            device_number,
+            device_model,
+            device_brand,
+            device_position,
+            responsible,
+            device_remark,
+            device_status,
+            backup2,
+            backup3,
+            created_time,
+            updated_time,
+            created_by,
+            updated_by,
+            del_flag,
+            responsible_phone,
+            operating_personnel,
+            device_acceptor,
+            acceptor_time,
+            security_number,
+            security_time,
+            device_unit,
+            device_time,
+            proactively_time,
+            exit_time,
+            device_info,
+            device_personnel_info,
+            device_register_info,
+            device_acceptance_info)
+        VALUES (
+            #{companyId},
+            #{groupId},
+            #{deviceTypeId},
+            #{riskPointId},
+            #{deviceName},
+            #{deviceNumber},
+            #{deviceModel},
+            #{deviceBrand},
+            #{devicePosition},
+            #{responsible},
+            #{deviceRemark},
+            #{deviceStatus},
+            #{backup2},
+            #{backup3},
+            #{createdTime},
+            #{updatedTime},
+            #{createdBy},
+            #{updatedBy},
+            #{delFlag},
+            #{responsiblePhone},
+            #{operatingPersonnel},
+            #{deviceAcceptor},
+            #{acceptorTime},
+            #{securityNumber},
+            #{securityTime},
+            #{deviceUnit},
+            #{deviceTime},
+            #{proactivelyTime},
+            #{exitTime},
+            #{deviceInfo},
+            #{devicePersonnelInfo},
+            #{deviceRegisterInfo},
+            #{deviceAcceptanceInfo}
+        )
+
+    </insert>
+
+    <update id="update" parameterType="DeviceInfo">
+        UPDATE scyf_device_info a SET
+            <if test="companyId != null">
+                a.company_id = #{companyId},
+            </if>
+            <if test="groupId != null">
+                a.group_id = #{groupId},
+            </if>
+            <if test="deviceTypeId != null and deviceTypeId != ''">
+                a.device_type_id = #{deviceTypeId},
+            </if>
+            <if test="riskPointId != null">
+                a.risk_point_id = #{riskPointId},
+            </if>
+            <if test="deviceName != null and deviceName != ''">
+                a.device_name = #{deviceName},
+            </if>
+            <if test="deviceNumber != null and deviceNumber != ''">
+                a.device_number = #{deviceNumber},
+            </if>
+            <if test="deviceModel != null and deviceModel != ''">
+                a.device_model = #{deviceModel},
+            </if>
+            <if test="deviceBrand != null and deviceBrand != ''">
+                a.device_brand = #{deviceBrand},
+            </if>
+            <if test="devicePosition != null and devicePosition != ''">
+                a.device_position = #{devicePosition},
+            </if>
+            <if test="responsible != null and responsible != ''">
+                a.responsible = #{responsible},
+            </if>
+            <if test="deviceRemark != null and deviceRemark != ''">
+                a.device_remark = #{deviceRemark},
+            </if>
+            <if test="deviceStatus != null">
+                a.device_status = #{deviceStatus},
+            </if>
+            <if test="backup2 != null and backup2 != ''">
+                a.backup2 = #{backup2},
+            </if>
+            <if test="backup3 != null and backup3 != ''">
+                a.backup3 = #{backup3},
+            </if>
+            <if test="createdTime != null">
+                a.created_time = #{createdTime},
+            </if>
+            <if test="updatedTime != null">
+                a.updated_time = #{updatedTime},
+            </if>
+            <if test="createdBy != null">
+                a.created_by = #{createdBy},
+            </if>
+            <if test="updatedBy != null">
+                a.updated_by = #{updatedBy},
+            </if>
+            <if test="delFlag != null">
+                a.del_flag = #{delFlag},
+            </if>
+            <if test="responsiblePhone != null">
+                a.responsible_phone = #{responsiblePhone},
+            </if>
+            <if test="operatingPersonnel != null and operatingPersonnel != ''">
+                a.operating_personnel = #{operatingPersonnel},
+            </if>
+            <if test="deviceAcceptor != null and deviceAcceptor != ''">
+                a.device_acceptor = #{deviceAcceptor},
+            </if>
+            <if test="acceptorTime != null">
+                a.acceptor_time = #{acceptorTime},
+            </if>
+            <if test="securityNumber != null and securityNumber != ''">
+                a.security_number = #{securityNumber},
+            </if>
+            <if test="securityTime != null">
+                a.security_time = #{securityTime},
+            </if>
+            <if test="deviceUnit != null and deviceUnit != ''">
+                a.device_unit = #{deviceUnit},
+            </if>
+            <if test="deviceTime != null">
+                a.device_time = #{deviceTime},
+            </if>
+            <if test="proactivelyTime != null">
+                a.proactively_time = #{proactivelyTime},
+            </if>
+            <if test="exitTime != null">
+                a.exit_time = #{exitTime},
+            </if>
+            <if test="deviceInfo != null and deviceInfo != ''">
+                a.device_info = #{deviceInfo},
+            </if>
+            <if test="devicePersonnelInfo != null and devicePersonnelInfo != ''">
+                a.device_personnel_info = #{devicePersonnelInfo},
+            </if>
+            <if test="deviceRegisterInfo != null and deviceRegisterInfo != ''">
+                a.device_register_info = #{deviceRegisterInfo},
+            </if>
+            <if test="deviceAcceptanceInfo != null and deviceAcceptanceInfo != ''">
+                a.device_acceptance_info = #{deviceAcceptanceInfo}
+            </if>
+        where device_id = #{deviceId}
+    </update>
+
+    <update id="deleteById" parameterType="Long">
+        UPDATE scyf_device_info a SET
+            a.del_flag = 1
+        where a.device_id = #{id}
+    </update>
+
+    <update id="deleteByIds" parameterType="java.util.List">
+        UPDATE scyf_device_info a SET
+            a.del_flag = 1
+        where a.device_id in
+        <foreach collection="ids" item="id" open="(" close=")" separator="," index="idx">
+            #{id}
+        </foreach>
+    </update>
+
+</mapper>

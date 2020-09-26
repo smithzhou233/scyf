@@ -1,0 +1,338 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.hngf.mapper.danger.HiddenRecordMapper">
+
+    <sql id="HiddenRecordColumns">
+        a.hidden_id AS hiddenId,
+        a.company_id AS companyId,
+        a.group_id AS groupId,
+        a.dengerous_point_id AS dengerousPointId,
+        a.inspect_def_id AS inspectDefId,
+        a.inspect_schedule_id AS inspectScheduleId,
+        a.inspect_record_id AS inspectRecordId,
+        a.inspect_item_id AS inspectItemId,
+        a.inspect_content_id AS inspectContentId,
+        a.hidden_cat_id AS hiddenCatId,
+        a.hidden_level AS hiddenLevel,
+        a.hidden_title AS hiddenTitle,
+        a.hidden_desc AS hiddenDesc,
+        a.risk_level AS riskLevel,
+        a.hidden_rectify_dept AS hiddenRectifyDept,
+        a.hidden_retify_group AS hiddenRetifyGroup,
+        a.hidden_quondam_retify_by AS hiddenQuondamRetifyBy,
+        a.hidden_retify_by AS hiddenRetifyBy,
+        a.hidden_retify_deadline AS hiddenRetifyDeadline,
+        a.hidden_accepted_group AS hiddenAcceptedGroup,
+        a.hidden_accepted_by AS hiddenAcceptedBy,
+        a.hidden_review_group AS hiddenReviewGroup,
+        a.hidden_review_by AS hiddenReviewBy,
+        a.happened_time AS happenedTime,
+        a.finished_time AS finishedTime,
+        a.status AS status,
+        a.created_by AS createdBy,
+        a.created_time AS createdTime,
+        a.updated_by AS updatedBy,
+        a.updated_time AS updatedTime,
+        a.del_flag AS delFlag
+    </sql>
+
+    <select id="findList" resultType="com.hngf.entity.danger.HiddenRecord">
+        select
+        <include refid="HiddenRecordColumns"/>
+        from
+        scyf_hidden_record a
+        where
+        a.del_flag = 0
+    </select>
+
+    <select id="findById" resultType="com.hngf.entity.danger.HiddenRecord" parameterType="Long">
+        select
+        <include refid="HiddenRecordColumns"/>
+        from
+        scyf_hidden_record a
+        where
+        a.del_flag = 0 and a.hidden_record_id = #{id}
+    </select>
+<!--
+    隐患年度统计 表格 柱形图
+-->
+    <select id="getHdangerYearStatistics" resultType="java.util.Map">
+        	SELECT
+        COUNT( hd.hidden_id ) as "sumCount",
+        DATE_FORMAT( hd.created_time, "%c" ) as  "createTime",
+        hd.`hidden_level` as "hdangerLevel",
+        hd.`status` as "status"
+        FROM
+        scyf_hidden hd
+        LEFT JOIN sys_group sg on hd.group_id = sg.group_id
+        LEFT JOIN sys_company cbi on hd.company_id = cbi.company_id and sg.company_id = cbi.company_id
+        <where>
+            hd.status in (2,3,4,5)
+            and hd.del_flag=0 and sg.del_flag=0 and cbi.del_flag=0
+            <if test="companyId != null">
+                AND hd.company_id = #{companyId}
+            </if>
+            <if test="groupId != null">
+                AND hd.group_id = #{groupId}
+            </if>
+            <if test="year != null">
+                AND DATE_FORMAT( hd.created_time, "%Y" ) = #{year}
+            </if>
+        </where>
+        GROUP BY
+        DATE_FORMAT( hd.created_time, "%Y-%w" ) ,hd.hidden_level, hd.`status`
+        ORDER BY
+        DATE_FORMAT( hd.created_time, "%Y-%w" )
+
+    </select>
+    <!--隐患类型统计柱形图-->
+    <select id="getHdangerTypeStatistics" resultType="java.util.Map">
+        SELECT
+        (
+        SELECT COUNT(hd.hidden_id)
+        FROM scyf_hidden hd
+        LEFT JOIN sys_group sg ON hd.group_id = sg.group_id
+        LEFT JOIN sys_company cbi ON hd.company_id = cbi.company_id
+        WHERE udi.classify_id = hd.hidden_cat_id
+				and hd.del_flag=0 and sg.del_flag=0 and cbi.del_flag=0
+        and hd.company_id = #{companyId}
+        and (hd.status = 2 or hd.status = 3 or hd.status = 5)
+        and hd.hidden_level = 1
+		and sg.group_id=#{groupId}
+        <if test="startTime != null and startTime != '' and endTime != null and endTime != ''">
+            and hd.created_time between #{startTime} and #{endTime}
+        </if>
+        ) sumCount1,
+        (
+        SELECT COUNT(hd.hidden_id)
+        FROM scyf_hidden hd
+        LEFT JOIN sys_group sg ON hd.group_id = sg.group_id
+        LEFT JOIN sys_company cbi ON hd.company_id = cbi.company_id
+        WHERE udi.classify_id = hd.hidden_cat_id
+		and hd.del_flag=0 and sg.del_flag=0 and cbi.del_flag=0
+        and hd.company_id = #{companyId}
+        and (hd.status = 2 or hd.status = 3 or hd.status = 5)
+        and hd.hidden_level = 2
+        and sg.group_id=#{groupId}
+        <if test="startTime != null and startTime != '' and endTime != null and endTime != ''">
+            and hd.created_time between #{startTime} and #{endTime}
+        </if>
+        ) sumCount2,
+        (
+        SELECT COUNT(hd.hidden_id)
+        FROM scyf_hidden hd
+        LEFT JOIN sys_group sg ON hd.group_id = sg.group_id
+        LEFT JOIN sys_company cbi ON hd.company_id = cbi.company_id
+        WHERE udi.classify_id = hd.hidden_cat_id
+		and hd.del_flag=0 and sg.del_flag=0 and cbi.del_flag=0
+        and hd.company_id = #{companyId}
+        and (hd.status = 2 or hd.status = 3 or hd.status = 5)
+        and hd.hidden_level = 3
+        and sg.group_id=#{groupId}
+        <if test="startTime != null and startTime != '' and endTime != null and endTime != ''">
+            and hd.created_time between #{startTime} and #{endTime}
+        </if>
+        ) sumCount3,
+        (
+        SELECT COUNT(hd.hidden_id)
+        FROM scyf_hidden hd
+        LEFT JOIN sys_group sg ON hd.group_id = sg.group_id
+        LEFT JOIN sys_company cbi ON hd.company_id = cbi.company_id
+        WHERE udi.classify_id = hd.hidden_cat_id
+		and hd.del_flag=0 and sg.del_flag=0 and cbi.del_flag=0
+        and hd.company_id = #{companyId}
+        and (hd.status = 2 or hd.status = 3 or hd.status = 5)
+        and hd.hidden_level = 4
+		and sg.group_id=#{groupId}
+        <if test="startTime != null and startTime != '' and endTime != null and endTime != ''">
+            and hd.created_time between #{startTime} and #{endTime}
+        </if>
+        ) sumCount4,
+        udi.`classify_id` as "classifyId",
+        udi.`classify_name` "classifyName"
+        FROM
+        sys_common_classify udi
+        where udi.classify_type = 1 and udi.del_flag = 0
+        and udi.company_id = #{companyId}
+        GROUP BY udi.classify_id
+        ORDER BY udi.created_time
+    </select>
+    <insert id="add" parameterType="Hidden">
+        INSERT INTO scyf_hidden_record (
+            hidden_id,
+            company_id,
+            group_id,
+            dengerous_point_id,
+            inspect_def_id,
+            inspect_schedule_id,
+            inspect_record_id,
+            inspect_item_id,
+            inspect_content_id,
+            hidden_cat_id,
+            hidden_level,
+            hidden_title,
+            hidden_desc,
+            risk_level,
+            hidden_rectify_dept,
+            hidden_retify_group,
+            hidden_quondam_retify_by,
+            hidden_retify_by,
+            hidden_retify_deadline,
+            hidden_accepted_group,
+            hidden_accepted_by,
+            hidden_review_group,
+            hidden_review_by,
+            happened_time,
+            finished_time,
+            status,
+            created_by,
+            created_time,
+            del_flag)
+        VALUES (
+            #{hiddenId},
+            #{companyId},
+            #{groupId},
+            #{riskPointId},
+            #{inspectDefId},
+            #{inspectScheduleId},
+            #{inspectRecordId},
+            #{inspectItemId},
+            #{inspectContentId},
+            #{hiddenCatId},
+            #{hiddenLevel},
+            #{hiddenTitle},
+            #{hiddenDesc},
+            #{riskLevel},
+            #{hiddenRectifyDept},
+            #{hiddenRetifyGroup},
+            #{hiddenQuondamRetifyBy},
+            #{hiddenRetifyBy},
+            #{hiddenRetifyDeadline},
+            #{hiddenAcceptedGroup},
+            #{hiddenAcceptedBy},
+            #{hiddenReviewGroup},
+            #{hiddenReviewBy},
+            #{happenedTime},
+            #{finishedTime},
+            #{status},
+            #{createdBy},
+            #{createdTime},
+            0
+        )
+
+    </insert>
+
+    <update id="update" parameterType="com.hngf.entity.danger.HiddenRecord">
+        UPDATE scyf_hidden_record a
+        <trim prefix="set" suffixOverrides=",">
+        <if test="hiddenId != null and hiddenId != ''">
+            a.hidden_id = #{hiddenId},
+        </if>
+        <if test="companyId != null and companyId != ''">
+            a.company_id = #{companyId},
+        </if>
+        <if test="groupId != null and groupId != ''">
+            a.group_id = #{groupId},
+        </if>
+        <if test="dengerousPointId != null and dengerousPointId != ''">
+            a.dengerous_point_id = #{dengerousPointId},
+        </if>
+        <if test="inspectDefId != null and inspectDefId != ''">
+            a.inspect_def_id = #{inspectDefId},
+        </if>
+        <if test="inspectScheduleId != null and inspectScheduleId != ''">
+            a.inspect_schedule_id = #{inspectScheduleId},
+        </if>
+        <if test="inspectRecordId != null and inspectRecordId != ''">
+            a.inspect_record_id = #{inspectRecordId},
+        </if>
+        <if test="inspectItemId != null and inspectItemId != ''">
+            a.inspect_item_id = #{inspectItemId},
+        </if>
+        <if test="inspectContentId != null and inspectContentId != ''">
+            a.inspect_content_id = #{inspectContentId},
+        </if>
+        <if test="hiddenCatId != null and hiddenCatId != ''">
+            a.hidden_cat_id = #{hiddenCatId},
+        </if>
+        <if test="hiddenLevel != null and hiddenLevel != ''">
+            a.hidden_level = #{hiddenLevel},
+        </if>
+        <if test="hiddenTitle != null and hiddenTitle != ''">
+            a.hidden_title = #{hiddenTitle},
+        </if>
+        <if test="hiddenDesc != null and hiddenDesc != ''">
+            a.hidden_desc = #{hiddenDesc},
+        </if>
+        <if test="riskLevel != null and riskLevel != ''">
+            a.risk_level = #{riskLevel},
+        </if>
+        <if test="hiddenRectifyDept != null and hiddenRectifyDept != ''">
+            a.hidden_rectify_dept = #{hiddenRectifyDept},
+        </if>
+        <if test="hiddenRetifyGroup != null and hiddenRetifyGroup != ''">
+            a.hidden_retify_group = #{hiddenRetifyGroup},
+        </if>
+        <if test="hiddenQuondamRetifyBy != null and hiddenQuondamRetifyBy != ''">
+            a.hidden_quondam_retify_by = #{hiddenQuondamRetifyBy},
+        </if>
+        <if test="hiddenRetifyBy != null and hiddenRetifyBy != ''">
+            a.hidden_retify_by = #{hiddenRetifyBy},
+        </if>
+        <if test="hiddenRetifyDeadline != null">
+            a.hidden_retify_deadline = #{hiddenRetifyDeadline},
+        </if>
+        <if test="hiddenAcceptedGroup != null and hiddenAcceptedGroup != ''">
+            a.hidden_accepted_group = #{hiddenAcceptedGroup},
+        </if>
+        <if test="hiddenAcceptedBy != null and hiddenAcceptedBy != ''">
+            a.hidden_accepted_by = #{hiddenAcceptedBy},
+        </if>
+        <if test="hiddenReviewGroup != null and hiddenReviewGroup != ''">
+            a.hidden_review_group = #{hiddenReviewGroup},
+        </if>
+        <if test="hiddenReviewBy != null and hiddenReviewBy != ''">
+            a.hidden_review_by = #{hiddenReviewBy},
+        </if>
+        <if test="happenedTime != null">
+            a.happened_time = #{happenedTime},
+        </if>
+        <if test="finishedTime != null">
+            a.finished_time = #{finishedTime},
+        </if>
+        <if test="status != null and status != ''">
+            a.status = #{status},
+        </if>
+        <if test="createdBy != null and createdBy != ''">
+            a.created_by = #{createdBy},
+        </if>
+        <if test="createdTime != null">
+            a.created_time = #{createdTime},
+        </if>
+        <if test="updatedBy != null">
+            a.updated_by = #{updatedBy},
+        </if>
+        <if test="updatedTime != null">
+            a.updated_time = #{updatedTime},
+        </if>
+        </trim>
+        where hidden_record_id = #{hiddenRecordId}
+    </update>
+
+    <update id="deleteById" parameterType="Long">
+        UPDATE scyf_hidden_record a SET
+            a.del_flag = 1
+        where a.hidden_record_id = #{id}
+    </update>
+
+    <update id="deleteByIds" parameterType="java.util.List">
+        UPDATE scyf_hidden_record a SET
+        a.del_flag = 1
+        where a.hidden_record_id in
+        <foreach collection="ids" item="id" open="(" close=")" separator="," index="idx">
+            #{id}
+        </foreach>
+    </update>
+
+</mapper>

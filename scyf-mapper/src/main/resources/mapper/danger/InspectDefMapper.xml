@@ -1,0 +1,288 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.hngf.mapper.danger.InspectDefMapper">
+
+
+    <select id="findList" resultType="com.hngf.entity.danger.InspectDef">
+		select * from scyf_inspect_def
+        where del_flag = 0
+	</select>
+
+    <select id="findById" resultType="com.hngf.entity.danger.InspectDef" parameterType="Long">
+		select * from scyf_inspect_def
+        where del_flag = 0 and inspect_def_id = #{id}
+	</select>
+
+    <select id="findIdByName" resultType="Long">
+		select inspect_def_id from scyf_inspect_def
+        where del_flag = 0
+        <if test="companyId != null">
+            and company_id = #{companyId}
+        </if>
+        <if test="inspectDefTypeId != null">
+            and inspect_def_type_id = #{inspectDefTypeId}
+        </if>
+        <if test="inspectDefName != null and inspectDefName != ''">
+            and inspect_def_name = #{inspectDefName}
+        </if>
+	</select>
+
+    <select id="findByMap" resultType="InspectDef">
+		SELECT
+            bcd.inspect_def_id,
+            bcd.inspect_def_name,
+            bcd.inspect_def_method,
+            bcd.inspect_def_rule,
+            bcd.inspect_def_desc,
+            bcd.penalize_def_rule,
+            bcd.company_id,
+            bcd.inspect_def_type_id,
+            bcd.created_time,
+            bcdt.classify_name,
+            ifnull( bcdt.classify_value, 1 ) AS classify_value
+        FROM
+            scyf_inspect_def AS bcd
+            LEFT JOIN sys_common_classify bcdt ON bcd.company_id = bcdt.company_id
+            AND bcd.inspect_def_type_id = bcdt.classify_id
+            AND bcdt.del_flag = 0
+        WHERE
+            bcd.del_flag =0
+
+        <if test="companyId != null">
+            and bcd.company_id = #{companyId}
+        </if>
+        <!-- 分级管控检查表 -->
+        <if test="controlTable == 0">
+            and bcdt.classify_value = 0
+        </if>
+        <!-- 查询非分级管控检查表 -->
+        <if test="controlTable == 1">
+            and bcdt.classify_value = 1
+        </if>
+        <if test="inspectDefTypeId!=null">
+            and bcd.inspect_def_type_id=#{inspectDefTypeId}
+        </if>
+        <if test="noDefTypeValue!=null and noDefTypeValue!=''">
+            and bcdt.classify_value = 1
+        </if>
+        <if test="defTypeValue!=null and defTypeValue!='' " >
+            and bcdt.classify_value = 0
+        </if>
+        <if test="keyword != null and keyword != ''">
+            and bcd.inspect_def_name like "%"#{keyword}"%"
+        </if>
+        order by bcd.created_time
+	</select>
+    <select id="selectById" resultType="InspectDef">
+        SELECT
+        *
+        FROM scyf_inspect_def
+        <where>
+            del_flag=0
+            and company_id=#{companyId}
+        </where>
+    </select>
+    <select id="selectListByCompanyId" resultType="InspectDef">
+        SELECT
+        *
+        FROM scyf_inspect_def
+        <where>
+            del_flag=0
+            and company_id=#{companyId}
+        </where>
+    </select>
+
+
+    <insert id="add" parameterType="InspectDef">
+		INSERT INTO scyf_inspect_def (
+		company_id
+		, inspect_def_name
+		, inspect_def_type_id
+		, inspect_def_method
+		, inspect_def_rule
+		, penalize_def_rule
+		, inspect_def_desc
+		, created_time
+		, created_by
+		, del_flag
+		)
+		VALUES (
+		#{companyId}
+		, #{inspectDefName}
+		, #{inspectDefTypeId}
+		, #{inspectDefMethod}
+		, #{inspectDefRule}
+		, #{penalizeDefRule}
+		, #{inspectDefDesc}
+		, #{createdTime}
+		, #{createdBy}
+		, 0
+		)
+
+    </insert>
+
+    <update id="update" parameterType="InspectDef">
+        UPDATE scyf_inspect_def
+        <trim prefix="set" suffixOverrides=",">
+        <if test="companyId != null and companyId != ''">
+            company_id = #{companyId} ,
+        </if>
+        <if test="inspectDefName != null and inspectDefName != ''">
+            inspect_def_name = #{inspectDefName} ,
+        </if>
+        <if test="inspectDefTypeId != null and inspectDefTypeId != ''">
+            inspect_def_type_id = #{inspectDefTypeId} ,
+        </if>
+        <if test="inspectDefMethod != null and inspectDefMethod != ''">
+            inspect_def_method = #{inspectDefMethod} ,
+        </if>
+        <if test="inspectDefRule != null and inspectDefRule != ''">
+            inspect_def_rule = #{inspectDefRule} ,
+        </if>
+        <if test="penalizeDefRule != null and penalizeDefRule != ''">
+            penalize_def_rule = #{penalizeDefRule} ,
+        </if>
+        <if test="inspectDefDesc != null and inspectDefDesc != ''">
+            inspect_def_desc = #{inspectDefDesc} ,
+        </if>
+        <if test="updatedTime != null">
+            updated_time = #{updatedTime} ,
+        </if>
+        <if test="updatedBy != null and updatedBy != ''">
+            updated_by = #{updatedBy},
+        </if>
+        </trim>
+        where inspect_def_id = #{inspectDefId}
+    </update>
+
+    <update id="deleteById" parameterType="Long">
+        UPDATE scyf_inspect_def SET
+        del_flag = 1
+        where inspect_def_id = #{id}
+    </update>
+
+    <update id="deleteByIds" parameterType="java.util.List">
+        UPDATE scyf_inspect_def SET
+        del_flag = 1
+        where inspect_def_id in
+        <foreach collection="ids" item="id" open="(" close=")" separator="," index="idx">
+            #{id}
+        </foreach>
+    </update>
+
+    <select id="findListByRiskPoint" resultType="map" parameterType="java.util.Map">
+        select
+        bcd.inspect_def_id as inspectDefId,
+        bcd.inspect_def_name as inspectDefName,
+        bcd.inspect_def_method as inspectDefMethod,
+        bcd.inspect_def_rule as inspectDefRule,
+        bcd.penalize_def_rule as penalizeDefRule,
+        bcd.inspect_def_desc as inspectDefDesc,
+        bcd.inspect_def_type_id as inspectDefTypeId,
+        DATE_FORMAT(bcd.created_time, "%Y-%m-%d %H:%i:%s" ) as createdTime,
+        bcdt.classify_name as inspectDefTypeName,
+        (
+        select count(erpcrl.record_id)
+        from scyf_risk_point_check_record_log erpcrl
+        where erpcrl.company_id = #{companyId}
+        and erpcrl.inspect_def_id = erpct.inspect_type_id
+        and erpcrl.created_by = #{userId}
+        <if test="riskPointId != null and riskPointId != ''">
+            and erpcrl.risk_point_id = #{riskPointId}
+        </if>
+        ) as inspectCount,
+        ifnull(bcdt.classify_value,1)as inspectTypeValue
+        from scyf_inspect_point_rel erpct
+        left join scyf_inspect_def as bcd on (bcd.company_id = erpct.company_id and bcd.inspect_def_id = erpct.inspect_type_id)
+        left join sys_common_classify bcdt
+        on (bcd.company_id = bcdt.company_id and bcd.inspect_def_type_id = bcdt.classify_id and bcdt.del_flag = 0)
+        where bcd.del_flag=0
+        <if test="riskPointId != null and riskPointId != ''">
+            and erpct.risk_point_id = #{riskPointId}
+        </if>
+        <if test="companyId != null">
+            and bcd.company_id = #{companyId}
+        </if>
+        <if test="inspectDefId != null and inspectDefId != ''">
+            and bcd.inspect_def_id = #{inspectDefId}
+        </if>
+        <!-- 查询分级管控检查表 -->
+        <if test="controlTable == 0">
+            and bcdt.classify_value = 0
+        </if>
+        <!-- 查询非分级管控检查表 -->
+        <if test="controlTable == 1">
+            and bcdt.classify_value = 1
+        </if>
+        <if test="inspectDefTypeId!=null and inspectDefTypeId != ''">
+            and bcd.inspect_def_type_id=#{inspectDefTypeId}
+        </if>
+        <if test="noInspectTypeValue!=null">
+            and bcdt.classify_value = 1
+        </if>
+        <if test="keyword != null and keyword != ''">
+            and bcd.inspect_def_name like "%"#{keyword}"%"
+        </if>
+        order by bcd.created_time
+    </select>
+
+    <!--检查表列表-->
+    <select id="getList" resultType="map" parameterType="java.util.Map">
+        select
+        bcd.inspect_def_id as inspectDefId,
+        bcd.inspect_def_name as inspectDefName,
+        bcd.inspect_def_method as inspectDefMethod,
+        bcd.inspect_def_rule as inspectDefRule,
+        bcd.penalize_def_rule as penalizeDefRule,
+        bcd.inspect_def_desc as inspectDefDesc,
+        bcd.inspect_def_type_id as inspectDefTypeId,
+        DATE_FORMAT(bcd.created_time, "%Y-%m-%d %H:%i:%s" ) as createdTime,
+        bcdt.classify_name as inspectDefTypeName,
+        (
+        select count(erpcrl.record_id)
+        from scyf_risk_point_check_record_log erpcrl
+        where erpcrl.company_id = #{companyId}
+        and erpcrl.inspect_def_id = bcd.inspect_def_id
+        and erpcrl.created_by = #{userId}
+        <if test="riskPointId != null and riskPointId != ''">
+            and erpcrl.risk_point_id = #{riskPointId}
+        </if>
+        ) as inspectCount,
+        ifnull(bcdt.classify_value,1)as inspectTypeValue
+        from scyf_inspect_def as bcd
+        left join sys_common_classify bcdt
+        on bcd.company_id = bcdt.company_id and bcd.inspect_def_type_id = bcdt.classify_id and bcdt.del_flag=0
+        where bcd.del_flag=0
+        <if test="companyId != null and companyId != ''">
+            and bcd.company_id = #{companyId}
+        </if>
+        <if test="inspectDefId != null and inspectDefId != ''">
+            and bcd.inspect_def_id = #{inspectDefId}
+        </if>
+        <!-- 查询分级管控检查表 -->
+        <if test="controlTable == 0">
+            and bcdt.classify_value = 0
+        </if>
+        <!-- 查询非分级管控检查表 -->
+        <if test="controlTable == 1">
+            and bcdt.classify_value = 1
+        </if>
+        <if test="inspectDefTypeId!=null and inspectDefTypeId != ''">
+            and bcd.inspect_def_type_id=#{inspectDefTypeId}
+        </if>
+        <if test="noInspectTypeValue!=null">
+            and bcdt.classify_value = 1
+        </if>
+        <if test="keyword != null and keyword != ''">
+            and bcd.inspect_def_name like "%"#{keyword}"%"
+        </if>
+        order by bcd.created_time
+    </select>
+
+    <update id="deleteBatchByCompanyId" parameterType="java.lang.Long" >
+        UPDATE scyf_inspect_def SET
+        del_flag = 1 , updated_by = #{updatedBy} ,updated_time = now()
+        WHERE company_id = #{companyId}
+    </update>
+</mapper>

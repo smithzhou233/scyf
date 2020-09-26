@@ -1,0 +1,227 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.hngf.mapper.danger.FeedbackMapper">
+
+    <sql id="FeedbackColumns">
+        a.feedback_id as feedbackId,
+        a.company_id AS companyId,
+        a.group_id AS groupId,
+        a.scene_data_value AS sceneDataValue,
+        a.scene_remark AS sceneRemark,
+        a.creater AS creater,
+        a.result_value AS resultValue,
+        a.result_desc AS resultDesc,
+        a.created_time AS createdTime,
+        a.created_by AS createdBy,
+        a.updated_time AS updatedTime,
+        a.updated_by AS updatedBy,
+        a.del_flag AS delFlag
+    </sql>
+
+    <select id="findList" resultType="java.util.Map">
+        select
+        <include refid="FeedbackColumns"/>,
+        ifnull(ac.user_name,'未知') as executorName,
+        ifnull(acc.user_name,'未知') as disposeName,
+        concat(
+        (SELECT
+        concat('【',g.group_name,'】',IFNULL(psg.group_name,'')) as s_group_name
+        FROM sys_group g
+        left join sys_group psg on (g.group_parent = psg.group_id)
+        where a.group_id = g.group_id
+        )) as executorGroupName
+        from
+        scyf_feedback a
+        left join sys_group sg on sg.group_id = a.group_id and sg.company_id = a.company_id
+        left join sys_user ac on ac.user_id = a.creater and a.company_id = ac.company_id
+        left join sys_user acc on acc.user_id = a.updated_by and a.company_id = acc.company_id
+        <where>
+            a.del_flag = 0
+            <if test="resultValue != null ">
+                and a.result_value = #{resultValue}
+            </if>
+            <if test="companyId != null ">
+                and a.company_id = #{companyId}
+            </if>
+        </where>
+
+
+    </select>
+
+    <select id="findById" resultType="com.hngf.entity.danger.Feedback" parameterType="Long">
+        select
+        <include refid="FeedbackColumns"/>,
+        ifnull(ac.user_name,'未知') as executorName,
+        ifnull(acc.user_name,'未知') as disposeName,
+        concat(
+        (SELECT
+        concat('【',g.group_name,'】',IFNULL(psg.group_name,'')) as s_group_name
+        FROM sys_group g
+        left join sys_group psg on (g.group_parent = psg.group_id)
+        where a.group_id = g.group_id
+        )) as executorGroupName
+        from
+        scyf_feedback a
+        left join sys_group sg on sg.group_id = a.group_id and sg.company_id = a.company_id
+        left join sys_user ac on ac.user_id = a.creater and a.company_id = ac.company_id
+        left join sys_user acc on acc.user_id = a.updated_by and a.company_id = acc.company_id
+        where
+        a.del_flag = 0 and a.feedback_id = #{id}
+    </select>
+     <!--【APP】我的，反馈列表查询-->
+      <select id="findAllList" resultType="java.util.Map">
+        select
+        bc.feedback_id as feedbackId,
+        bc.scene_data_value as sceneDataValue,
+        bc.scene_remark as sceneRemark,
+        bc.result_value as resultValue,
+        bc.result_desc as resultDesc,
+        ( DATE_FORMAT( bc.created_time, '%Y-%m-%d %H:%i' ) ) as createdTime,
+        ( DATE_FORMAT( bc.updated_time, '%Y-%m-%d %H:%i' ) ) as updatedTime,
+        ifnull(a.user_name,'未知') as executorName,
+        ifnull(acc.user_name,'未知') as disposeName,
+        concat(
+        (SELECT
+        concat('【',g.group_name,'】',IFNULL(psg.group_name,'')) as s_group_name
+        FROM sys_group g
+        left join sys_group psg on (g.group_parent = psg.group_id)
+        where bc.group_id = g.group_id
+        )) as executorGroupName
+        from scyf_feedback bc
+        left join sys_group sg on sg.group_id = bc.group_id and sg.company_id = bc.company_id
+        left join sys_user a on a.user_id = bc.creater and bc.company_id = a.company_id
+        left join sys_user acc on acc.user_id = bc.updated_by and bc.company_id = acc.company_id
+        <where>
+            bc.del_flag = 0
+             <if test="companyId != null">
+                 and bc.company_id = #{companyId}
+             </if>
+            <if test="resultValue != null">
+                and bc.result_value = #{resultValue}
+            </if>
+            <if test="creater != null">
+                and bc.creater = #{creater}
+            </if>
+        </where>
+        order by bc.created_time desc
+      </select>
+    <!--【APP】我的，反馈列表详情信息-->
+    <select id="getDetailById" resultType="java.util.Map">
+        select
+        bc.group_id as groupId,
+		bc.feedback_id as feedbackId,
+        bc.scene_data_value as sceneDataValue,
+        bc.scene_remark as sceneRemark,
+        bc.result_value as resultValue,
+        bc.result_desc as resultDesc,
+        ( DATE_FORMAT( bc.created_time, '%Y-%m-%d %H:%i' ) ) as createdTime,
+        ifnull( DATE_FORMAT( bc.updated_time, '%Y-%m-%d %H:%i' ),'' ) as updatedTime,
+        ifnull(a.user_name,'-') as executorName,
+        ifnull(acc.user_name,'-') as disposeName,
+        concat(
+        (SELECT
+        concat('【',g.group_name,'】',IFNULL(psg.group_name,'')) as s_group_name
+        FROM sys_group g
+        left join sys_group psg on (g.group_parent = psg.group_id)
+        where bc.group_id = g.group_id
+        )) as executorGroupName
+        from scyf_feedback bc
+        left join sys_user a on a.user_id = bc.creater and bc.company_id = a.company_id
+        left join sys_user acc on acc.user_id = bc.updated_by and bc.company_id = acc.company_id
+        where bc.feedback_id = #{feedbackId}
+    </select>
+    <insert id="add" parameterType="com.hngf.entity.danger.Feedback" useGeneratedKeys="true" keyProperty="feedbackId">
+    <selectKey resultType="Long" order="AFTER" keyProperty="feedbackId" >
+        select LAST_INSERT_ID()
+    </selectKey>
+        INSERT INTO scyf_feedback (
+            company_id,
+            group_id,
+            scene_data_value,
+            scene_remark,
+            creater,
+            result_value,
+            result_desc,
+            created_time,
+            created_by,
+            updated_time,
+            updated_by,
+            del_flag)
+
+        VALUES (
+            #{companyId},
+            #{groupId},
+            #{sceneDataValue},
+            #{sceneRemark},
+            #{creater},
+            #{resultValue},
+            #{resultDesc},
+            #{createdTime},
+            #{createdBy},
+            #{updatedTime},
+            #{updatedBy},
+            #{delFlag}
+        )
+
+    </insert>
+
+    <update id="update" parameterType="com.hngf.entity.danger.Feedback">
+        UPDATE scyf_feedback a
+        <trim prefix="set" suffixOverrides=",">
+            <if test="companyId != null and companyId != ''">
+                a.company_id = #{companyId},
+            </if>
+            <if test="groupId != null and groupId != ''">
+                a.group_id = #{groupId},
+            </if>
+            <if test="sceneDataValue != null and sceneDataValue != ''">
+                a.scene_data_value = #{sceneDataValue},
+            </if>
+            <if test="sceneRemark != null and sceneRemark != ''">
+                a.scene_remark = #{sceneRemark},
+            </if>
+            <if test="creater != null and creater != ''">
+                a.creater = #{creater},
+            </if>
+            <if test="resultValue != null and resultValue != ''">
+                a.result_value = #{resultValue},
+            </if>
+            <if test="resultDesc != null and resultDesc != ''">
+                a.result_desc = #{resultDesc},
+            </if>
+            <if test="createdTime != null  ">
+                a.created_time = #{createdTime},
+            </if>
+            <if test="createdBy != null and createdBy != ''">
+                a.created_by = #{createdBy},
+            </if>
+            <if test="updatedTime != null ">
+                a.updated_time = #{updatedTime},
+            </if>
+            <if test="updatedBy != null and updatedBy != ''">
+                a.updated_by = #{updatedBy},
+            </if>
+            <if test="delFlag != null and delFlag != ''">
+                a.del_flag = #{delFlag}
+            </if>
+        </trim>
+        where feedback_id = #{feedbackId}
+    </update>
+
+    <update id="deleteById" parameterType="Long">
+        UPDATE scyf_feedback a SET
+            a.del_flag = 1
+        where a.feedback_id = #{id}
+    </update>
+
+    <update id="deleteByIds" parameterType="java.util.List">
+        UPDATE scyf_feedback a SET
+        a.del_flag = 1
+        where a.feedback_id in
+        <foreach collection="ids" item="id" open="(" close=")" separator="," index="idx">
+            #{id}
+        </foreach>
+    </update>
+
+</mapper>

@@ -1,0 +1,315 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.hngf.mapper.risk.RiskInspectRecordMapper">
+
+
+    <select id="findList" resultType="RiskInspectRecord">
+		select * from
+		scyf_risk_inspect_record
+		where del_flag = 0
+	</select>
+
+    <!-- 风险点设备设施/作业活动接口(scyf/riskpoint/info/{riskPointId})，查询info接口返回更多信息使用-->
+    <select id="findByMap" resultType="RiskInspectRecord"
+            parameterType="Map">
+        SELECT
+            ercr.inspect_record_id,
+            ifnull( ehd.hidden_id, 0 ) AS hidden_id,
+            ifnull( ehd.hidden_level, 0 ) AS hidden_level,
+            ifnull( ehd.hidden_title, '无隐患' ) AS hidden_title,
+            ifnull( ehd.STATUS, 6 ) AS `status`,
+            ifnull( ercr.spot_data, '' ) AS spotData,
+            ercr.inspect_record_no,
+            ercr.inspect_result,
+            ifnull( ercr.remark, '检查结果正常' ) remark,
+            ercr.created_time,
+            concat(
+            (
+            SELECT
+            concat( '【', sg.group_name, '】', IFNULL( psg.group_name, '' ) ) AS group_name
+            FROM
+            sys_group sg
+            LEFT JOIN sys_group psg ON ( sg.group_parent = psg.group_id )
+            WHERE
+            ercr.group_id = sg.group_id
+            )
+            ) AS inspectGroupName,
+            ifnull(rp.risk_point_name,'不涉及风险点') AS risk_point_name,
+            rp.risk_point_Id,
+            rp.risk_point_type,
+            bcd.inspect_def_name,
+            a.user_name AS inspectUserName,
+            ifnull( ercr.risk_measure_content, '未知的检查内容，可能被修改或者已删除' ) AS riskMeasureContent
+        FROM
+            scyf_risk_inspect_record ercr
+        LEFT JOIN sys_group g ON g.company_id = ercr.company_id AND ercr.group_id = g.group_id
+        LEFT JOIN scyf_risk_point rp ON rp.company_id = ercr.company_id AND rp.risk_point_id = ercr.risk_point_id
+        LEFT JOIN sys_user a ON a.user_id = ercr.created_by AND a.company_id = ercr.company_id
+        LEFT JOIN scyf_inspect_def bcd ON ercr.schdule_def_id = bcd.inspect_def_id AND bcd.company_id = ercr.company_id
+        LEFT JOIN scyf_hidden ehd ON ehd.inspect_record_id = ercr.inspect_record_id AND ehd.company_id = ercr.company_id
+
+        WHERE
+        ercr.company_id = #{companyId}
+        <if test="riskPointId != null and riskPointId != ''">
+            and ercr.risk_point_id = #{riskPointId}
+        </if>
+        <if test="inspectScheduleId != null and inspectScheduleId != '' ">
+            and ercr.inspect_schedule_id = #{inspectScheduleId}
+        </if>
+        <if test="inspectRecordNo != null and inspectRecordNo != ''">
+            and ercr.inspect_record_no = #{inspectRecordNo}
+        </if>
+        ORDER BY ercr.created_time desc, ercr.check_sort
+	</select>
+
+    <!-- 风险点检查记录查询-记录明细按钮调用-->
+    <select id="findRiskInspectRecord" resultType="RiskInspectRecord"
+            parameterType="Map">
+        SELECT
+            ercr.inspect_record_id AS "inspectRecordId",
+            ifnull( ehd.hidden_id, 0 ) AS hiddenId,
+            ifnull( ehd.hidden_level, 0 ) AS hiddenLevel,
+            ifnull( ehd.hidden_title, '无隐患' ) AS hiddenTitle,
+            ifnull( ehd.STATUS, 6 ) AS `status`,
+            ifnull( ercr.spot_data, '' ) AS spotData,
+            ercr.inspect_record_no AS "inspectRecordNo",
+            ercr.inspect_result AS "inspectResult",
+            case ercr.inspect_result when 1 then "通过" when 2 then "不通过" when 3 then "发现隐患" when 4 then "不涉及" end AS "inspectResultStr",
+            ifnull( ercr.remark, '检查结果正常' ) remark,
+            ercr.created_time AS createdTime,
+            concat(
+            (
+            SELECT
+            concat( '【', sg.group_name, '】', IFNULL( psg.group_name, '' ) ) AS group_name
+            FROM
+            sys_group sg
+            LEFT JOIN sys_group psg ON ( sg.group_parent = psg.group_id )
+            WHERE
+            ercr.group_id = sg.group_id
+            )
+            ) AS inspectGroupName,
+            ifnull(rp.risk_point_name,'不涉及风险点') AS riskPointName,
+            rp.risk_point_Id AS "riskPointId",
+            rp.risk_point_type AS "riskPointType",
+            bcd.inspect_def_name AS "inspectDefName",
+						ifnull(
+						(
+						SELECT
+						eds.risk_danger_name
+						FROM scyf_risk_source eds
+						WHERE ercr.item_detail_id  = eds.risk_danger_id
+						),
+						ifnull((
+						SELECT
+						bcid.inspect_item_def_name
+						FROM scyf_inspect_item_def bcid
+						WHERE bcid.inspect_item_def_id = ercr.item_detail_id
+						),'未知')
+						) AS riskDangerName,
+            a.user_name AS inspectUserName,
+            ifnull( ercr.risk_measure_content, '未知的检查内容，可能被修改或者已删除' ) AS riskMeasureContent,
+
+
+						ifnull(ecat.attachment_id,hdatt.hidden_attach_id)  as attachmentId,
+						ifnull(ecat.mime_type,hdatt.hidden_attach_type)  as attachmentType,
+						ifnull(ecat.save_path,hdatt.hidden_attach_path)  as attachmentPath
+        FROM
+            scyf_risk_inspect_record ercr
+        LEFT JOIN sys_group g ON g.company_id = ercr.company_id AND ercr.group_id = g.group_id
+        LEFT JOIN scyf_risk_point rp ON rp.company_id = ercr.company_id AND rp.risk_point_id = ercr.risk_point_id
+        LEFT JOIN sys_user a ON a.user_id = ercr.created_by AND a.company_id = ercr.company_id
+        LEFT JOIN scyf_inspect_def bcd ON ercr.schdule_def_id = bcd.inspect_def_id AND bcd.company_id = ercr.company_id
+        LEFT JOIN scyf_hidden ehd ON ehd.inspect_record_id = ercr.inspect_record_id AND ehd.company_id = ercr.company_id
+				LEFT JOIN scyf_hidden_attach hdatt ON (ehd.hidden_id = hdatt.hidden_detail_id)
+        LEFT JOIN scyf_common_attachment ecat on (ecat.owner_id = ercr.inspect_record_id)
+
+        WHERE
+        ercr.company_id = #{companyId}
+        <if test="riskPointId != null and riskPointId != ''">
+            and ercr.risk_point_id = #{riskPointId}
+        </if>
+        <if test="inspectScheduleId != null and inspectScheduleId != '' ">
+            and ercr.inspect_schedule_id = #{inspectScheduleId}
+        </if>
+        <if test="inspectRecordNo != null and inspectRecordNo != ''">
+            and ercr.inspect_record_no = #{inspectRecordNo}
+        </if>
+        group by ercr.inspect_record_id
+        ORDER BY ercr.check_sort
+    </select>
+
+    <select id="findById" resultType="RiskInspectRecord"
+            parameterType="Long">
+		select * from scyf_risk_inspect_record
+		where del_flag = 0 and inspect_record_id = #{id}
+	</select>
+
+    <insert id="add" parameterType="RiskInspectRecord">
+		INSERT INTO scyf_risk_inspect_record (
+		inspect_record_id
+		,inspect_record_no
+		, company_id
+		, group_id
+		, risk_point_id
+		, inspect_schedule_id
+		, inspect_item_def_id
+		, schdule_def_id
+		, item_detail_id
+		, risk_measure_id
+		, risk_measure_content
+		, inspect_result
+		, inspect_number
+		, spot_data
+		, remark
+		, check_sort
+		, created_time
+		, created_by
+		, del_flag
+		)
+		VALUES (
+		#{inspectRecordId}
+		,#{inspectRecordNo}
+		, #{companyId}
+		, #{groupId}
+		, #{riskPointId}
+		, #{inspectScheduleId}
+		, #{inspectItemDefId}
+		, #{schduleDefId}
+		, #{itemDetailId}
+		, #{riskMeasureId}
+		, #{riskMeasureContent}
+		, #{inspectResult}
+		, #{inspectNumber}
+		, #{spotData}
+		, #{remark}
+		, 3
+		, #{createdTime}
+		, #{createdBy}
+		, 0
+		)
+
+	</insert>
+
+    <insert id="addForeach" parameterType="RiskInspectRecord">
+		INSERT INTO scyf_risk_inspect_record (
+		inspect_record_id
+		,inspect_record_no
+		, company_id
+		, group_id
+		, risk_point_id
+		, inspect_schedule_id
+		, inspect_item_def_id
+		, schdule_def_id
+		, item_detail_id
+		, risk_measure_id
+		, risk_measure_content
+		, inspect_result
+		, inspect_number
+		, spot_data
+		, remark
+		, check_sort
+		, created_time
+		, created_by
+		, del_flag
+		)
+		VALUES
+        <foreach collection="list" item="item" index="index" separator=",">
+            (#{item.inspectRecordId},
+            #{item.inspectRecordNo},
+            #{item.companyId},
+            #{item.groupId},
+            #{item.riskPointId},
+            #{item.inspectScheduleId},
+            #{item.inspectItemDefId},
+            #{item.schduleDefId},
+            #{item.itemDetailId},
+            #{item.riskMeasureId},
+            #{item.riskMeasureContent},
+            #{item.inspectResult},
+            #{item.inspectNumber},
+            #{item.spotData},
+            #{item.remark},
+            #{item.checkSort},
+            #{item.createdTime},
+            #{item.createdBy},
+            0)
+        </foreach>
+
+	</insert>
+
+    <update id="update" parameterType="RiskInspectRecord">
+        UPDATE scyf_risk_inspect_record
+        <trim prefix="set" suffixOverrides=",">
+        <if test="inspectRecordNo != null and inspectRecordNo != ''">
+            inspect_record_no = #{inspectRecordNo} ,
+        </if>
+        <if test="companyId != null and companyId != ''">
+            company_id = #{companyId} ,
+        </if>
+        <if test="groupId != null and groupId != ''">
+            group_id = #{groupId} ,
+        </if>
+        <if test="riskPointId != null and riskPointId != ''">
+            risk_point_id = #{riskPointId} ,
+        </if>
+        <if test="inspectScheduleId != null and inspectScheduleId != ''">
+            inspect_schedule_id = #{inspectScheduleId} ,
+        </if>
+        <if test="inspectItemDefId != null and inspectItemDefId != ''">
+            inspect_item_def_id = #{inspectItemDefId} ,
+        </if>
+        <if test="schduleDefId != null and schduleDefId != ''">
+            schdule_def_id = #{schduleDefId} ,
+        </if>
+        <if test="itemDetailId != null and itemDetailId != ''">
+            item_detail_id = #{itemDetailId} ,
+        </if>
+        <if test="riskMeasureId != null and riskMeasureId != ''">
+            risk_measure_id = #{riskMeasureId} ,
+        </if>
+        <if test="riskMeasureContent != null and riskMeasureContent != ''">
+            risk_measure_content = #{riskMeasureContent} ,
+        </if>
+        <if test="inspectResult != null and inspectResult != ''">
+            inspect_result = #{inspectResult} ,
+        </if>
+        <if test="inspectNumber != null and inspectNumber != ''">
+            inspect_number = #{inspectNumber} ,
+        </if>
+        <if test="spotData != null and spotData != ''">
+            spot_data = #{spotData} ,
+        </if>
+        <if test="remark != null and remark != ''">
+            remark = #{remark} ,
+        </if>
+        <if test="checkSort != null and checkSort != ''">
+            check_sort = #{checkSort} ,
+        </if>
+        <if test="updatedTime != null">
+            updated_time = #{updatedTime} ,
+        </if>
+        <if test="updatedBy != null and updatedBy != ''">
+            updated_by = #{updatedBy},
+        </if>
+        </trim>
+        where inspect_record_id = #{inspectRecordId}
+    </update>
+
+    <update id="deleteById" parameterType="Long">
+		UPDATE scyf_risk_inspect_record SET
+		del_flag = 1
+		where inspect_record_id = #{id}
+	</update>
+
+    <update id="deleteByIds" parameterType="java.util.List">
+        UPDATE scyf_risk_inspect_record SET
+        del_flag = 1
+        where inspect_record_id in
+        <foreach collection="ids" item="id" open="(" close=")"
+                 separator="," index="idx">
+            #{id}
+        </foreach>
+    </update>
+
+</mapper>

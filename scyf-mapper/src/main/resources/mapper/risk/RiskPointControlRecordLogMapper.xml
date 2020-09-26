@@ -1,0 +1,178 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper
+        namespace="com.hngf.mapper.risk.RiskPointControlRecordLogMapper">
+
+
+    <select id="findList" resultType="RiskPointControlRecordLog">
+		select * from
+		scyf_risk_point_control_record_log
+		where del_flag = 0
+	</select>
+
+    <select id="findById" resultType="RiskPointControlRecordLog"
+            parameterType="Long">
+		select * from scyf_risk_point_control_record_log
+		where del_flag = 0 and record_id = #{id}
+	</select>
+
+    <select id="findIsControlRecordList" resultType="RiskPointControlRecordLog" parameterType="java.util.Map" >
+        SELECT
+            rpacr.detail_type   AS "detailType",
+            rpacr.detail_id AS "detailId",
+            rp.risk_point_level AS "riskPointLevel",
+            rpacr.cause_remark AS "causeRemark",
+            rpacr.created_time AS "createdTime",
+            sgp.group_name AS "groupName",
+            rp.risk_point_name AS "riskPointName"
+        FROM
+            scyf_risk_point_control_record_log rpacr
+            LEFT JOIN scyf_risk_point rp ON ( rp.risk_point_id = rpacr.risk_point_id AND rp.company_id = rpacr.company_id )
+            LEFT JOIN sys_group sgp ON ( sgp.group_id = rp.duty_group_id AND rp.company_id = sgp.company_id )
+        WHERE
+             rpacr.del_flag  =0
+            AND rpacr.is_close_up = 0
+            AND rpacr.is_control = 0
+            AND rpacr.company_id = #{companyId}
+        <if test="riskPointId !=null and riskPointId !=''">
+            and rpacr.risk_point_id = #{riskPointId}
+        </if>
+        <if test="riskPointLevel !=null and riskPointLevel !='' and riskPointLevel !='-1'">
+            and rp.risk_point_level = #{riskPointLevel}
+        </if>
+        <if test="riskPointIds != null and riskPointIds !=''">
+            and rpacr.risk_point_id in (${riskPointIds})
+        </if>
+        <if test="dateTime != null">
+            <![CDATA[
+                     AND DATE_FORMAT( rpacr.created_time, "%Y-%m-%d" ) = #{dateTime}
+                ]]>
+        </if>
+        order by rpacr.created_time desc
+    </select>
+
+    <insert id="add" parameterType="RiskPointControlRecordLog">
+		INSERT INTO scyf_risk_point_control_record_log (
+		company_id
+		, risk_point_id
+		, detail_id
+		, detail_type
+		, position_id
+		, is_control
+        <if test="isCloseUp != null">
+            , is_close_up
+        </if>
+		, cause_reason
+		, cause_remark
+		, created_time
+		, created_by
+		, del_flag
+		)
+		VALUES (
+		#{companyId}
+		, #{riskPointId}
+		, #{detailId}
+		, #{detailType}
+		, #{positionId}
+		, #{isControl}
+        <if test="isCloseUp != null">
+            , #{isCloseUp}
+        </if>
+		, #{causeReason}
+		, #{causeRemark}
+		, #{createdTime}
+		, #{createdBy}
+		, 0
+		)
+
+	</insert>
+
+    <update id="update" parameterType="RiskPointControlRecordLog">
+        UPDATE scyf_risk_point_control_record_log
+        <trim prefix="set" suffixOverrides=",">
+        <if test="companyId != null and companyId != ''">
+            company_id = #{companyId} ,
+        </if>
+        <if test="riskPointId != null and riskPointId != ''">
+            risk_point_id = #{riskPointId} ,
+        </if>
+        <if test="detailId != null and detailId != ''">
+            detail_id = #{detailId} ,
+        </if>
+        <if test="detailType != null and detailType != ''">
+            detail_type = #{detailType} ,
+        </if>
+        <if test="positionId != null and positionId != ''">
+            position_id = #{positionId} ,
+        </if>
+        <if test="isControl != null and isControl != ''">
+            is_control = #{isControl} ,
+        </if>
+        <if test="isCloseUp != null and isCloseUp != ''">
+            is_close_up = #{isCloseUp} ,
+        </if>
+        <if test="causeReason != null and causeReason != ''">
+            cause_reason = #{causeReason} ,
+        </if>
+        <if test="causeRemark != null and causeRemark != ''">
+            cause_remark = #{causeRemark} ,
+        </if>
+        <if test="updatedTime != null">
+            updated_time = #{updatedTime},
+        </if>
+        <if test="cupdatedBy != null and cupdatedBy != ''">
+            cupdated_by = #{cupdatedBy},
+        </if>
+        </trim>
+        where record_id = #{recordId}
+    </update>
+
+    <update id="deleteIsCloseUp">
+		UPDATE scyf_risk_point_control_record_log SET
+		del_flag = 1
+		where company_id = #{companyId}
+        <if test="riskPointId != null " >
+            AND risk_point_id = #{riskPointId}
+        </if>
+        <if test="detailId != null " >
+            and detail_id = #{detailId}
+        </if>
+        <if test="positionId != null" >
+            and position_id = #{positionId}
+        </if>
+	</update>
+
+    <!--闭环逾期任务-->
+    <update id="scheduleIsCloseUp" >
+        UPDATE scyf_risk_point_control_record_log SET
+        del_flag = 1
+        where company_id = #{companyId}
+        <if test="riskPointId != null" >
+            AND risk_point_id = #{riskPointId}
+        </if>
+        <if test="detailType != null" >
+            and detail_type = #{detailType}
+        </if>
+        <if test="positionId != null" >
+            and position_id = #{positionId}
+        </if>
+    </update>
+
+    <update id="deleteById" parameterType="Long">
+		UPDATE scyf_risk_point_control_record_log SET
+		del_flag = 1
+		where record_id = #{id}
+	</update>
+
+    <update id="deleteByIds" parameterType="java.util.List">
+        UPDATE scyf_risk_point_control_record_log SET
+        del_flag = 1
+        where record_id in
+        <foreach collection="ids" item="id" open="(" close=")"
+                 separator="," index="idx">
+            #{id}
+        </foreach>
+    </update>
+
+</mapper>

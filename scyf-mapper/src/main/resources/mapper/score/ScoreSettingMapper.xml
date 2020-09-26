@@ -1,0 +1,146 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.hngf.mapper.score.ScoreSettingMapper">
+
+    <sql id="Base_Column_List">
+             score_setting_id,
+             company_id,
+             score_item_name,
+             score_item_desc,
+             setting_code,
+             setting_score,
+             setting_type,
+             setting_status,
+             updated_time,
+             updated_by,
+             created_time,
+             created_by,
+             del_flag
+    </sql>
+    <select id="findList" resultType="com.hngf.entity.score.ScoreSetting">
+		 select
+        <include refid="Base_Column_List"/>
+        from scyf_score_setting
+        <where>
+            del_flag=0
+            <if test="companyId != null">
+             and   company_id = #{companyId}
+            </if>
+            <if test="settingType != null and settingType != ''">
+              and  setting_type = #{settingType}
+            </if>
+        </where>
+	</select>
+
+    <select id="findById" resultType="com.hngf.entity.score.ScoreSetting" parameterType="Long">
+		select * from scyf_score_setting
+        where del_flag = 0 and score_setting_id = #{id}
+	</select>
+
+    <select id="findBySettingCode" resultType="ScoreSetting">
+		select * from scyf_score_setting
+        where del_flag = 0
+        and company_id = #{companyId}
+        and setting_code = #{settingCode}
+	</select>
+
+    <insert id="add" parameterType="com.hngf.entity.score.ScoreSetting">
+        INSERT INTO scyf_score_setting (
+                                         company_id
+        ,                                score_item_name
+        ,                                score_item_desc
+        ,                                setting_code
+        ,                                setting_score
+        ,                                setting_type
+        ,                                setting_status
+        ,                                updated_time
+        ,                                updated_by
+        ,                                created_time
+        ,                                created_by
+        ,                                del_flag
+                                        )
+                                 VALUES (
+                                           #{companyId}
+        ,                                  #{scoreItemName}
+        ,                                  #{scoreItemDesc}
+        ,                                  #{settingCode}
+        ,                                  #{settingScore}
+        ,                                  #{settingType}
+        ,                                  #{settingStatus}
+        ,                                  #{updatedTime}
+        ,                                  #{updatedBy}
+        ,                                  #{createdTime}
+        ,                                  #{createdBy}
+        ,                                  #{delFlag}
+                                  )
+
+    </insert>
+
+    <update id="update" parameterType="com.hngf.entity.score.ScoreSetting">
+                      UPDATE scyf_score_setting
+                      <trim>
+                          <set>
+                            <if test="companyId != null">
+                            company_id = #{companyId} ,
+                            </if>
+                            <if test="scoreItemName != null and scoreItemName != ''">
+                            score_item_name = #{scoreItemName} ,
+                            </if>
+                            <if test="scoreItemDesc != null and scoreItemDesc != ''">
+                            score_item_desc = #{scoreItemDesc} ,
+                            </if>
+                            <if test="settingCode != null">
+                            setting_code = #{settingCode} ,
+                            </if>
+                            <if test="settingScore != null">
+                            setting_score = #{settingScore} ,
+                            </if>
+                            <if test="settingType != null">
+                            setting_type = #{settingType} ,
+                            </if>
+                            <if test="settingStatus != null">
+                            setting_status = #{settingStatus} ,
+                            </if>
+                            <if test="updatedTime != null">
+                            updated_time = #{updatedTime} ,
+                            </if>
+                            <if test="updatedBy != null">
+                            updated_by = #{updatedBy} ,
+                            </if>
+                            <if test="createdTime != null">
+                            created_time = #{createdTime} ,
+                            </if>
+                            <if test="createdBy != null">
+                            created_by = #{createdBy} ,
+                            </if>
+                            <if test="delFlag != null">
+                            del_flag = #{delFlag}
+                            </if>
+                          </set>
+                      </trim>
+                         where score_setting_id = #{scoreSettingId}
+    </update>
+
+    <update id="deleteById" parameterType="Long">
+        UPDATE scyf_score_setting SET
+        del_flag = 1
+        where score_setting_id = #{id}
+    </update>
+
+    <update id="deleteByIds" parameterType="java.util.List">
+        UPDATE scyf_score_setting SET
+        del_flag = 1
+        where score_setting_id in
+        <foreach collection="ids" item="id" open="(" close=")" separator="," index="idx">
+            #{id}
+        </foreach>
+    </update>
+
+    <update id="deleteBatchByCompanyId" parameterType="java.lang.Long">
+        UPDATE scyf_score_setting SET
+        del_flag = 1 , updated_by = #{updatedBy} ,updated_time = now()
+        WHERE company_id = #{companyId}
+    </update>
+
+</mapper>

@@ -1,0 +1,224 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.hngf.mapper.risk.RiskRecordMapper">
+    <update id="delDangerSource">
+        UPDATE scyf_risk_record
+        SET del_flag=1
+        <where>
+            risk_danger_id=#{dangerSrcId}
+            and company_id=#{companyId}
+        </where>
+    </update>
+
+
+    <update id="remove">
+        update scyf_risk_record set del_flag=1
+        where risk_point_id in
+        <foreach collection="list" separator="," item="item" open="("
+                 close=")">
+            #{item}
+        </foreach>
+        and risk_danger_id=#{parentRiskDangerId}
+    </update>
+
+    <update id="delete">
+        UPDATE scyf_risk_record SET
+        del_flag=1
+        where risk_id=#{riskId} and company_id=#{companyId}
+    </update>
+
+
+    <select id="findList"
+            resultType="com.hngf.entity.risk.RiskRecord">
+		select * from scyf_risk_record
+		where del_flag = 0
+	</select>
+
+    <select id="findRiskByRiskPointId" resultType="Risk">
+		SELECT
+            er.risk_danger_id    AS "riskDangerId",
+            er.risk_id AS "riskId",
+            er.risk_code AS "riskCode",
+            er.risk_name AS "riskName",
+            er.risk_level AS "riskLevel",
+            er.risk_hram_factor AS "riskHramFactor",
+            er.risk_consequence AS "riskConsequence",
+            eds.risk_danger_name AS "riskDangerName"
+        FROM
+            scyf_risk_record err
+            LEFT JOIN scyf_risk er ON er.company_id = err.company_id
+            AND er.risk_id = err.risk_id
+            LEFT JOIN scyf_risk_source eds ON err.risk_danger_id = eds.risk_danger_id
+            AND err.company_id = eds.company_id
+            AND eds.del_flag = 0
+        WHERE
+            err.risk_point_id = #{value}  AND err.del_flag = 0
+            AND er.risk_id IS NOT NULL
+        ORDER BY
+            err.risk_danger_id DESC
+	</select>
+
+    <select id="findMeasureList" resultType="Map">
+        SELECT
+            er.risk_point_id as riskPointId,
+            er.risk_id as riskId,
+            er.risk_danger_id as riskDangerId,
+            er.risk_name as riskName,
+            er.company_id as companyId,
+            eds.risk_danger_type as riskDangerType,
+            edsp.risk_danger_name as parentRiskDangerName,
+            edsn.risk_danger_name as rootName,
+            er1.risk_hram_factor riskHramFactor,
+            er1.risk_consequence riskConsequence,
+            er1.risk_level riskLevel,
+            er1.risk_code riskCode,
+            group_concat(concat(erm.risk_measure_type_id, '#', erm.risk_measure_content)) as riskMeasureContent
+        from scyf_risk_record er
+            LEFT JOIN scyf_risk_source eds on er.risk_id=eds.risk_danger_id and er.company_id=eds.company_id and eds.del_flag=0
+            LEFT JOIN scyf_risk_source edsp on eds.parent_risk_danger_id=edsp.risk_danger_id and er.company_id=edsp.company_id and edsp.del_flag=0
+            LEFT JOIN scyf_risk_source edsn on eds.root_node=edsn.risk_danger_id and er.company_id=edsn.company_id and edsn.del_flag=0
+            LEFT JOIN scyf_risk_measure erm on erm.risk_id = er.risk_id and er.company_id = erm.company_id
+            LEFT JOIN scyf_risk er1 on er1.risk_id = er.risk_id and er.company_id = er1.company_id
+        WHERE 1=1
+            and er.risk_point_id=#{value}
+            and er.del_flag=0
+            and erm.del_flag=0
+            and er1.risk_id is not null
+        group by er.risk_id
+        order by er.risk_id desc
+	</select>
+
+    <select id="findById"
+            resultType="com.hngf.entity.risk.RiskRecord" parameterType="Long">
+		select *
+		from scyf_risk_record
+		where del_flag = 0 and risk_id = #{id}
+	</select>
+    <select id="getRiskPointByDangerId" resultType="java.util.Map">
+     SELECT
+        MIN(risk.risk_level) as "lv",
+        err.risk_point_id  as "riskPointId",
+        COUNT(err.risk_id)as "riskCount"
+        from scyf_risk_record err
+        LEFT JOIN scyf_risk risk on  err.risk_id=risk.risk_id and risk.company_id=err.company_id
+        WHERE err.risk_point_id in(SELECT risk_point_id from scyf_risk_record WHERE risk_danger_id=#{parentRiskDangerId} GROUP BY risk_point_id)
+        GROUP BY risk_point_id
+    </select>
+    <select id="list" resultType="com.hngf.entity.risk.RiskRecord">
+        SELECT
+        *
+        FROM scyf_risk_record
+        <where>
+            del_flag=0
+            and risk_danger_id=#{riskDangerId}
+            and company_id=#{companyId}
+        </where>
+    </select>
+
+    <insert id="add" parameterType="com.hngf.entity.risk.RiskRecord">
+		INSERT INTO scyf_risk_record (
+		risk_point_id
+		,
+		risk_danger_id
+		,
+		risk_name
+		,
+		company_id
+		,
+		del_flag
+		)
+		VALUES (
+		#{riskPointId}
+		,
+		#{riskDangerId}
+		,
+		#{riskName}
+		,
+		#{companyId}
+		,
+		#{delFlag}
+		)
+
+	</insert>
+    <!--批量新增风险点关联风险表-->
+    <insert id="saveBatch">
+        INSERT INTO scyf_risk_record(
+        risk_id,
+        risk_point_id,
+        risk_danger_id,
+        risk_name,
+        company_id,
+        del_flag
+        )
+        VALUES
+        <foreach collection="list" item="emp" separator=",">
+            (
+            #{emp.riskId},
+            #{emp.riskPointId},
+            #{emp.riskDangerId},
+            #{emp.riskName},
+            #{emp.companyId},
+            0
+            )
+        </foreach>
+    </insert>
+
+    <update id="update"
+            parameterType="com.hngf.entity.risk.RiskRecord">
+		UPDATE scyf_risk_record SET
+
+		risk_point_id = #{riskPointId}
+
+		,
+		risk_danger_id = #{riskDangerId}
+
+		,
+		risk_name = #{riskName}
+
+		,
+		company_id = #{companyId}
+
+		,
+		del_flag = #{delFlag}
+
+
+		where risk_id = #{riskId}
+	</update>
+
+    <update id="deleteById" parameterType="Long">
+		UPDATE scyf_risk_record SET
+		del_flag = 1
+		where risk_id = #{id}
+	</update>
+
+    <update id="deleteByIds" parameterType="java.util.List">
+        UPDATE scyf_risk_record SET
+        del_flag = 1
+        where risk_id in
+        <foreach collection="ids" item="id" open="(" close=")"
+                 separator="," index="idx">
+            #{id}
+        </foreach>
+    </update>
+
+    <update id="deleteByMap" parameterType="Map">
+        UPDATE scyf_risk_record SET
+        del_flag = 1
+        where 1=1
+        <if test="riskId != null and riskId != ''">
+            and risk_id = #{riskId}
+        </if>
+        <if test="riskPointId != null and riskPointId != ''">
+            and risk_point_id = #{riskPointId}
+        </if>
+        <if test="companyId != null and companyId != ''">
+            and company_id = #{companyId}
+        </if>
+        <if test="riskDangerId != null and riskDangerId != ''">
+            and risk_danger_id = #{riskDangerId}
+        </if>
+    </update>
+
+
+</mapper>

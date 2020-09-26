@@ -1,0 +1,1402 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.hngf.mapper.sys.CompanyMapper">
+
+    <sql id="Company_Column_List">
+        A.company_id         AS  "companyId",
+        A.company_name       AS   "companyName",
+        A.company_pic        AS   "companyPic",
+        A.register_number    AS   "registerNumber",
+        A.org_code           AS   "orgCode",
+        A.found_date         AS   "foundDate",
+        A.company_deputy     AS   "companyDeputy",
+        A.company_mobile     AS   "companyMobile",
+        A.compay_email       AS   "compayEmail",
+        A.company_address    AS   "companyAddress",
+        A.postal_code        AS   "postalCode",
+        A.economic_type_code AS   "economicTypeCode",
+        A.industry_type_coe  AS   "industryTypeCoe",
+        A.company_affiliation AS  "companyAffiliation",
+        A.business_scope      AS  "businessScope",
+        A.company_status      AS  "companyStatus",
+        A.longitude           AS  "longitude",
+        A.latitude            AS  "latitude",
+        A.business_scope_baidu AS  "businessScopeBaidu",
+        A.business_scope_3d   AS  "businessScope3d",
+        A.company_admin_id    AS  "companyAdminId",
+        A.company_group_id    AS  "companyGroupId",
+        A.supervision_id      AS  "supervisionId",
+        A.company_root_id     AS  "companyRootId",
+        A.company_parent_id   AS  "companyParentId",
+        A.company_type_id     AS  "companyTypeId",
+        A.company_left        AS  "companyLeft",
+        A.company_right       AS  "companyRight",
+        A.company_level       AS  "companyLevel",
+        A.prov_id             AS "provId",
+        A.city_id             AS "cityId",
+        A.county_id           AS "countyId",
+        A.town_id             AS "townId",
+        A.company_certificate AS "companyCertificate",
+        A.company_aptitude AS "companyAptitude",
+        B.major_name          AS  "majorName",
+        B.major_telephone     AS  "majorTelephone",
+        B.major_phone         AS  "majorPhone",
+        B.major_email         AS  "majorEmail",
+        B.secure_name         AS  "secureName",
+        B.secure_telephone    AS  "secureTelephone",
+        B.secure_phone        AS  "securePhone",
+        B.secure_email        AS  "secureEmail",
+        B.secure_setting      AS  "secureSetting",
+        B.employee_persons    AS  "employeePersons",
+        B.special_work_persons AS  "specialWorkPersons",
+        B.fulltime_secure_persons AS  "fulltimeSecurePersons",
+        B.fulltime_emergency_persons  AS "fulltimeEmergencyPersons",
+        B.register_secure_engineer_persons AS "registerSecureEngineerPersons",
+        B.secure_supervise_persons AS "secureSupervisePersons",
+        B.production_address   AS  "productionAddress",
+        B.scale_case           AS  "scaleCase",
+        B.company_scale        AS  "companyScale",
+        B.supervise_classify   AS  "superviseClassify",
+        B.hidden_check_govern  AS  "hiddenCheckGovern",
+        B.hidden_check_plan    AS  "hiddenCheckPlan",
+        C.industry_name        AS  "industryName",
+        E.item_name            AS  "itemName",
+        F.org_name             AS  "orgName",
+        G.web_url              AS  "webUrl" ,
+        H.login_name           AS  "loginName",
+        H.user_mobile          AS  "userMobile"
+    </sql>
+
+    <sql id="Company_Column">
+        A.company_id         AS  "companyId",
+        A.company_name       AS   "companyName",
+        A.company_pic        AS   "companypic",
+        A.company_aptitude   AS   "companyAptitude",
+        A.company_certificate  AS   "companyCertificate",
+        A.register_number    AS   "registerNumber",
+        A.org_code           AS   "orgCode",
+        A.found_date         AS   "foundDate",
+        A.company_deputy     AS   "companyDeputy",
+        A.company_mobile     AS   "companyMobile",
+        A.compay_email       AS   "compayEmail",
+        A.company_address    AS   "companyAddress",
+        A.postal_code        AS   "postalCode",
+        A.economic_type_code AS   "economicTypeCode",
+        A.industry_type_coe  AS   "industryTypeCoe",
+        A.company_affiliation AS  "companyAffiliation",
+        A.business_scope      AS  "businessScope",
+        A.company_status      AS  "companyStatus",
+        A.longitude           AS  "longitude",
+        A.latitude            AS  "latitude",
+        A.business_scope_baidu AS  "businessScopeBaidu",
+        A.business_scope_3d   AS  "businessScope3d",
+        A.company_admin_id    AS  "companyAdminId",
+        A.company_group_id    AS  "companyGroupId",
+        A.supervision_id      AS  "supervisionId",
+        A.company_root_id     AS  "companyRootId",
+        A.company_parent_id   AS  "companyParentId",
+        A.company_type_id     AS  "companyTypeId",
+        A.company_left        AS  "companyLeft",
+        A.company_right       AS  "companyRight",
+        A.company_level       AS  "companyLevel",
+        A.prov_id             AS "provId",
+        A.city_id             AS "cityId",
+        A.county_id           AS "countyId",
+        A.town_id             AS "townId"
+    </sql>
+
+    <select id="findList" resultType="CompanyDto">
+        SELECT
+        <include refid="Company_Column_List"/>
+        FROM sys_company AS A
+        LEFT JOIN scyf_secure_produc AS B ON B.company_id = A.company_id
+        LEFT JOIN sys_industry AS C ON C.industry_code = A.industry_type_coe
+        LEFT JOIN sys_dict_item AS E ON E.item_id = A.company_affiliation
+        LEFT JOIN sys_org AS F ON F.org_id = B.secure_supervise_persons
+        LEFT JOIN sys_info AS G ON G.company_id = A.company_id
+        LEFT JOIN sys_user AS H ON H.user_id = A.company_admin_id
+        WHERE 1 = 1 AND A.del_flag = 0
+        <if test="companyId != null ">
+            AND A.company_id = #{companyId}
+        </if>
+        <if test="keyword != null and keyword != ''">
+            AND (A.company_name like "%"#{keyword}"%"
+            OR A.register_number like "%"#{keyword}"%"
+            OR A.company_mobile like "%"#{keyword}"%"
+            OR A.company_address like "%"#{keyword}"%")
+        </if>
+        <if test="industryCode != null and industryCode != ''">
+            AND C.industry_code = #{industryCode}
+        </if>
+        GROUP BY A.company_id
+        ORDER BY A.company_parent_id asc ,A.created_time desc
+	</select>
+
+    <select id="findById" resultType="java.util.Map" >
+        SELECT
+        <include refid="Company_Column_List"/>
+        FROM sys_company AS A
+        LEFT JOIN scyf_secure_produc AS B ON B.company_id = A.company_id
+        LEFT JOIN sys_industry AS C ON C.industry_code = A.industry_type_coe
+        LEFT JOIN sys_dict_item AS E ON E.item_id = A.company_affiliation
+        LEFT JOIN sys_org AS F ON F.org_id = B.secure_supervise_persons
+        LEFT JOIN sys_info AS G ON G.company_id = A.company_id
+        LEFT JOIN sys_user AS H ON H.user_id = A.company_admin_id
+        WHERE A.company_id = #{companyId}
+        AND A.del_flag = 0
+        GROUP BY A.company_id
+	</select>
+    <!--三级联动查询省市县乡-->
+    <select id="selectPro" resultType="java.util.Map">
+        SELECT
+        a.area_code AS "areacode",
+        a.area_name AS "areaName",
+        a.area_type AS "areatype",
+        a.area_parent_id AS "areaParentId"
+        FROM sys_area a
+        <where>
+            a.del_flag=0
+            <if test="parentId != null and parentId !=''">
+               AND a.area_parent_id = #{parentId}
+            </if>
+        </where>
+    </select>
+    <select id="getCompanyById" resultType="com.hngf.entity.sys.Company">
+        SELECT
+        <include refid="Company_Column"/>
+        FROM sys_company A
+        <where>
+            A.del_flag=0
+            AND A.company_id=#{companyParentId}
+        </where>
+    </select>
+    <!--查看企业经济类型-->
+    <select id="queryEconomicType" resultType="java.util.Map">
+        SELECT
+            dict_code AS "dictCode",
+            dict_name AS "dictName"
+        FROM sys_dict
+        <where>
+            del_flag=0
+            and owner_id=#{dictId}
+            and dict_type=#{dictType}
+        </where>
+    </select>
+    <!--查看企业经济类型父类-->
+    <select id="queryEconomicTypeParent" resultType="java.util.Map">
+        SELECT
+        dict_id AS "dictId",
+        dict_name AS "dictName"
+        FROM sys_dict
+        <where>
+            del_flag=0
+            and owner_id=#{ownerId}
+            and dict_type=#{dictType}
+        </where>
+    </select>
+    <!--企业规模查询-->
+    <select id="queryScale" resultType="java.util.Map">
+        SELECT
+          dict_code AS "comCode",
+          dict_name AS "comName"
+        FROM sys_dict
+        <where>
+            del_flag=0
+            and dict_type=#{dictType}
+        </where>
+    </select>
+    <select id="getCompanyId" resultType="com.hngf.entity.sys.Company">
+        SELECT
+        <include refid="Company_Column"/>
+        FROM sys_company A
+        <where>
+            A.del_flag=0
+            and A.company_id=#{companyId}
+        </where>
+
+    </select>
+
+    <insert id="add" parameterType="com.hngf.entity.sys.Company" useGeneratedKeys="true" keyProperty="companyId">
+        INSERT INTO sys_company (
+                                company_name,
+                                company_pic,
+                                 register_number ,
+                                 org_code,
+                                found_date,
+                                 company_deputy,
+                                company_mobile ,
+                                 compay_email ,
+                                company_address,
+                                postal_code,
+                                prov_id,
+                                city_id,
+                                county_id,
+                                town_id,
+                                 economic_type_code,
+                                industry_type_coe ,
+                                 company_affiliation,
+                                business_scope,
+                                 company_status,
+                                 longitude,
+                                 latitude ,
+                                 business_scope_baidu,
+                                business_scope_3d,
+                                company_admin_id ,
+                                company_group_id,
+                                 supervision_id,
+                                company_root_id ,
+                                company_parent_id,
+                                company_type_id ,
+                                 company_left,
+                                company_right,
+                                company_level,
+                                 deployment,
+                                created_time,
+                                 created_by,
+                                 updated_time,
+                                  updated_by,
+                                  company_certificate,
+                                  company_aptitude,
+                                  del_flag)VALUES(
+                                #{companyName},
+                                #{companyPic},
+                                #{registerNumber},
+                                #{orgCode},
+                                DATE_FORMAT(#{foundDate},'%Y-%m-%d %H:%i:%S'),
+                                #{companyDeputy},
+                                #{companyMobile} ,
+                                #{compayEmail} ,
+                                #{companyAddress},
+                                #{postalCode},
+                                #{provId},
+                                 #{cityId},
+                                #{countyId},
+                                 #{townId},
+                                #{economicTypeCode} ,
+                                 #{industryTypeCoe},
+                                #{companyAffiliation} ,
+                                #{businessScope},
+                                #{companyStatus},
+                                #{longitude} ,
+                                #{latitude},
+                                #{businessScopeBaidu} ,
+                                #{businessScope3d},
+                                #{companyAdminId} ,
+                                #{companyGroupId},
+                                #{supervisionId},
+                                 #{companyRootId},
+                                #{companyParentId},
+                                 #{companyTypeId},
+                                #{companyLeft},
+                                #{companyRight},
+                                #{companyLevel},
+                                #{deployment},
+                                #{createdTime},
+                                #{createdBy},
+                                #{updatedTime},
+                               #{updatedBy},
+                               #{companyCertificate},
+                               #{companyAptitude},
+                                 #{delFlag})
+
+    </insert>
+    <insert id="insertCompany" parameterType="com.hngf.entity.sys.Company" useGeneratedKeys="true" keyProperty="companyId">
+        INSERT INTO sys_company (
+        <if test="companyName != null and companyName !=''">
+            company_name ,
+        </if>
+        <if test="companyPic != null and companyPic !=''">
+            company_pic ,
+        </if>
+        <if test="registerNumber != null and registerNumber !=''">
+            register_number ,
+        </if>
+        <if test="orgCode != null and orgCode !=''">
+            org_code ,
+        </if>
+        <if test="foundDate != null">
+            found_date ,
+        </if>
+        <if test="companyDeputy != null and companyDeputy !=''">
+            company_deputy ,
+        </if>
+        <if test="companyMobile != null and companyMobile !=''">
+            company_mobile ,
+        </if>
+        <if test="compayEmail != null and compayEmail !=''">
+            compay_email ,
+        </if>
+        <if test="companyAddress != null and companyAddress !=''">
+            company_address ,
+        </if>
+        <if test="postalCode != null and postalCode !=''">
+            postal_code ,
+        </if>
+        <if test="provId != null and provId !=''">
+            prov_id ,
+        </if>
+        <if test="cityId != null and cityId !=''">
+            city_id ,
+        </if>
+        <if test="countyId != null and countyId !=''">
+            county_id ,
+        </if>
+        <if test="townId != null and townId !=''">
+            town_id ,
+        </if>
+        <if test="economicTypeCode != null and economicTypeCode !=''">
+            economic_type_code ,
+        </if>
+        <if test="industryTypeCoe != null and industryTypeCoe !=''">
+            industry_type_coe ,
+        </if>
+        <if test="companyAffiliation != null and companyAffiliation !=''">
+            company_affiliation ,
+        </if>
+        <if test="businessScope != null and businessScope !=''">
+            business_scope ,
+        </if>
+        <if test="companyStatus != null">
+            company_status ,
+        </if>
+        <if test="longitude != null and longitude !=''">
+            longitude ,
+        </if>
+        <if test="latitude != null and latitude !=''">
+            latitude ,
+        </if>
+        <if test="businessScopeBaidu != null and businessScopeBaidu !=''">
+            business_scope_baidu ,
+        </if>
+        <if test="businessScope3d != null and businessScope3d !=''">
+            business_scope_3d ,
+        </if>
+        <if test="companyAdminId != null and companyAdminId !=''">
+            company_admin_id ,
+        </if>
+        <if test="companyGroupId != null and companyGroupId !=''">
+            company_group_id ,
+        </if>
+        <if test="supervisionId != null and supervisionId !=''">
+            supervision_id ,
+        </if>
+        <if test="companyRootId != null and companyRootId !=''">
+            company_root_id ,
+        </if>
+        <if test="companyParentId != null">
+            company_parent_id ,
+        </if>
+        <if test="companyTypeId != null">
+            company_type_id ,
+        </if>
+        <if test="companyLevel != null and companyLevel !=''">
+            company_level ,
+        </if>
+        <if test="deployment != null and deployment !=''">
+            deployment ,
+        </if>
+        <if test="createdTime != null">
+            created_time  ,
+        </if>
+        <if test="createdBy != null and createdBy !=''">
+            created_by ,
+        </if>
+        <if test="updatedTime != null">
+            updated_time ,
+        </if>
+        <if test="updatedBy != null and updatedBy !=''">
+            updated_by ,
+        </if>
+        <if test="companyCertificate != null and companyCertificate !=''">
+            company_certificate ,
+        </if>
+        <if test="companyAptitude != null and companyAptitude !=''">
+            company_aptitude ,
+        </if>
+        del_flag
+        )
+        VALUES(
+        <if test="companyName != null and companyName !=''">
+            #{companyName},
+        </if>
+        <if test="companyPic != null and companyPic !=''">
+            #{companyPic} ,
+        </if>
+        <if test="registerNumber != null and registerNumber !=''">
+            #{registerNumber},
+        </if>
+        <if test="orgCode != null and orgCode !=''">
+            #{orgCode},
+        </if>
+        <if test="foundDate != null">
+            DATE_FORMAT(#{foundDate},'%Y-%m-%d %H:%i:%S'),
+        </if>
+        <if test="companyDeputy != null and companyDeputy !=''">
+            #{companyDeputy},
+        </if>
+        <if test="companyMobile != null and companyMobile !=''">
+            #{companyMobile},
+        </if>
+        <if test="compayEmail != null and compayEmail !=''">
+            #{compayEmail},
+        </if>
+        <if test="companyAddress != null and companyAddress !=''">
+            #{companyAddress},
+        </if>
+        <if test="postalCode != null and postalCode !=''">
+            #{postalCode},
+        </if>
+        <if test="provId != null and provId !=''">
+            #{provId},
+        </if>
+        <if test="cityId != null and cityId !=''">
+            #{cityId},
+        </if>
+        <if test="countyId != null and countyId !=''">
+            #{countyId},
+        </if>
+        <if test="townId != null and townId !=''">
+            #{townId},
+        </if>
+        <if test="economicTypeCode != null and economicTypeCode !=''">
+            #{economicTypeCode},
+        </if>
+        <if test="industryTypeCoe != null and industryTypeCoe !=''">
+            #{industryTypeCoe},
+        </if>
+        <if test="companyAffiliation != null and companyAffiliation !=''">
+            #{companyAffiliation},
+        </if>
+        <if test="businessScope != null and businessScope !=''">
+            #{businessScope},
+        </if>
+        <if test="companyStatus != null">
+            #{companyStatus} ,
+        </if>
+        <if test="longitude != null and longitude !=''">
+            #{longitude},
+        </if>
+        <if test="latitude != null and latitude !=''">
+            #{latitude},
+        </if>
+        <if test="businessScopeBaidu != null and businessScopeBaidu !=''">
+            #{businessScopeBaidu},
+        </if>
+        <if test="businessScope3d != null and businessScope3d !=''">
+            #{businessScope3d},
+        </if>
+        <if test="companyAdminId != null and companyAdminId !=''">
+            #{companyAdminId},
+        </if>
+        <if test="companyGroupId != null and companyGroupId !=''">
+            #{companyGroupId} ,
+        </if>
+        <if test="supervisionId != null and supervisionId !=''">
+            #{supervisionId},
+        </if>
+        <if test="companyRootId != null and companyRootId !=''">
+            #{companyRootId},
+        </if>
+        <if test="companyParentId != null">
+            #{companyParentId},
+        </if>
+        <if test="companyTypeId != null">
+            #{companyTypeId},
+        </if>
+        <if test="companyLevel != null and companyLevel !=''">
+            #{companyLevel},
+        </if>
+        <if test="deployment != null and deployment !=''">
+            #{deployment},
+        </if>
+        <if test="createdTime != null">
+            #{createdTime} ,
+        </if>
+        <if test="createdBy != null and createdBy !=''">
+            #{createdBy},
+        </if>
+        <if test="updatedTime != null">
+            #{updatedTime},
+        </if>
+        <if test="updatedBy != null and updatedBy !=''">
+            #{updatedBy},
+        </if>
+        <if test="companyCertificate != null and companyCertificate !=''">
+            #{companyCertificate},
+        </if>
+        <if test="companyAptitude != null and companyAptitude !=''">
+            #{companyAptitude},
+        </if>
+        0
+        )
+    </insert>
+
+    <update id="update" parameterType="com.hngf.entity.sys.Company">
+        UPDATE sys_company
+        <trim suffixOverrides=",">
+            <set>
+                <if test="companyName != null and companyName !=''">
+                    company_name = #{companyName},
+                </if>
+                <if test="companyPic != null and companyPic !=''">
+                    company_pic = #{companyPic} ,
+                </if>
+                <if test="registerNumber != null and registerNumber !=''">
+                    register_number = #{registerNumber},
+                </if>
+                <if test="orgCode != null and orgCode !=''">
+                    org_code = #{orgCode},
+                </if>
+                <if test="foundDate != null">
+                    found_date = DATE_FORMAT(#{foundDate},'%Y-%m-%d %H:%i:%S'),
+                </if>
+                <if test="companyDeputy != null and companyDeputy !=''">
+                    company_deputy = #{companyDeputy},
+                </if>
+                <if test="companyMobile != null and companyMobile !=''">
+                    company_mobile = #{companyMobile},
+                </if>
+                <if test="compayEmail != null and compayEmail !=''">
+                    compay_email = #{compayEmail},
+                </if>
+                <if test="companyAddress != null and companyAddress !=''">
+                    company_address = #{companyAddress},
+                </if>
+                <if test="postalCode != null and postalCode !=''">
+                    postal_code = #{postalCode},
+                </if>
+                <if test="provId != null and provId !=''">
+                    prov_id = #{provId},
+                </if>
+                <if test="cityId != null and cityId !=''">
+                    city_id = #{cityId},
+                </if>
+                <if test="countyId != null and countyId !=''">
+                    county_id = #{countyId},
+                </if>
+                <if test="townId != null and townId !=''">
+                    town_id = #{townId},
+                </if>
+                <if test="economicTypeCode != null and economicTypeCode !=''">
+                    economic_type_code = #{economicTypeCode},
+                </if>
+                <if test="industryTypeCoe != null and industryTypeCoe !=''">
+                    industry_type_coe = #{industryTypeCoe},
+                </if>
+                <if test="companyAffiliation != null and companyAffiliation !=''">
+                    company_affiliation = #{companyAffiliation},
+                </if>
+                <if test="businessScope != null and businessScope !=''">
+                    business_scope = #{businessScope},
+                </if>
+                <if test="companyStatus != null">
+                    company_status = #{companyStatus} ,
+                </if>
+                <if test="longitude != null and longitude !=''">
+                    longitude = #{longitude},
+                </if>
+                <if test="latitude != null and latitude !=''">
+                    latitude = #{latitude},
+                </if>
+                <if test="businessScopeBaidu != null and businessScopeBaidu !=''">
+                    business_scope_baidu = #{businessScopeBaidu},
+                </if>
+                <if test="businessScope3d != null and businessScope3d !=''">
+                    business_scope_3d = #{businessScope3d},
+                </if>
+                <if test="companyAdminId != null and companyAdminId !=''">
+                    company_admin_id = #{companyAdminId},
+                </if>
+                <if test="companyGroupId != null and companyGroupId !=''">
+                    company_group_id = #{companyGroupId} ,
+                </if>
+                <if test="supervisionId != null and supervisionId !=''">
+                    supervision_id = #{supervisionId},
+                </if>
+                <if test="companyRootId != null and companyRootId !=''">
+                    company_root_id = #{companyRootId},
+                </if>
+                <if test="companyParentId != null">
+                    company_parent_id = #{companyParentId},
+                </if>
+                <if test="companyTypeId != null">
+                    company_type_id = #{companyTypeId},
+                </if>
+                <if test="companyLeft != null and companyLeft !=''">
+                    company_left = #{companyLeft},
+                </if>
+                <if test="companyRight != null and companyRight !=''">
+                    company_right = #{companyRight},
+                </if>
+                <if test="companyLevel != null and companyLevel !=''">
+                    company_level = #{companyLevel},
+                </if>
+                <if test="deployment != null and deployment !=''">
+                    deployment = #{deployment},
+                </if>
+                <if test="createdTime != null">
+                    created_time = #{createdTime} ,
+                </if>
+                <if test="createdBy != null and createdBy !=''">
+                    created_by = #{createdBy},
+                </if>
+                <if test="updatedTime != null">
+                    updated_time = #{updatedTime},
+                </if>
+                <if test="updatedBy != null and updatedBy !=''">
+                    updated_by = #{updatedBy},
+                </if>
+                <if test="companyCertificate != null and companyCertificate !=''">
+                    company_certificate = #{companyCertificate},
+                </if>
+                <if test="companyAptitude != null and companyAptitude !=''">
+                    company_aptitude = #{companyAptitude},
+                </if>
+            </set>
+        </trim>
+        <where>
+            company_id = #{companyId}
+        </where>
+    </update>
+
+    <update id="deleteById" parameterType="java.lang.Long">
+        UPDATE sys_company SET
+        del_flag = 1 , updated_by = #{updatedBy}, updated_time = now()
+        where company_id = #{companyId}
+    </update>
+
+    <update id="deleteByIds" parameterType="java.util.List">
+        UPDATE sys_company SET
+        del_flag = 1
+        where company_id in
+        <foreach collection="ids" item="id" open="(" close=")" separator="," index="idx">
+            #{id}
+        </foreach>
+    </update>
+    <!--修改企业表companyGroupId-->
+    <update id="updateComGroupId">
+        UPDATE  sys_company SET
+        company_group_id =#{comGroupId}
+        <where>
+            company_id=#{companyId}
+        </where>
+    </update>
+    <!--更新企业管理员-->
+    <update id="updateCompanyAdmin">
+        UPDATE sys_company
+        <set>
+            <if test="userId != null">
+                company_admin_id = #{userId},
+            </if>
+        </set>
+        WHERE company_id = #{companyId}
+    </update>
+
+    <!-- 企业评分(监管端使用) -->
+    <select id="findCompanyScore" resultType="Map">
+        SELECT
+        cbi.company_id as companyId,
+        cbi.company_name AS companyName,
+        IFNULL(temp1.total,0) AS "totalLevel",
+        IFNULL(temp1.oneLevel,0) AS "oneLevel",
+        IFNULL(temp1.oneLevelOut,0) AS "oneLevelOut",
+        IFNULL(temp1.twoLevel,0) AS "twoLevel",
+        IFNULL(temp1.twoLevelOut,0) AS "twoLevelOut",
+        IFNULL(temp1.threeLevel,0) AS "threeLevel",
+        IFNULL(temp1.fourLevel,0) AS "fourLevel",
+        IFNULL(temp2.totalDangerCount,0) AS "totalHiddenCount",
+        IFNULL(temp2.finishDangerCount,0) AS "finishHiddenCount",
+        IFNULL(temp2.oneLevel,0) AS "oneHiddenLevel",
+        IFNULL(temp2.oneLevelFinish,0) AS "oneHiddenFinish",
+        <!--IFNULL(temp2.twoLevel,0) AS "twoHiddenLevel",-->
+        IFNULL(temp2.threeLevel,0) AS "threeHiddenLevel",
+        IFNULL(temp2.threeLevelFinish,0) AS "threeHiddenFinish",
+        <!--IFNULL(temp2.fourLevel,0) AS "fourHiddenLevel",-->
+        IFNULL(temp3.planCheckCount,0) AS "planCheckCount",
+        IFNULL(temp3.finishCheckCount,0) AS "finishCheckCount"
+        FROM
+        sys_company cbi
+        LEFT JOIN (SELECT
+        erp.company_id,
+        COUNT(erp.risk_point_id) AS "total",
+        SUM(IF(erp.risk_point_level = 1,1,0)) AS "oneLevel",
+        SUM(IF(erp.risk_point_level = 1 AND erp.is_out_of_control = 1,1,0)) AS "oneLevelOut",
+        SUM(IF(erp.risk_point_level = 2,1,0)) AS "twoLevel",
+        SUM(IF(erp.risk_point_level = 1 AND erp.is_out_of_control = 1,1,0)) AS "twoLevelOut",
+        SUM(IF(erp.risk_point_level = 3,1,0)) AS "threeLevel",
+        SUM(IF(erp.risk_point_level = 4,1,0)) AS "fourLevel"
+        FROM
+        scyf_risk_point erp
+        WHERE IF (erp.is_active = 1,(erp.end_time > now() OR erp.end_time IS NULL),'1=1')
+        AND erp.del_flag = 0
+        GROUP BY erp.company_id) temp1 ON temp1.company_id = cbi.company_id
+        LEFT JOIN (
+        SELECT
+        ehd.company_id,
+        COUNT(ehd.hidden_id) AS "totalDangerCount",
+        SUM(IF(ehd.status = 4,1,0)) AS "finishDangerCount",
+        SUM(IF(ehd.hidden_level = 1,1,0)) AS "oneLevel",
+        SUM(IF(ehd.hidden_level = 1 AND ehd.`status` = 4,1,0)) AS "oneLevelFinish",
+        <!-- SUM(IF(ehd.hidden_level = 2,1,0)) AS "twoLevel",-->
+         SUM(IF(ehd.hidden_level = 3,1,0)) AS "threeLevel",
+         SUM(IF(ehd.hidden_level = 3 AND ehd.`status` = 4,1,0)) AS "threeLevelFinish"
+         <!--SUM(IF(ehd.hidden_level = 4,1,0)) AS "fourLevel"-->
+        FROM
+        scyf_hidden ehd
+        WHERE ehd.`status` = 2 OR ehd.`status` = 3 OR ehd.`status` = 4 OR ehd.`status` = 5
+        GROUP BY ehd.company_id) temp2 ON temp2.company_id = cbi.company_id
+        LEFT JOIN (
+        SELECT
+        ercs.company_id,
+        COUNT(inspect_schedule_id) AS "planCheckCount",
+        SUM(IF(ercs.status = 2,1,0)) AS "finishCheckCount"
+        FROM
+        scyf_inspect_schdule ercs
+        WHERE ercs.del_flag = 0 AND ercs.parent_schedule_id != 0
+        GROUP BY ercs.company_id
+        ) temp3 ON temp3.company_id = cbi.company_id
+        where cbi.del_flag = 0
+        <if test="industryCodes != null and industryCodes != ''">
+            and find_in_set(cbi.industry_type_coe,#{industryCodes})
+        </if>
+        <if test="companyId != null and companyId != ''">
+            and find_in_set(cbi.company_id,#{companyId})
+        </if>
+        <if test="industryCode != null and industryCode != ''">
+            and (cbi.industry_type_coe = #{industryCode})
+        </if>
+        order by cbi.created_time
+    </select>
+
+    <!--根据公司ID主键查询公司信息+安全信息-->
+    <select id="findCompanyById" resultType="CompanyDto" >
+        SELECT
+        <include refid="Company_Column_List"/>
+        FROM sys_company AS A
+        LEFT JOIN scyf_secure_produc AS B ON B.company_id = A.company_id
+        LEFT JOIN sys_industry AS C ON C.industry_code = A.industry_type_coe
+        LEFT JOIN sys_dict_item AS E ON E.item_id = A.company_affiliation
+        LEFT JOIN sys_org AS F ON F.org_id = B.secure_supervise_persons
+        LEFT JOIN sys_info AS G ON G.company_id = A.company_id
+        LEFT JOIN sys_user AS H ON H.user_id = A.company_admin_id
+        WHERE A.company_id = #{companyId}
+        AND A.del_flag = 0
+        GROUP BY A.company_id
+    </select>
+
+    <!-- 查询集团、企业列表（含所有子节点） -->
+    <select id="findCompanyIdsWithSub" resultType="string">
+        SELECT GROUP_CONCAT(c.company_id)
+        FROM sys_company c
+        WHERE c.company_root_id = #{value}
+        AND c.del_flag = 0
+
+    </select>
+
+    <!-- 查询集团、企业列表（含所有子节点） -->
+    <select id="findCompanyIdsByCId" resultType="string">
+        SELECT GROUP_CONCAT(c.company_id)
+        FROM sys_company c
+        WHERE c.company_root_id = #{value}
+        AND c.del_flag = 0
+        AND c.company_type_id = 0
+    </select>
+
+    <!-- 删除多个集团、企业 -->
+    <update id="deleteCompanys">
+        UPDATE sys_company
+        SET del_flag = 1
+        WHERE FIND_IN_SET(company_id, #{value})
+    </update>
+
+    <!-- 查询机构企业列表 -->
+    <select id="selectCompanyListForTreeTable" resultType="CompanyDto">
+         SELECT c.company_id
+			 ,c.company_parent_id
+			 ,c.company_root_id
+			 ,c.company_type_id
+			 ,c.company_level
+			 ,c.company_name
+			 ,c.company_address
+			 ,i.industry_name
+			 ,c.company_deputy
+			 ,c.company_mobile
+			 ,c.deployment
+			 ,f.org_name
+			 ,c.company_admin_id
+			 ,a.user_name companyAdminName
+        FROM sys_company c
+            LEFT JOIN sys_company c1 ON c.company_parent_id = c1.company_id
+            LEFT JOIN scyf_secure_produc b ON b.company_id = c.company_id
+            LEFT JOIN sys_industry i ON i.industry_code = c.industry_type_coe
+            LEFT JOIN sys_org f ON f.org_id = b.secure_supervise_persons
+            LEFT JOIN sys_user a on a.user_id = c.company_admin_id
+        WHERE c.company_root_id = #{value}
+          AND c.del_flag = 0
+    </select>
+
+    <!-- 查询企业列表 -->
+    <select id="findSingleOrgs" parameterType="map" resultType="Company">
+        SELECT *
+        FROM sys_company
+        WHERE company_type_id = 0
+            AND company_parent_id = 0
+            AND del_flag = 0
+        ORDER BY company_name
+    </select>
+
+    <!-- 设置某个企业为指定集团的下级企业 -->
+    <update id="addExistOrg2Group" parameterType="map">
+        UPDATE sys_company
+        SET company_root_id = #{rootId}
+            ,company_parent_id = #{parentId}
+        WHERE company_id = #{companyId}
+            AND del_flag = 0
+    </update>
+
+    <update id="updateDeployment" parameterType="map">
+        UPDATE sys_company
+        SET deployment = #{deployment}
+        WHERE company_id = #{companyId}
+            AND del_flag = 0
+    </update>
+
+    <!-- 集团版主页统计风险点、隐患、风险指数和安全指数 -->
+    <select id="selectTotalForMainPage" resultType="map" parameterType="map">
+        SELECT c.company_id
+        ,c.company_name
+        ,IFNULL(riskCount1, 0) riskCount1
+        ,IFNULL(riskCount2, 0) riskCount2
+        ,IFNULL(hdCount1, 0) hdCount1
+        ,IFNULL(hdCount2, 0) hdCount2
+        ,IFNULL(hdCount3, 0) hdCount3
+        ,IFNULL(hdCount4, 0) hdCount4
+        ,IFNULL(risk_point, 0) risk_point
+        ,IFNULL(security_point, 0) security_point
+        ,IFNULL(scheduleCount,0) scheduleCount
+        FROM sys_company c
+        LEFT JOIN (
+        SELECT r.company_id, COUNT(1) riskCount1   <!-- 重大风险点 -->
+        FROM scyf_risk_point r
+        WHERE IF (r.is_active = 1, (r.end_time > now() OR r.end_time IS NULL), 1 = 1)
+        AND FIND_IN_SET(r.company_id, #{cIds})
+        AND r.del_flag = 0
+        AND r.risk_point_level = 1
+        GROUP BY r.company_id
+        ) t1 ON c.company_id = t1.company_id
+        LEFT JOIN (
+        SELECT r.company_id, COUNT(1) riskCount2   <!-- 较大风险点 -->
+        FROM scyf_risk_point r
+        WHERE IF (r.is_active = 1, (r.end_time > now() OR r.end_time IS NULL), 1 = 1)
+        AND FIND_IN_SET(r.company_id, #{cIds})
+        AND r.del_flag = 0
+        AND r.risk_point_level = 2
+        GROUP BY r.company_id
+        ) t2 on c.company_id = t2.company_id
+        LEFT JOIN (
+        SELECT h.company_id, COUNT(1) hdCount1   <!-- 未整改重大隐患 -->
+        FROM scyf_hidden h
+        WHERE FIND_IN_SET(h.company_id, #{cIds})
+        AND h.hidden_level = 1
+        AND FIND_IN_SET(h.status, '2,3,4,5')
+        GROUP BY h.company_id
+        ) t3 ON c.company_id = t3.company_id
+        LEFT JOIN (
+        SELECT h.company_id, COUNT(1) hdCount2  <!-- 未整改一般隐患 -->
+        FROM scyf_hidden h
+        WHERE FIND_IN_SET(h.company_id, #{cIds})
+        AND h.hidden_level = 3
+        AND FIND_IN_SET(h.status, '2,3,4,5')
+        GROUP BY h.company_id
+        ) t4  ON c.company_id = t4.company_id
+        LEFT JOIN (
+        SELECT h.company_id, COUNT(1) hdCount3   <!-- 已整改重大隐患 -->
+        FROM scyf_hidden h
+        WHERE FIND_IN_SET(h.company_id, #{cIds})
+        AND h.hidden_level = 1
+        AND h.status = 4
+        GROUP BY h.company_id
+        ) t5 ON c.company_id = t5.company_id
+        LEFT JOIN (
+        SELECT h.company_id, COUNT(1) hdCount4   <!-- 已整改一般隐患 -->
+        FROM scyf_hidden h
+        WHERE FIND_IN_SET(h.company_id, #{cIds})
+        AND h.hidden_level = 3
+        AND h.status = 4
+        GROUP BY h.company_id
+        ) t6 ON c.company_id = t6.company_id
+        LEFT JOIN
+        (
+        SELECT
+        IFNULL(SUM(
+        CASE  WHEN rp.risk_point_level = 1 THEN #{rp1}
+        WHEN rp.risk_point_level = 2 THEN #{rp2}
+        WHEN rp.risk_point_level = 3 THEN #{rp3}
+        WHEN rp.risk_point_level = 4 then #{rp4}
+        ELSE 0
+        END
+        ), 0) risk_point  <!-- 风险指数 -->
+        ,rp.company_id
+        FROM scyf_risk_point rp
+        WHERE IF (rp.is_active = 1, (rp.end_time > now() OR rp.end_time IS NULL), 1 = 1)
+        AND find_in_set(rp.company_id, #{cIds})
+        AND rp.del_flag = 0
+        GROUP BY rp.company_id
+        ) t7 ON c.company_id = t7.company_id
+        LEFT JOIN
+        (
+        SELECT IFNULL(SUM(CASE WHEN hd.hidden_level = 1 THEN #{hd1}
+        <!--WHEN hd.hidden_level = 2 THEN #{hd2}-->
+        WHEN hd.hidden_level = 3 THEN #{hd3}
+        <!-- WHEN hd.hidden_level = 4 THEN #{hd4}-->
+         ELSE 0
+         END), 0) security_point  <!-- 安全指数 -->
+        ,hd.company_id
+        FROM scyf_hidden hd
+        WHERE find_in_set(hd.company_id, #{cIds})
+        AND FIND_IN_SET(hd.status, '2,3,4,5')
+        GROUP BY hd.company_id
+        ) t8 ON c.company_id = t8.company_id
+        left join
+        (select  s.company_id,IFNULL(count(s.inspect_schedule_id),0)  as scheduleCount
+        from scyf_inspect_schdule s
+        left join sys_info si on si.company_id = s.company_id
+        WHERE TIMESTAMPDIFF(HOUR,NOW(), s.end_date) &lt;= si.superviser_advent  and TIMESTAMPDIFF(HOUR,NOW(), s.end_date) &gt; 0
+        and FIND_IN_SET(s.company_id,  #{cIds})
+        AND s.status in ( 0,1)
+        GROUP BY s.company_id
+        ) t9 on c.company_id  =t9.company_id
+        WHERE FIND_IN_SET(c.company_id, #{cIds})
+    </select>
+
+
+    <!-- 查询统计某集团下的所有企业列表（含该企业风险点和隐患的统计） -->
+    <select id="findCompanyListForBigScreen" parameterType="map" resultType="map">
+        SELECT t1.*
+        ,IFNULL(t2.rOneCount, 0) risk1
+        ,IFNULL(t2.rTwoCount, 0) risk2
+        ,IFNULL(t3.hdOneCount, 0) hd1
+        ,IFNULL(t3.hdTwoCount, 0) hd2
+        FROM
+        (
+        SELECT c.company_id as companyId
+        ,c.company_name as companyName
+        ,c.longitude
+        ,c.latitude
+        ,IFNULL(s.web_url, '') AS webUrl
+        FROM sys_company c
+        LEFT JOIN sys_info s ON c.company_id = s.company_id
+        WHERE c.company_root_id = #{companyRootId}
+        AND c.company_type_id = 0
+        AND c.del_flag = 0
+        ) t1
+
+        LEFT JOIN
+
+        <!-- 统计风险个数 -->
+        (
+        SELECT SUM(oneCount) rOneCount
+        ,SUM(twoCount) rTwoCount
+        ,company_id
+        FROM (
+        SELECT 1 oneCount
+        ,0 twoCount
+        ,r.company_id
+        FROM scyf_risk_point r
+        WHERE r.risk_point_level = 1 <!-- 1重大 -->
+        AND r.del_flag = 0
+        UNION ALL
+        SELECT 0 oneCount
+        ,1 twoCount
+        ,r.company_id
+        FROM scyf_risk_point r
+        WHERE r.risk_point_level = 2 <!-- 2较大 -->
+        AND r.del_flag = 0
+        ) t
+        GROUP BY company_id
+        ) t2
+        ON t1.companyId = t2.company_id
+        LEFT JOIN
+        <!-- 统计隐患个数 -->
+        (
+        SELECT SUM(oneCount) hdOneCount
+        ,SUM(twoCount) hdTwoCount
+        ,company_id
+        FROM (
+        SELECT 1 oneCount
+        ,0 twoCount
+        ,d.company_id
+        FROM scyf_hidden d
+        WHERE d.hidden_level = 1 <!-- 1重大 -->
+        AND FIND_IN_SET(d.`status`, '2,3,5')
+      <!--  UNION ALL
+        SELECT 0 oneCount
+        ,1 twoCount
+        ,d.company_id
+        FROM scyf_hidden d
+        WHERE d.hidden_level = 2 &lt;!&ndash; 2较大 &ndash;&gt;
+        AND FIND_IN_SET(d.`status`, '2,3,5')-->
+        ) t
+        GROUP BY company_id
+        ) t3
+
+        ON t1.companyId = t3.company_id
+    </select>
+    <select id="selectGroupPositionAndLvl" parameterType="Map" resultType="Map">
+        SELECT
+        sg.group_id groupId,
+        sg.company_id companyId,
+        sg.longitude,
+        sg.latitude,
+        CASE
+        gt.group_type_title
+        WHEN '公司' THEN
+        0 ELSE 1
+        END AS typeId,
+        IFNULL( gml.maxlvl,'4')  as maxlvl
+        FROM
+        sys_group sg
+        LEFT JOIN sys_group_type gt ON sg.group_type_id = gt.group_type_id
+        left join
+        (
+        SELECT
+        IFNULL( min( rp.risk_point_level ),'4') maxlvl,rp.duty_group_id
+        FROM
+        scyf_risk_point rp
+        WHERE
+        rp.duty_group_id IN (
+        SELECT
+        group_id
+        FROM
+        sys_group csg
+        WHERE
+        csg.group_id = #{groupId} or (csg.group_parent= #{groupId} and csg.group_leaf = 1) )     group by rp.duty_group_id  )   gml on gml.duty_group_id = sg.group_id
+        <where>  sg.longitude is not null and sg.latitude is not null
+            and ( sg.group_id = #{groupId} or (sg.group_parent= #{groupId} and sg.group_leaf = 1) )
+            <if test="companyId!=null and companyId!=''">
+                and  sg.company_id = #{companyId}
+            </if>
+        </where>
+
+    </select>
+    <select id="selectGroupPositionAndLvlPointMap" parameterType="Map" resultType="Map">
+        select  rpm.map_id as "mapId" , rpm.risk_point_id as "riskPointId"  from  scyf_risk_point_map rpm
+        where rpm.risk_point_id in ( select t.risk_point_id from ( select rp.risk_point_id from  scyf_risk_point rp  where rp.risk_point_level = #{riskPointLevel} and rp.company_id = #{companyId} and rp.duty_group_id = #{groupId} and rp.del_flag =0  limit 1 ) t )
+    </select>
+    <select id="findCompanyGroupIdByCompanyId" parameterType="Long" resultType="Long">
+        select company_group_id from sys_company where company_id = #{companyId}
+    </select>
+
+    <select id="findParentGroupIds" parameterType="Long" resultType="String">
+       	SELECT
+	     concat(A.group_id,',',B.group_id,',',B.group_parent)
+		FROM sys_group  AS A
+		LEFT JOIN sys_group  AS B ON A.group_parent = B.group_id
+		where A.group_id =#{groupId}
+    </select>
+    <select id="findParentGroupLeaderId" parameterType="Map"  resultType ="Long" >
+        SELECT gm.user_id
+        from sys_group_member as gm
+        left join sys_group_member_position as C on C.user_id = gm.user_id
+        where gm.group_id in (${groupIds})  and C.position_id in ( ${leaderPositonIds})
+    </select>
+
+    <select id="getCompanyCountByIndustryCode" resultType="java.lang.Integer" parameterType="String">
+       select IFNULL(COUNT(company_id),0)
+       from sys_company
+       where  find_in_set(industry_type_coe, #{industryCode})  and del_flag = 0
+    </select>
+
+    <select id="getCompanyDataByIndustryCode" resultType="java.util.Map">
+        SELECT
+        si.industry_name AS "industryName",
+        IFNULL( SUM( temp.oneHiddenLevel ), 0 ) AS "oneDangerLevel",
+        IFNULL( SUM( temp.oneHiddenLevelFinish ), 0 ) AS "oneDangerLevelFinish",
+        IFNULL( SUM( temp.threeHiddenLevel ), 0 ) AS "threeDangerLevel",
+        IFNULL( SUM( temp.threeHiddenLevelFinish ), 0 ) AS "threeDangerLevelFinish",
+        IFNULL( SUM( temp.oneLevel ), 0 ) AS "oneLevel",
+        IFNULL( SUM( temp.twoLevel ), 0 ) AS "twoLevel",
+        IFNULL( SUM( temp.threeLevel ), 0 ) AS "threeLevel",
+        IFNULL( SUM( temp.fourLevel ), 0 ) AS "fourLevel",
+        IFNULL( COUNT(temp.companyId ), 0 ) AS "companyCount",
+        IFNULL( SUM( temp.riskScore ), 0 ) AS "riskScoreCount",
+        IFNULL( SUM( temp.safeScore ), 0 ) AS "safeScoreCount",
+        IFNULL( SUM( temp.planCheckCount ), 0 ) AS "planCheckCount",
+        IFNULL( SUM( temp.finishCheckCount ), 0 ) AS "finishCheckCount",
+        IFNULL( CAST( AVG( temp.riskScore ) AS SIGNED ), 0 ) AS "riskScore",
+        IFNULL( CAST( AVG( temp.safeScore ) AS SIGNED ), 0 ) AS "safeScore",
+        IFNULL( SUM( IF ( temp.safeScore &gt; 80, 1, 0 ) ), 0 ) AS "one",
+        IFNULL( SUM( IF ( temp.safeScore &gt; 60 AND temp.safeScore &lt;= 80, 1, 0 ) ), 0 ) AS "two",
+        IFNULL( SUM( IF ( temp.safeScore &gt; 40 AND temp.safeScore &lt; 60, 1, 0 ) ), 0 ) AS "three",
+        IFNULL( SUM( IF ( temp.safeScore &lt; 40, 1, 0 ) ), 0 ) AS "four"
+        FROM
+        (
+        SELECT
+        cbi.company_id AS companyId,
+        cbi.industry_type_coe,
+        IFNULL( temp2.oneHiddenLevel, 0 ) AS "oneHiddenLevel",
+        IFNULL( temp2.oneHiddenLevelFinish, 0 ) AS "oneHiddenLevelFinish",
+        IFNULL( temp2.threeHiddenLevel, 0 ) AS "threeHiddenLevel",
+        IFNULL( temp2.threeHiddenLevelFinish, 0 ) AS "threeHiddenLevelFinish",
+        IFNULL(temp2.safeScore,0) as "safeScore",
+        IFNULL( temp3.planCheckCount, 0 ) AS "planCheckCount",
+        IFNULL( temp3.finishCheckCount, 0 ) AS "finishCheckCount",
+        IFNULL(temp1.riskScore,0) as "riskScore",
+        IFNULL( temp1.oneLevel, 0 ) AS "oneLevel",
+        IFNULL( temp1.twoLevel, 0 ) AS "twoLevel",
+        IFNULL( temp1.threeLevel, 0 ) AS "threeLevel",
+        IFNULL( temp1.fourLevel, 0 ) AS "fourLevel"
+         <!--  IF (temp1.total IS NULL, 0,( temp1.oneLevel * 5+ temp1.twoLevel * 3+ temp1.threeLevel * 2+ temp1.fourLevel ) * 100 / ( ( temp1.total ) * 5 )) AS "riskScore",
+               IF(temp3.planCheckCount IS NULL AND ( temp2.oneHiddenLevel IS NULL AND temp2.threeHiddenLevel IS NULL ), 100, IF( temp3.planCheckCount IS NULL, 0, temp3.finishCheckCount * 40 / temp3.planCheckCount ) +
+               IF ( temp2.oneHiddenLevel IS NULL OR temp2.threeHiddenLevel IS NULL, 0, temp2.oneHiddenLevelFinish * 5 + temp2.threeHiddenLevelFinish ) * 60 / ( temp2.oneHiddenLevel * 5 + temp2.threeHiddenLevel ) ) AS "safeScore"*/
+          -->
+        FROM
+        sys_company cbi
+        LEFT JOIN (
+        SELECT
+        erp.company_id,
+        SUM( IF ( erp.risk_point_level = 1, 1, 0 ) ) AS "oneLevel",
+        SUM( IF ( erp.risk_point_level = 2, 1, 0 ) ) AS "twoLevel",
+        SUM( IF ( erp.risk_point_level = 3, 1, 0 ) ) AS "threeLevel",
+        SUM( IF ( erp.risk_point_level = 4, 1, 0 ) ) AS "fourLevel",
+        COUNT( erp.risk_point_id ) AS "total",
+        IFNULL(SUM(
+        CASE  WHEN erp.risk_point_level = 1 THEN #{rp1}
+        WHEN erp.risk_point_level = 2 THEN #{rp2}
+        WHEN erp.risk_point_level = 3 THEN #{rp3}
+        WHEN erp.risk_point_level = 4 then #{rp4}
+        ELSE 0
+        END
+        ), 0) riskScore
+        FROM
+        scyf_risk_point erp
+        WHERE
+        IF( erp.is_active = 1, ( erp.end_time > now() OR erp.end_time IS NULL ), '1=1' )
+        AND erp.del_flag = 0
+        GROUP BY
+        erp.company_id
+        ) temp1 ON temp1.company_id = cbi.company_id
+        LEFT JOIN (
+        SELECT
+        ehd.company_id,
+        COUNT( ehd.hidden_id ) AS "totalDangerCount",
+        SUM( IF ( ehd.STATUS = 4, 1, 0 ) ) AS "finishDangerCount",
+        SUM( IF ( ehd.hidden_level = 1, 1, 0 ) ) AS "oneHiddenLevel",
+        SUM( IF ( ehd.hidden_level = 1 AND ehd.`status` = 4, 1, 0 ) ) AS "oneHiddenLevelFinish",
+        <!--SUM( IF ( ehd.hidden_level = 2, 1, 0 ) ) AS "twoDangerLevel",-->
+        SUM( IF ( ehd.hidden_level = 3, 1, 0 ) ) AS "threeHiddenLevel",
+        SUM( IF ( ehd.hidden_level = 3 AND ehd.`status` = 4, 1, 0 ) ) AS "threeHiddenLevelFinish",
+        <!--SUM( IF ( ehd.hidden_level = 4, 1, 0 ) ) AS "fourDangerLevel"-->
+        IFNULL(SUM(CASE WHEN ehd.hidden_level = 1 THEN #{hd1}
+        WHEN ehd.hidden_level = 3 THEN #{hd3}
+        ELSE 0
+        END), 0) safeScore  <!-- 安全指数 -->
+        FROM
+        `scyf_hidden` ehd
+        WHERE
+        ehd.`status` = 2
+        OR ehd.`status` = 3
+        OR ehd.`status` = 4
+        OR ehd.`status` = 5
+        GROUP BY
+        ehd.company_id
+        ) temp2 ON temp2.company_id = cbi.company_id
+        LEFT JOIN (
+        SELECT
+        ercs.company_id,
+        COUNT( inspect_schedule_id ) AS "planCheckCount",
+        SUM( IF ( ercs.STATUS = 2, 1, 0 ) ) AS "finishCheckCount"
+        FROM
+        scyf_inspect_schdule ercs
+        WHERE
+        ercs.del_flag = 0
+        AND ercs.parent_schedule_id != 0
+        GROUP BY
+        ercs.company_id
+        ) temp3 ON temp3.company_id = cbi.company_id
+        WHERE
+        cbi.del_flag = 0
+        ) temp
+        LEFT JOIN sys_industry si ON si.industry_code = temp.industry_type_coe
+        WHERE
+        find_in_set( temp.industry_type_coe,#{industryCode})
+    </select>
+
+    <select id="selectTop10ScoreOrRisk" resultType="Map" parameterType="Map">
+        select
+        result.company_id,
+        result.company_name,
+        CAST( IFNULL(  result.riskScore , 0) AS SIGNED) as "riskScore",
+        CAST(IFNULL( result.safeScore, 0) AS SIGNED) as "safeScore"
+        from (
+        select
+            sc.company_id,
+            sc.company_name,
+            sc.industry_type_coe,
+            riskPoint.riskOneLevel,
+            riskPoint.riskTwoLevel,
+            riskPoint.riskThreeLevel,
+            riskPoint.riskFourLevel,
+            riskPoint.riskScore,
+            hidden.finishDangerCount,
+            hidden.oneHiddenLevel,
+            hidden.oneHiddenLevelFinish,
+            hidden.threeHiddenLevel,
+            hidden.threeHiddenLevelFinish,
+            hidden.safeScore,
+            hidden.totalDangerCount,
+            task.finishCheckCount,
+            task.planCheckCount
+        from sys_company sc
+        left join (
+          SELECT
+            srp.company_id,
+            SUM( IF ( srp.risk_point_level = 1, 1, 0 ) ) AS "riskOneLevel",
+            SUM( IF ( srp.risk_point_level = 2, 1, 0 ) ) AS "riskTwoLevel",
+            SUM( IF ( srp.risk_point_level = 3, 1, 0 ) ) AS "riskThreeLevel",
+            SUM( IF ( srp.risk_point_level = 4, 1, 0 ) ) AS "riskFourLevel",
+            IFNULL(SUM(
+            CASE  WHEN srp.risk_point_level = 1 THEN #{rp1}
+            WHEN srp.risk_point_level = 2 THEN #{rp2}
+            WHEN srp.risk_point_level = 3 THEN #{rp3}
+            WHEN srp.risk_point_level = 4 then #{rp4}
+            ELSE 0
+            END
+            ), 0) riskScore
+            FROM
+            scyf_risk_point srp
+            WHERE
+            IF( srp.is_active = 1, ( srp.end_time > now() OR srp.end_time IS NULL ), '1=1' )
+            AND srp.del_flag = 0
+            GROUP BY
+        srp.company_id
+        ) riskPoint ON riskPoint.company_id = sc.company_id
+        left join (
+            SELECT
+            sh.company_id,
+            COUNT(  sh.hidden_id ) AS "totalDangerCount",
+            SUM( IF (  sh.STATUS = 4, 1, 0 ) ) AS "finishDangerCount",
+            SUM( IF (  sh.hidden_level = 1, 1, 0 ) ) AS "oneHiddenLevel",
+            SUM( IF (  sh.hidden_level = 1 AND sh.`status` = 4, 1, 0 ) ) AS "oneHiddenLevelFinish",
+            SUM( IF (  sh.hidden_level = 3, 1, 0 ) ) AS "threeHiddenLevel",
+            SUM( IF (  sh.hidden_level = 3 AND sh.`status` = 4, 1, 0 ) ) AS "threeHiddenLevelFinish",
+            IFNULL(SUM(CASE WHEN sh.hidden_level = 1 THEN #{hd1}
+            WHEN sh.hidden_level = 3 THEN #{hd3}
+            ELSE 0
+            END), 0) safeScore  <!-- 安全指数 -->
+            FROM
+            `scyf_hidden` sh
+            WHERE
+             sh.`status` = 2
+            OR  sh.`status` = 3
+            OR  sh.`status` = 4
+            OR  sh.`status` = 5
+            GROUP BY
+            sh.company_id
+        ) hidden on hidden.company_id = sc.company_id
+        left join (
+            SELECT
+            ercs.company_id,
+            COUNT( inspect_schedule_id ) AS "planCheckCount",
+            SUM( IF ( ercs.STATUS = 2, 1, 0 ) ) AS "finishCheckCount"
+            FROM
+            scyf_inspect_schdule ercs
+            WHERE
+            ercs.del_flag = 0
+            <!--AND ercs.parent_schedule_id != 0-->
+            GROUP BY      ercs.company_id
+        )task on task.company_id = sc.company_id
+        where sc.del_flag = 0
+        ) result
+        LEFT JOIN sys_industry si ON si.industry_code = result.industry_type_coe
+        WHERE
+        find_in_set( result.industry_type_coe,#{industryCode})
+        <if test='type != null and type != "" and type == "riskScore"'>
+            ORDER BY result.riskScore DESC
+            limit 10
+        </if>
+        <if test='type != null and type != "" and type == "safeScore"'>
+            ORDER BY result.safeScore DESC
+            limit 10
+        </if>
+        <if test='type != null and type != "" and type == "riskScoreAll"'>
+            ORDER BY result.riskScore DESC
+        </if>
+        <if test='type != null and type != "" and type == "safeScoreAll"'>
+            ORDER BY result.safeScore DESC
+        </if>
+
+    </select>
+
+    <select id="selectListByindustryTypeCode" parameterType="java.util.Map" resultType="CompanyDto">
+        SELECT
+        <include refid="Company_Column_List"/>
+        FROM (SELECT sc.* FROM sys_company sc WHERE sc.del_flag = 0
+        <if test="null != companyTopId and '' != companyTopId ">
+            and find_in_set(sc.company_id,fu_getChildrenCompany(#{companyTopId}))
+        </if>
+        <!--集团(局级)公司企业查询某个行业的下级企业 -->
+        <if test="industryCode != null and industryCode != ''">
+            and find_in_set(sc.industry_type_coe,fu_getChildrenIndustry(#{industryCode}))
+        </if>
+        <!-- 监管机构 查询所监管行业的企业 -->
+        <if test="industryCodes != null and industryCodes != ''">
+            and find_in_set(sc.industry_type_coe,#{industryCodes})
+        </if>
+        <if test="null != keyword and '' != keyword ">
+            and ( locate(#{keyword}, sc.company_name ) &gt; 0  or locate(#{keyword}, sc.company_deputy ) &gt; 0  or locate(#{keyword}, sc.company_mobile ) &gt; 0 or locate(#{keyword}, sc.org_code ) &gt; 0 )
+        </if>
+            )AS A
+        LEFT JOIN scyf_secure_produc AS B ON B.company_id = A.company_id and B.del_flag = 0
+        LEFT JOIN sys_industry AS C ON C.industry_code = A.industry_type_coe and C.del_flag = 0
+        LEFT JOIN sys_dict_item AS E ON E.item_id = A.company_affiliation and E.del_flag = 0
+        LEFT JOIN sys_org AS F ON F.org_id = B.secure_supervise_persons and F.del_flag = 0
+        LEFT JOIN sys_info AS G ON G.company_id = A.company_id and G.del_flag = 0
+        LEFT JOIN sys_user AS H ON H.user_id = A.company_admin_id and H.del_flag = 0
+    </select>
+
+    <select id="getCompanyMapByParentId" parameterType="java.lang.Long" resultType="java.util.Map">
+        SELECT
+        A.company_id         AS  "companyId",
+        A.company_name       AS  "companyName",
+        A.company_group_id   AS  "groupId",
+        A.company_address    AS  "companyAddress",
+        A.longitude          AS  "longitude",
+        A.latitude           AS  "latitude"
+        FROM  sys_company A
+        WHERE A.del_flag=0 AND
+        find_in_set(A.company_id,fu_getChildrenCompany(#{companyId}))
+        and A.company_id &lt;&gt; #{companyId}
+    </select>
+
+    <select id="getMonthCountByIndustry" resultType="java.util.Map">
+         SELECT
+        a.month,
+        IFNULL(b.num,0) as "count"
+         FROM
+        (
+        SELECT '01' AS month UNION
+        SELECT '02' AS month UNION
+        SELECT '03' AS month UNION
+        SELECT '04' AS month UNION
+        SELECT '05' AS month UNION
+        SELECT '06' AS month UNION
+        SELECT '07' AS month UNION
+        SELECT '08' AS month UNION
+        SELECT '09' AS month UNION
+        SELECT '10' AS month UNION
+        SELECT '11' AS month UNION
+        SELECT '12' AS month
+        ) a
+        LEFT JOIN (
+        SELECT DATE_FORMAT(sh.created_time,'%m') AS month,
+        COUNT(DISTINCT(sh.hidden_id)) AS num
+        FROM scyf_hidden sh
+        left join sys_company cbi on cbi.company_id =  sh.company_id
+        WHERE YEAR(sh.created_time) = YEAR(NOW())
+        and find_in_set(cbi.industry_type_coe,  #{industryCode})
+        GROUP BY month
+        )b ON a.month = b.month
+    </select>
+</mapper>

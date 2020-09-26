@@ -1,0 +1,209 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.hngf.mapper.sys.IndustryMapper">
+    <sql id="Base_Column_List">
+        si.industry_id as "industryId",
+        si.industry_code as "industryCode",
+        si.industry_name as "industryName",
+        si.industry_parent_id as "industryParentId",
+        si.industry_type as "industryType",
+        si.industry_icon_url as "industryIconUrl",
+        si.sort_no as "sortNo",
+        si.created_time as "createdTime",
+        si.created_by as "createdBy"
+    </sql>
+
+
+    <sql id="Ext_Column_List">
+        A.org_industry_id  AS "orgIndustryId",
+        A.org_id AS "orgId",
+        C.org_name AS "orgName",
+        A.industry_id AS "industryId",
+        B.industry_name AS "industryName",
+        B.industry_code AS "industryCode",
+        B.industry_icon_url AS "industryIconUrl",
+        A.group_id AS "groupId",
+        D.group_name AS "groupName"
+    </sql>
+    <select id="findList" resultType="Industry">
+		select
+        <include refid="Base_Column_List"/>
+        from sys_industry si
+        where si.del_flag = 0
+    </select>
+
+    <select id="findById" resultType="Industry" parameterType="Long">
+		select * from sys_industry
+        where del_flag = 0 and industry_id = #{id}
+	</select>
+    <!--行业管理 列表显示树结构-->
+    <select id="queryTreeList" resultType="com.hngf.entity.sys.Industry">
+        select
+        <include refid="Base_Column_List"/>
+        from sys_industry si
+        where si.del_flag = 0
+        <if test="null != orgId and '' != orgId ">
+            and EXISTS (select soi.industry_id from  sys_org_industry soi where soi.org_id = #{orgId} and soi.industry_id = si.industry_id )
+        </if>
+    </select>
+    <!--查询行业类型-->
+    <select id="dictIndustryType" resultType="Dict">
+        select * from sys_dict where del_flag=0 and dict_type=#{dictType}
+    </select>
+    <!--根据行业类别industryCode获取监察机构-->
+    <select id="getOrgIndustryList" resultType="java.util.Map">
+        SELECT
+        <include refid="Ext_Column_List"/>
+        FROM       sys_org_industry   A
+        LEFT JOIN  sys_industry   B ON B.industry_id = A.industry_id
+        LEFT JOIN  sys_org            C ON C.org_id        = A.org_id
+        LEFT JOIN  sys_group        D ON D.group_id        = A.group_id
+        WHERE 1 = 1 AND A.del_flag = 0
+        <if test="industryCode != null and industryCode != ''">
+            AND B.industry_code = #{industryCode}
+        </if>
+        GROUP BY A.org_id
+    </select>
+
+    <insert id="add" parameterType="Industry">
+        INSERT INTO sys_industry (
+         industry_code,
+         industry_name,
+         industry_parent_id,
+         industry_parent_code,
+         industry_type,
+         industry_icon_url,
+         sort_no,
+         created_time,
+         created_by,
+         updated_time,
+         updated_by,
+         del_flag
+                                )
+        VALUES (
+        #{industryCode},
+        #{industryName},
+        #{industryParentId},
+        #{industryParentCode},
+        #{industryType},
+        #{industryIconUrl},
+        #{sortNo},
+        #{createdTime},
+        #{createdBy},
+        #{updatedTime},
+        #{updatedBy},
+        #{delFlag}
+                                  )
+    </insert>
+
+    <update id="update" parameterType="Industry">
+        UPDATE sys_industry
+        <trim suffixOverrides=",">
+            <set>
+                <if test="industryCode != null and industryCode != ''">
+                   industry_code = #{industryCode} ,
+                </if>
+                <if test="industryName != null and industryName != ''">
+                   industry_name = #{industryName} ,
+                </if>
+                <if test="industryParentId != null and industryParentId != ''">
+                   industry_parent_id = #{industryParentId} ,
+                </if>
+                <if test="industryParentCode != null and industryParentCode != ''">
+                    industry_parent_code = #{industryParentCode} ,
+                </if>
+                <if test="industryType != null and industryType != ''">
+                    industry_type = #{industryType} ,
+                </if>
+                <if test="industryIconUrl != null and industryIconUrl != ''">
+                    industry_icon_url = #{industryIconUrl} ,
+                </if>
+                <if test="sortNo != null and sortNo != ''">
+                    sort_no = #{sortNo} ,
+                </if>
+                <if test="createdTime != null">
+                    created_time = #{createdTime} ,
+                </if>
+                <if test="createdBy != null and createdBy != ''">
+                    created_by = #{createdBy} ,
+                </if>
+                <if test="updatedTime != null">
+                    updated_time = #{updatedTime} ,
+                </if>
+                <if test="updatedBy != null and updatedBy != ''">
+                    updated_by = #{updatedBy} ,
+                </if>
+                <if test="delFlag != null and delFlag != ''">
+                    del_flag = #{delFlag}
+                 </if>
+            </set>
+        </trim>
+            where industry_id = #{industryId}
+    </update>
+
+    <update id="deleteById" parameterType="Long">
+        UPDATE sys_industry SET
+        del_flag = 1
+        where industry_id = #{id} or industry_parent_id=#{id}
+    </update>
+
+    <update id="deleteByIds" parameterType="java.util.List">
+        UPDATE sys_industry SET
+        del_flag = 1
+        where industry_id in
+        <foreach collection="ids" item="id" open="(" close=")" separator="," index="idx">
+            #{id}
+        </foreach>
+    </update>
+
+    <select id="getIndustryTreeByOrgId" resultType="Industry">
+        SELECT
+        si.industry_id as "industryId",
+        si.industry_code as "industryCode",
+        si.industry_name as "industryName",
+        si.industry_parent_id as "industryParentId",
+        si.industry_parent_code as "industryParentCode",
+        si.industry_type as "industryType",
+        si.industry_icon_url as "industryIconUrl",
+        si.sort_no as "sortNo"
+        FROM  sys_industry si
+        left join sys_org_industry soi on soi.industry_id = si.industry_id
+        where soi.org_id = #{orgId}
+        GROUP BY si.industry_id
+        ORDER BY si.sort_no ASC
+    </select>
+
+    <select id="getIndustryCodeByOrgId" parameterType="Long" resultType="java.lang.String">
+        SELECT
+        group_concat(si.industry_code)
+        FROM
+            sys_org_industry oi
+        left join sys_industry si on oi.industry_id = si.industry_id
+        WHERE  oi.del_flag = 0 and oi.org_id =#{orgId}
+    </select>
+    <!-- 筛选机构下的所有行业 -->
+    <select id="getCodeListByIndustryCode" resultType="java.lang.String">
+        SELECT
+            group_concat( i.industry_code )
+        FROM
+            sys_industry i
+        WHERE
+            EXISTS (SELECT	oi.org_industry_id FROM	sys_org_industry oi WHERE	oi.org_id = #{orgId} AND oi.del_flag = 0 	AND oi.industry_id = i.industry_id 	)
+            AND i.del_flag = 0
+        <!-- 行业编码有值时，此行业及其下属行业 -->
+            <if test=" null != industryCode and '' != industryCode ">
+                AND FIND_IN_SET( i.industry_code, fu_getChildrenIndustry ( #{industryCode} ) )
+            </if>
+    </select>
+
+    <select id="findIndustryListByIndustryCode" parameterType="java.lang.String" resultType="com.hngf.entity.sys.Industry">
+        select
+        si.industry_id as "industryId",
+        si.industry_code as "industryCode",
+        si.industry_name as "industryName"
+        FROM sys_industry si
+        WHERE si.industry_code = #{industryCode} and si.del_flag = 0
+    </select>
+
+</mapper>

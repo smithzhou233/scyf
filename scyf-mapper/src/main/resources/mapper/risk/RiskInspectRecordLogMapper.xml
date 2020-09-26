@@ -1,0 +1,279 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper
+	namespace="com.hngf.mapper.risk.RiskInspectRecordLogMapper">
+
+	<sql id="RiskInspectRecordLogColumns">
+		a.inspect_record_id,
+		a.inspect_record_no,
+		a.company_id,
+		a.group_id,
+		a.risk_point_id,
+		a.inspect_schedule_id,
+		a.inspect_item_def_id,
+		a.schdule_def_id,
+		a.item_detail_id,
+		a.risk_measure_id,
+		a.risk_measure_content,
+		a.inspect_result,
+		a.inspect_number,
+		a.spot_data,
+		a.remark,
+		a.updated_time,
+		a.updated_by,
+		a.created_time,
+		a.created_by
+	</sql>
+
+	<select id="findList" resultType="RiskInspectRecordLog">
+		select
+		<include refid="RiskInspectRecordLogColumns" />
+		from
+		scyf_risk_inspect_record_log a
+		where
+		a.del_flag = 0
+	</select>
+
+	<select id="findById" resultType="RiskInspectRecordLog"
+		parameterType="Long">
+		select
+		<include refid="RiskInspectRecordLogColumns" />
+		from
+		scyf_risk_inspect_record_log a
+		where
+		a.del_flag = 0 and a.inspect_record_id = #{id}
+	</select>
+
+	<select id="findRiskInspectLogCount" resultType="int" parameterType="map">
+		SELECT
+			count( inspect_record_id )
+		FROM
+			scyf_risk_inspect_record_log
+		WHERE
+			company_id = #{companyId}
+		<if test="inspectDefId != null ">
+			and schdule_def_id = #{inspectDefId}
+		</if>
+		<if test="riskPointId != null">
+			and risk_point_id = #{riskPointId}
+		</if>
+		<if test="scheduleId != null">
+			and inspect_schedule_id = #{scheduleId}
+		</if>
+
+		<if test="userId != null ">
+			and created_by = #{userId}
+		</if>
+		ORDER BY
+			created_time DESC
+			LIMIT 1
+	</select>
+
+	<select id="findByRiskInspectRecordLog" resultType="RiskInspectRecordLog" parameterType="map">
+		select *
+		from scyf_risk_inspect_record_log
+		where 1=1
+		and company_id = #{companyId}
+		<if test="riskPointId != null">
+			and risk_point_id = #{riskPointId}
+		</if>
+		<if test="inspectDefId != null and inspectDefId != ''">
+			and schdule_def_id = #{inspectDefId}
+		</if>
+		<if test="scheduleId !=null and scheduleId !=''">
+			and inspect_schedule_id = #{scheduleId}
+		</if>
+		<if test="checkNumber != null">
+			and inspect_number = #{checkNumber}
+		</if>
+		<if test="checkRecordNo !=null and checkRecordNo !=''">
+			and inspect_record_no = #{checkRecordNo}
+		</if>
+		<if test="userId !=null and userId !=''">
+			and created_by = #{userId}
+		</if>
+		<if test="result !=null and result == 2">
+			and inspect_result = #{result}
+		</if>
+	</select>
+
+	<insert id="add" parameterType="RiskInspectRecordLog">
+		INSERT INTO scyf_risk_inspect_record_log (
+		inspect_record_id,
+		inspect_record_no,
+		company_id,
+		group_id,
+		risk_point_id,
+		inspect_schedule_id,
+		inspect_item_def_id,
+		schdule_def_id,
+		item_detail_id,
+		risk_measure_id,
+		risk_measure_content,
+		inspect_result,
+		inspect_number,
+		spot_data,
+		remark,
+		created_time,
+		created_by,
+		del_flag)
+		VALUES (
+		#{inspectRecordId},
+		#{inspectRecordNo},
+		#{companyId},
+		#{groupId},
+		#{riskPointId},
+		#{inspectScheduleId},
+		#{inspectItemDefId},
+		#{schduleDefId},
+		#{itemDetailId},
+		#{riskMeasureId},
+		#{riskMeasureContent},
+		#{inspectResult},
+		#{inspectNumber},
+		#{spotData},
+		#{remark},
+		#{createdTime},
+		#{createdBy},
+		0
+		)
+
+	</insert>
+
+	<insert id="addForeach" parameterType="RiskInspectRecordLog">
+		INSERT INTO scyf_risk_inspect_record_log (
+		inspect_record_id,
+		inspect_record_no,
+		company_id,
+		group_id,
+		risk_point_id,
+		inspect_schedule_id,
+		inspect_item_def_id,
+		schdule_def_id,
+		item_detail_id,
+		risk_measure_id,
+		risk_measure_content,
+		inspect_result,
+		inspect_number,
+		spot_data,
+		remark,
+		created_time,
+		created_by,
+		del_flag)
+		VALUES
+		<foreach collection="list" item="item" index="index" separator=",">
+			(#{item.inspectRecordId},
+			#{item.inspectRecordNo},
+			#{item.companyId},
+			#{item.groupId},
+			#{item.riskPointId},
+			#{item.inspectScheduleId},
+			#{item.inspectItemDefId},
+			#{item.schduleDefId},
+			#{item.itemDetailId},
+			#{item.riskMeasureId},
+			#{item.riskMeasureContent},
+			#{item.inspectResult},
+			#{item.inspectNumber},
+			#{item.spotData},
+			#{item.remark},
+			#{item.createdTime},
+			#{item.createdBy},
+			0)
+		</foreach>
+
+	</insert>
+
+	<update id="update" parameterType="RiskInspectRecordLog">
+		UPDATE scyf_risk_inspect_record_log a
+		<trim prefix="set" suffixOverrides=",">
+		<if test="inspectRecordNo != null and inspectRecordNo != ''">
+			a.inspect_record_no = #{inspectRecordNo},
+		</if>
+		<if test="companyId != null and companyId != ''">
+			a.company_id = #{companyId},
+		</if>
+		<if test="groupId != null and groupId != ''">
+			a.group_id = #{groupId},
+		</if>
+		<if test="riskPointId != null and riskPointId != ''">
+			a.risk_point_id = #{riskPointId},
+		</if>
+		<if test="inspectScheduleId != null and inspectScheduleId != ''">
+			a.inspect_schedule_id = #{inspectScheduleId},
+		</if>
+		<if test="inspectItemDefId != null and inspectItemDefId != ''">
+			a.inspect_item_def_id = #{inspectItemDefId},
+		</if>
+		<if test="schduleDefId != null and schduleDefId != ''">
+			a.schdule_def_id = #{schduleDefId},
+		</if>
+		<if test="itemDetailId != null and itemDetailId != ''">
+			a.item_detail_id = #{itemDetailId},
+		</if>
+		<if test="riskMeasureId != null and riskMeasureId != ''">
+			a.risk_measure_id = #{riskMeasureId},
+		</if>
+		<if test="riskMeasureContent != null and riskMeasureContent != ''">
+			a.risk_measure_content = #{riskMeasureContent},
+		</if>
+		<if test="inspectResult != null and inspectResult != ''">
+			a.inspect_result = #{inspectResult},
+		</if>
+		<if test="inspectNumber != null and inspectNumber != ''">
+			a.inspect_number = #{inspectNumber},
+		</if>
+		<if test="spotData != null and spotData != ''">
+			a.spot_data = #{spotData},
+		</if>
+		<if test="remark != null and remark != ''">
+			a.remark = #{remark},
+		</if>
+		<if test="updatedTime != null ">
+			a.updated_time = #{updatedTime},
+		</if>
+		<if test="updatedBy != null and updatedBy != ''">
+			a.updated_by = #{updatedBy},
+		</if>
+		</trim>
+		where inspect_record_id = #{inspectRecordId}
+	</update>
+
+	<update id="deleteById" parameterType="Long">
+		UPDATE scyf_risk_inspect_record_log a SET
+		a.del_flag = 1
+		where a.inspect_record_id = #{id}
+	</update>
+
+	<update id="deleteByIds" parameterType="java.util.List">
+		UPDATE scyf_risk_inspect_record_log a SET
+		a.del_flag = 1
+		where a.inspect_record_id in
+		<foreach collection="ids" item="id" open="(" close=")"
+			separator="," index="idx">
+			#{id}
+		</foreach>
+	</update>
+
+	<delete id="deleteRecordLog" parameterType="map">
+		delete from scyf_risk_inspect_record_log
+		where
+		company_id = #{companyId}
+		<if test="checkRecordNo != null ">
+			and inspect_record_no = #{checkRecordNo}
+		</if>
+		<if test="inspectDefId != null ">
+			and schdule_def_id = #{inspectDefId}
+		</if>
+		<if test="riskPointId != null ">
+			and risk_point_id = #{riskPointId}
+		</if>
+		<if test="userId != null ">
+			and created_by = #{userId}
+		</if>
+	</delete>
+	<delete id="truncateCheckedRecordLog" >
+        truncate table scyf_risk_inspect_record_log
+    </delete>
+</mapper>

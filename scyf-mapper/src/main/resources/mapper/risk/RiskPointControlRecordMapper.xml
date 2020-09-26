@@ -1,0 +1,240 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper
+        namespace="com.hngf.mapper.risk.RiskPointControlRecordMapper">
+
+    <sql id="RiskPointControlRecordColumns">
+		a.company_id  AS "companyId",
+		a.risk_point_id AS "riskPointId",
+		a.detail_id AS "detailId",
+		a.detail_type AS "detailType",
+		a.position_id AS "positionId",
+		a.is_control AS "isControl",
+		a.is_close_up AS "isCloseUp",
+		a.cause_reason AS "causeReason",
+		a.cause_remark AS "causeRemark",
+		a.created_by AS "createdBy",
+		a.updated_by AS "cupdatedBy",
+		DATE_FORMAT(a.created_time, '%Y-%m-%d %H:%i' ) AS createdTime,
+		DATE_FORMAT(a.updated_time, '%Y-%m-%d %H:%i' ) AS updatedTime
+	</sql>
+
+    <select id="findList" resultType="RiskPointControlRecord">
+        select
+        <include refid="RiskPointControlRecordColumns" />
+        from
+        scyf_risk_point_control_record a
+        where
+        a.del_flag = 0
+    </select>
+
+    <!--风险点实时预警记录-->
+    <select id="findControlRecord" resultType="java.util.Map">
+        select
+        <include refid="RiskPointControlRecordColumns" />,
+        rp.risk_point_name  AS "riskPointName",
+        rp.risk_point_level AS "riskPointLevel",
+        rp.is_out_of_control AS "isOutOfControl",
+        ehd.hidden_level AS "hiddenLevel",
+        d.dict_name AS "causeReasonName"
+        from scyf_risk_point_control_record_log a
+        left join scyf_risk_point rp on rp.risk_point_id = a.risk_point_id and a.company_id = rp.company_id
+        left join scyf_hidden ehd on ehd.hidden_id = a.detail_id and a.company_id = ehd.company_id
+        left join sys_group g on rp.duty_group_id = g.group_id and rp.company_id = g.company_id
+        left join sys_dict d on a.cause_reason=d.dict_code
+        where
+        a.del_flag = 0
+        <if test="companyId != null">
+            and a.company_id = #{companyId}
+        </if>
+        <if test="keyword != null and keyword!=''">
+            and rp.risk_point_name like CONCAT('%',#{keyword,jdbcType=VARCHAR}, '%')
+        </if>
+        <if test="riskPointLevel != null and riskPointLevel != '' ">
+            and rp.risk_point_level = #{riskPointLevel}
+        </if>
+        <if test="causeReason != null and causeReason!=''">
+            and a.cause_reason = #{causeReason}
+        </if>
+        <if test="isControl != null and isControl != '' ">
+            and a.is_control = #{isControl}
+        </if>
+        <!--告警类型：1隐患告警；2任务逾期告警；3传感器告警；-->
+        <if test="detailType != null and detailType != '' ">
+            and a.detail_type = #{detailType}
+        </if>
+        <if test="startDate != null and startDate!=''">
+            and date(a.created_time) >= #{startDate,jdbcType=VARCHAR}
+        </if>
+        <if test="endDate != null and endDate!=''">
+            and date(a.created_time) &lt;= #{endDate,jdbcType=VARCHAR}
+        </if>
+        <if test="groupId != null and groupId != ''">
+            AND FIND_IN_SET(g.group_id ,fu_getChildrenGroup(#{groupId}))
+        </if>
+        order by a.created_time desc
+    </select>
+
+    <!--风险点历史预警记录-->
+    <select id="findHistoryControlRecord" resultType="java.util.Map">
+        select
+        <include refid="RiskPointControlRecordColumns" />,
+        rp.risk_point_name AS "riskPointName",
+        rp.risk_point_level AS "riskPointLevel",
+        rp.is_out_of_control AS "isOutOfControl",
+        ehd.hidden_level AS "hiddenLevel",
+        d.dict_name AS "causeReasonName"
+        from scyf_risk_point_control_record a
+        left join scyf_risk_point rp on rp.risk_point_id = a.risk_point_id and a.company_id = rp.company_id
+        left join scyf_hidden ehd on ehd.hidden_id = a.detail_id and a.company_id = ehd.company_id
+        left join sys_group g on rp.duty_group_id = g.group_id and rp.company_id = g.company_id
+        left join sys_dict d on a.cause_reason=d.dict_code
+        where
+        a.del_flag = 0
+        <if test="companyId != null">
+            and a.company_id = #{companyId}
+        </if>
+        <if test="keyword != null and keyword!=''">
+            and rp.risk_point_name like CONCAT('%',#{keyword,jdbcType=VARCHAR}, '%')
+        </if>
+        <if test="riskPointLevel != null and riskPointLevel != '' ">
+            and rp.risk_point_level = #{riskPointLevel}
+        </if>
+        <if test="causeReason != null and causeReason!=''">
+            and a.cause_reason = #{causeReason}
+        </if>
+        <if test="isControl != null and isControl != '' ">
+            and a.is_control = #{isControl}
+        </if>
+        <if test="startDate != null and startDate!=''">
+            and date(a.created_time) >= #{startDate,jdbcType=VARCHAR}
+        </if>
+        <if test="endDate != null and endDate!=''">
+            and date(a.created_time) &lt;= #{endDate,jdbcType=VARCHAR}
+        </if>
+        order by a.created_time desc
+    </select>
+    <!--风险，风险点预警记录统计折线图-->
+    <select id="getStatistics" resultType="java.util.Map">
+        SELECT DATE_FORMAT(erpcr.created_time,'%m') as "month",
+        COUNT(erpcr.risk_point_id) as "value"
+         FROM scyf_risk_point_control_record as erpcr
+         <where>
+             erpcr.del_flag=0
+             <if test="companyId !=null">
+                 and erpcr.company_id = #{companyId}
+             </if>
+             <if test="year !=null">
+                 and DATE_FORMAT(erpcr.created_time,"%Y") = #{year}
+             </if>
+         </where>
+        GROUP BY "month"
+    </select>
+    <!--风险，风险点预警记录统计折线图 年份下拉框-->
+    <select id="getStatisticsYear" resultType="java.util.Map">
+        select
+         DATE_FORMAT(erpcr.created_time,"%Y") as "value",
+        DATE_FORMAT(erpcr.created_time,"%Y") as "name"
+         from scyf_risk_point_control_record erpcr
+          where erpcr.del_flag=0
+          and erpcr.company_id=#{companyId}
+           GROUP BY DATE_FORMAT(erpcr.created_time,"%Y")
+           ORDER BY DATE_FORMAT(erpcr.created_time,"%Y") DESC
+    </select>
+    <select id="findById" resultType="RiskPointControlRecord"
+            parameterType="Long">
+        select
+        <include refid="RiskPointControlRecordColumns" />
+        from
+        scyf_risk_point_control_record a
+        where
+        a.del_flag = 0 and a.record_id = #{id}
+    </select>
+
+    <insert id="add" parameterType="RiskPointControlRecord">
+		INSERT INTO scyf_risk_point_control_record (
+		company_id,
+		risk_point_id,
+		detail_id,
+		detail_type,
+		position_id,
+		is_control,
+		is_close_up,
+		cause_reason,
+		cause_remark,
+		created_time,
+		created_by,
+		del_flag)
+		VALUES (
+		#{companyId},
+		#{riskPointId},
+		#{detailId},
+		#{detailType},
+		#{positionId},
+		#{isControl},
+		#{isCloseUp},
+		#{causeReason},
+		#{causeRemark},
+		#{createdTime},
+		#{createdBy},
+		0
+		)
+
+	</insert>
+
+    <update id="update" parameterType="RiskPointControlRecord">
+        UPDATE scyf_risk_point_control_record a SET
+        <if test="companyId != null and companyId != ''">
+            a.company_id = #{companyId},
+        </if>
+        <if test="riskPointId != null and riskPointId != ''">
+            a.risk_point_id = #{riskPointId},
+        </if>
+        <if test="detailId != null and detailId != ''">
+            a.detail_id = #{detailId},
+        </if>
+        <if test="detailType != null and detailType != ''">
+            a.detail_type = #{detailType},
+        </if>
+        <if test="positionId != null and positionId != ''">
+            a.position_id = #{positionId},
+        </if>
+        <if test="isControl != null and isControl != ''">
+            a.is_control = #{isControl},
+        </if>
+        <if test="isCloseUp != null and isCloseUp != ''">
+            a.is_close_up = #{isCloseUp},
+        </if>
+        <if test="causeReason != null and causeReason != ''">
+            a.cause_reason = #{causeReason},
+        </if>
+        <if test="causeRemark != null and causeRemark != ''">
+            a.cause_remark = #{causeRemark},
+        </if>
+        <if test="updatedTime != null">
+            a.updated_time = #{updatedTime},
+        </if>
+        <if test="cupdatedBy != null and cupdatedBy != ''">
+            a.cupdated_by = #{cupdatedBy}
+        </if>
+        where record_id = #{recordId}
+    </update>
+
+    <update id="deleteById" parameterType="Long">
+		UPDATE scyf_risk_point_control_record a SET
+		a.del_flag = 1
+		where a.record_id = #{id}
+	</update>
+
+    <update id="deleteByIds" parameterType="java.util.List">
+        UPDATE scyf_risk_point_control_record a SET
+        a.del_flag = 1
+        where a.record_id in
+        <foreach collection="ids" item="id" open="(" close=")"
+                 separator="," index="idx">
+            #{id}
+        </foreach>
+    </update>
+
+</mapper>

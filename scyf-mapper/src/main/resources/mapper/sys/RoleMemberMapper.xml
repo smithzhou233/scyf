@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.hngf.mapper.sys.RoleMemberMapper">
+
+
+    <select id="findList" resultType="com.hngf.entity.sys.RoleMember">
+		select * from sys_role_member
+        where del_flag = 0
+	</select>
+
+    <select id="findById" resultType="com.hngf.entity.sys.RoleMember" parameterType="Long">
+		select * from sys_role_member
+        where del_flag = 0 and role_id = #{id}
+	</select>
+
+    <insert id="add" parameterType="com.hngf.entity.sys.RoleMember">
+        INSERT INTO sys_role_member (
+                                                                                                                user_id
+                                            ,
+                                                                                    created_by
+                                            ,
+                                                                                    created_time
+                                            ,
+                                                                                    updated_by
+                                            ,
+                                                                                    updated_time
+                                            ,
+                                                                                    del_flag
+                                                        )
+        VALUES (
+                                                                                                                #{userId}
+
+                                            ,
+                                                                                    #{createdBy}
+
+                                            ,
+                                                                                    #{createdTime}
+
+                                            ,
+                                                                                    #{updatedBy}
+
+                                            ,
+                                                                                    #{updatedTime}
+
+                                            ,
+                                                                                    #{delFlag}
+
+                                                        )
+
+    </insert>
+
+    <update id="update" parameterType="com.hngf.entity.sys.RoleMember">
+        UPDATE sys_role_member SET
+
+                                                        user_id = #{userId}
+
+                                    ,
+                                                                created_by = #{createdBy}
+
+                                    ,
+                                                                created_time = #{createdTime}
+
+                                    ,
+                                                                updated_by = #{updatedBy}
+
+                                    ,
+                                                                updated_time = #{updatedTime}
+
+                                    ,
+                                                                del_flag = #{delFlag}
+
+                                    
+        where role_id = #{roleId}
+    </update>
+
+    <update id="deleteById" parameterType="Long">
+        UPDATE sys_role_member SET
+        del_flag = 1
+        where role_id = #{id}
+    </update>
+
+    <update id="deleteByIds" parameterType="java.util.List">
+        UPDATE sys_role_member SET
+        del_flag = 1
+        where role_id in
+        <foreach collection="ids" item="id" open="(" close=")" separator="," index="idx">
+            #{id}
+        </foreach>
+    </update>
+
+</mapper>

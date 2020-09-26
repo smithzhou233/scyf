@@ -1,0 +1,122 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.hngf.mapper.danger.InspectPointRelMapper">
+
+    <sql id="InspectPointRelColumns">
+        a.inspect_type_id AS inspectTypeId,
+        a.company_id AS companyId,
+        a.risk_point_id AS riskPointId,
+        a.created_by AS createdBy,
+        a.created_time AS createdTime,
+        a.updated_by AS updatedBy,
+        a.updated_time AS updatedTime
+    </sql>
+
+    <select id="findList" resultType="com.hngf.entity.danger.InspectPointRel">
+        select
+        <include refid="InspectPointRelColumns"/>
+        from
+        scyf_inspect_point_rel a
+
+    </select>
+
+    <select id="findById" resultType="com.hngf.entity.danger.InspectPointRel" parameterType="Long">
+        select
+        <include refid="InspectPointRelColumns"/>
+        from
+        scyf_inspect_point_rel a
+        where
+        a.inspect_point_rel_id = #{id}
+    </select>
+
+    <insert id="add" parameterType="com.hngf.entity.danger.InspectPointRel">
+        INSERT INTO scyf_inspect_point_rel (
+            inspect_type_id,
+            company_id,
+            risk_point_id,
+            created_by,
+            created_time,
+            del_flag)
+        VALUES (
+            #{inspectTypeId},
+            #{companyId},
+            #{riskPointId},
+            #{createdBy},
+            #{createdTime},
+            0
+        )
+
+    </insert>
+
+    <update id="update" parameterType="com.hngf.entity.danger.InspectPointRel">
+        UPDATE scyf_inspect_point_rel a SET
+        <if test="inspectTypeId != null and inspectTypeId != ''">
+            a.inspect_type_id = #{inspectTypeId},
+        </if>
+        <if test="companyId != null and companyId != ''">
+            a.company_id = #{companyId},
+        </if>
+        <if test="riskPointId != null and riskPointId != ''">
+            a.risk_point_id = #{riskPointId},
+        </if>
+        <if test="updatedBy != null">
+            a.updated_by = #{updatedBy},
+        </if>
+        <if test="updatedTime != null">
+            a.updated_time = #{updatedTime},
+        </if>
+        <if test="delFlag != null and delFlag != ''">
+            a.del_flag = #{delFlag}
+        </if>
+        where inspect_point_rel_id = #{inspectPointRelId}
+    </update>
+
+    <update id="deleteById" parameterType="Long">
+        DELETE from scyf_inspect_point_rel
+        where inspect_point_rel_id = #{id}
+    </update>
+
+    <update id="deleteByIds" parameterType="java.util.List">
+        DELETE from scyf_inspect_point_rel
+        where inspect_point_rel_id in
+        <foreach collection="ids" item="id" open="(" close=")" separator="," index="idx">
+            #{id}
+        </foreach>
+    </update>
+
+
+    <update id="deleteByMap" parameterType="Map">
+        DELETE from scyf_inspect_point_rel
+        where 1=1
+        <if test="riskPointId != null and riskPointId != ''">
+            and risk_point_id = #{riskPointId}
+        </if>
+        <if test="companyId != null and companyId != ''">
+            and company_id = #{companyId}
+        </if>
+        <if test="inspectTypeId != null and inspectTypeId != ''">
+            and inspect_type_id = #{inspectTypeId}
+        </if>
+    </update>
+
+    <insert id="addForeach" parameterType="List">
+        INSERT INTO scyf_inspect_point_rel (
+        inspect_type_id
+        , company_id
+        , risk_point_id
+        , created_by
+        , del_flag
+        )
+        VALUES
+        <foreach collection="list" item="item" index="index" separator=",">
+            (
+            #{item.inspectTypeId},
+            #{item.companyId},
+            #{item.riskPointId},
+            #{item.createdBy},
+            0
+            )
+        </foreach>
+    </insert>
+</mapper>

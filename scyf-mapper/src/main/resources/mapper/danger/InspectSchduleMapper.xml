@@ -1,0 +1,921 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.hngf.mapper.danger.InspectSchduleMapper">
+
+    <sql id="InspectSchduleColumns">
+        a.inspect_schedule_id as inspectScheduleId,
+        a.inspect_total_count AS inspectTotalCount,
+        a.inspect_schedule_count AS inspectScheduleCount,
+        a.status AS status,
+        a.executor AS executor,
+        a.inspect_mode AS inspectMode,
+        a.inspect_def_id AS inspectDefId,
+        a.company_id AS companyId,
+        a.schdule_def_id AS schduleDefId,
+        a.parent_schedule_id AS parentScheduleId,
+        a.inspect_group_id AS inspectGroupId,
+        a.inspect_position_id AS inspectPositionId,
+        a.start_date AS startDate,
+        a.end_date AS endDate,
+        a.executor_date AS executorDate,
+        a.finish_date AS finishDate,
+        a.finish_by AS finishBy,
+        a.next_task_generated AS nextTaskGenerated,
+        a.position_rel_persons AS positionRelPersons,
+        a.created_time AS createdTime,
+        a.created_by AS createdBy,
+        a.updated_time AS updatedTime,
+        a.updated_by AS updatedBy
+
+    </sql>
+
+    <select id="findList" resultType="com.hngf.entity.danger.InspectSchdule">
+        select
+        <include refid="InspectSchduleColumns"/>
+        from
+        scyf_inspect_schdule a
+        where
+        a.del_flag = 0
+    </select>
+    <select id="getTodayOverdueTask" resultType="com.hngf.entity.danger.InspectSchdule">
+        SELECT
+        def.risk_inspect_def_title AS riskInspectDefTitle,
+        mp.user_id,
+        sch.*,
+        ( SELECT e.dict_name FROM sys_dict e WHERE def.risk_inspect_type = e.dict_id ) AS riskCheckTypeName,
+        IF( def.inspect_type = 'random', "临时性检查", "常规检查" ) AS checkType,
+        group_concat( DISTINCT ( sp.position_id ) ) AS positionId,
+        group_concat( DISTINCT ( sp.position_title ) ) AS positionName,
+
+        IF( psg.group_name IS NULL, sg.group_name, concat( psg.group_name, "-", sg.group_name ) ) AS group_name
+        FROM
+        scyf_inspect_schdule sch
+        LEFT JOIN scyf_inspect_schdule_def def ON sch.schdule_def_id = def.schdule_def_id
+        AND sch.company_id = def.company_id
+        LEFT JOIN sys_group_member_position mp ON sch.inspect_position_id = mp.position_id
+        AND sch.inspect_group_id = mp.group_id
+        LEFT JOIN sys_position sp ON sp.position_id = sch.inspect_position_id
+        LEFT JOIN sys_group sg ON sg.group_id = sch.inspect_group_id
+        AND sch.company_id = sg.company_id
+        LEFT JOIN sys_group psg ON psg.group_id = sg.group_parent
+        AND psg.company_id = sg.company_id
+        WHERE
+        (sch.`status` = 0 or  sch.`status` =1)
+        AND sch.del_flag = 0
+
+        AND date(sch.end_date) = date(curdate()-1)
+        AND def.inspect_type = 'fixed'
+        GROUP BY
+        sch.inspect_schedule_id
+        ORDER BY
+        sch.start_date ASC
+
+        <!--   SELECT
+           <include refid="InspectSchduleColumns"/>
+           FROM
+           scyf_inspect_schdule a
+               LEFT JOIN scyf_inspect_schdule_def def ON a.inspect_def_id = def.inspect_def_id
+               AND a.company_id = def.company_id
+           WHERE
+               (a.`status` = 0 or  a.`status` =1)
+               AND a.del_flag = 0
+               AND date(a.end_date) = date(curdate()-1)
+               AND def.inspect_type = 'fixed'
+               AND a.inspect_schedule_count=0
+           GROUP BY
+               a.inspect_schedule_id-->
+    </select>
+    <!--定时任务-->
+    <select id="getAllOverdueMainTask" resultType="com.hngf.entity.danger.InspectSchdule">
+   SELECT
+        def.risk_inspect_def_title AS riskInspectDefTitle,
+        mp.user_id,
+        sch.*,
+        ( SELECT e.dict_name FROM sys_dict e WHERE def.risk_inspect_type = e.dict_id ) AS riskCheckTypeName,
+        IF( def.inspect_type = 'random', "临时性检查", "常规检查" ) AS checkType,
+        group_concat( DISTINCT ( sp.position_id ) ) AS positionId,
+        group_concat( DISTINCT ( sp.position_title ) ) AS inspectPositionName,
+	    def.created_by as createdBy,
+        IF( psg.group_name IS NULL, sg.group_name, concat( psg.group_name, "-", sg.group_name ) ) AS inspectGroupName
+        FROM
+        scyf_inspect_schdule sch
+        LEFT JOIN scyf_inspect_schdule_def def ON sch.schdule_def_id = def.schdule_def_id
+        AND sch.company_id = def.company_id
+        LEFT JOIN sys_group_member_position mp ON sch.inspect_position_id = mp.position_id
+        AND sch.inspect_group_id = mp.group_id
+        LEFT JOIN sys_position sp ON sp.position_id = sch.inspect_position_id
+        LEFT JOIN sys_group sg ON sg.group_id = sch.inspect_group_id
+        AND sch.company_id = sg.company_id
+        LEFT JOIN sys_group psg ON psg.group_id = sg.group_parent
+        AND psg.company_id = sg.company_id
+        WHERE
+        (sch.`status` =1 or   sch.`status` =0 or   sch.`status` =4)
+        AND sch.del_flag = 0
+        AND sch.end_date &lt; now()
+        AND def.inspect_type = 'fixed'
+        GROUP BY
+        sch.inspect_schedule_id
+        ORDER BY
+        sch.start_date ASC
+    </select>
+    <select id="getByParentScheduleId" resultType="InspectSchdule">
+        select
+        <include refid="InspectSchduleColumns"/>
+        from
+        scyf_inspect_schdule a
+        where
+        a.del_flag = 0
+        and a.parent_schedule_id = #{value}
+        and a.status in (0,1)
+    </select>
+
+    <!--任务列表-->
+    <select id="findListByMap" resultType="InspectSchdule">
+        SELECT
+            rcs.inspect_schedule_id,
+            rcs.inspect_def_id,
+            bcd.inspect_def_name,
+            rcs.inspect_schedule_count,
+            rcs.company_id,
+            rcs.schdule_def_id,
+            ercsd.risk_inspect_def_title,
+            ercsd.inspect_type,
+            ecc.classify_name AS risk_inspect_type_name,
+            rcs.inspect_group_id,
+            ( SELECT c.group_name FROM sys_group c WHERE rcs.inspect_group_id = c.group_id ) AS inspect_group_name,
+            rcs.inspect_position_id,
+            sp.position_title AS inspect_position_name,
+            ( CASE ercsd.inspect_type WHEN 'random' THEN '临时' WHEN 'fixed' THEN '常规' END ) AS inspectTypeStr,
+            rcs.inspect_mode,
+            IF
+            ( psg.group_name IS NULL, sg.group_name, concat( psg.group_name, "-", sg.group_name ) ) AS group_name,
+            rcs.start_date,
+            rcs.end_date,
+            rcs.del_flag
+        FROM
+            scyf_inspect_schdule rcs
+            LEFT JOIN scyf_inspect_def bcd ON rcs.inspect_def_id = bcd.inspect_def_id
+            LEFT JOIN scyf_inspect_schdule_def ercsd ON ercsd.schdule_def_id = rcs.schdule_def_id
+            LEFT JOIN sys_common_classify ecc ON ecc.classify_id = ercsd.risk_inspect_type
+            AND ecc.del_flag = 0
+            AND ecc.classify_type in ( 4,2)
+            AND ecc.company_id = ercsd.company_id
+            LEFT JOIN sys_group sg ON sg.group_id = ercsd.group_id
+            LEFT JOIN sys_group psg ON psg.group_id = sg.group_parent
+            AND sg.company_id = psg.company_id
+            LEFT JOIN sys_position sp ON sp.position_id = rcs.inspect_position_id
+            AND sp.company_id = rcs.company_id
+
+        <where>
+            rcs.parent_schedule_id = 0
+            <if test="delFlag != null and delFlag != ''">
+                and rcs.del_flag = #{delFlag}
+            </if>
+            <if test="delFlag == null || delFlag == ''">
+                and rcs.del_flag = 0
+            </if>
+
+            <if test="startDate != null and startDate != ''">
+                and DATE_FORMAT( rcs.start_date, "%Y-%m-%d" ) &gt;= DATE_FORMAT(#{startDate}, "%Y-%m-%d" )
+            </if>
+            <if test="endDate != null and endDate != ''">
+                and DATE_FORMAT( rcs.end_date, "%Y-%m-%d" ) &lt;= DATE_FORMAT(#{endDate}, "%Y-%m-%d" )
+            </if>
+            <if test="status != null and status != ''">
+                and rcs.status = #{status}
+            </if>
+            <!--web查询条件 未检查-->
+            <if test='action == "0"'>
+                and rcs.status in (0,1)
+                <![CDATA[
+                    AND IF (ercsd.inspect_type = 'random',(
+                        (now() between  rcs.start_date and rcs.end_date)
+                    ),'1=1')
+                ]]>
+            </if>
+            <!--web查询条件 已逾期-->
+            <if test='action == "3"'>
+                AND IF ( ercsd.inspect_type = 'fixed', ( ( rcs.STATUS in (3) ) ), '1=1' )
+                AND IF ( ercsd.inspect_type = 'random', ( ( rcs.STATUS IN ( 0, 1 ) ) ), '1=1' )
+                <![CDATA[
+                    AND IF ( ercsd.inspect_type = 'random', ( (  rcs.end_date < now( ) ) ), '1=1' )
+                ]]>
+            </if>
+            <!--web查询条件已检查-->
+            <if test='action == "2"'>
+                and rcs.status = 2
+            </if>
+            <if test='inspectType == "random"'>
+                and ercsd.inspect_type = 'random'
+            </if>
+            <if test='inspectType == "fixed"'>
+                and ercsd.inspect_type = 'fixed'
+            </if>
+            <if test='inspectMode == "1"'>
+                and rcs.inspect_mode = 1
+            </if>
+            <if test='inspectMode == "2"'>
+                and rcs.inspect_mode = 2
+            </if>
+            <if test="companyId != null and companyId != '' ">
+                and rcs.company_id = #{companyId}
+            </if>
+            <if test="groupId !=null">
+                AND FIND_IN_SET(sg.group_id ,fu_getChildrenGroup(#{groupId}))
+            </if>
+            <if test="positionId != null and positionId != '' ">
+                and rcs.inspect_position_id = #{positionId}
+            </if>
+            <if test="keyword != null and keyword != ''">
+                and ( ercsd.risk_inspect_def_title like "%"#{keyword}"%"
+                or sg.group_name like "%"#{keyword}"%"
+                )
+            </if>
+
+        </where>
+        group by rcs.schdule_def_id
+        order by rcs.created_time desc
+    </select>
+
+    <!--子任务列表-->
+    <select id="findSonList" resultType="InspectSchdule" parameterType="map">
+        SELECT
+        rcs.inspect_schedule_id,
+        rcs.inspect_def_id,
+        bcd.inspect_def_name,
+        rcs.inspect_schedule_count,
+        rcs.company_id,
+        rcs.schdule_def_id,
+        ercsd.risk_inspect_def_title,
+        ercsd.inspect_type,
+        ecc.classify_name AS risk_inspect_type_name,
+        rcs.inspect_group_id,
+        ( SELECT c.group_name FROM sys_group c WHERE rcs.inspect_group_id = c.group_id ) AS inspect_group_name,
+        rcs.inspect_position_id,
+        sp.position_title AS inspect_position_name,
+        rcs.executor,
+        acc.user_name AS executorName,
+        rcs.STATUS,
+        ( CASE ercsd.inspect_type WHEN 'random' THEN '临时' WHEN 'fixed' THEN '常规' END ) AS inspectTypeStr,
+        rcs.inspect_mode,
+        IF
+        ( psg.group_name IS NULL, sg.group_name, concat( psg.group_name, "-", sg.group_name ) ) AS group_name,
+        rcs.start_date,
+        rcs.end_date,
+        rcs.created_time,
+        rcs.executor_date,
+        rcs.finish_date,
+        rcs.inspect_total_count,
+        rcs.finish_by,
+        rcs.next_task_generated,
+        rcs.position_rel_persons,
+        rcs.del_flag
+        FROM
+        scyf_inspect_schdule rcs
+        LEFT JOIN scyf_inspect_def bcd ON rcs.inspect_def_id = bcd.inspect_def_id
+        LEFT JOIN scyf_inspect_schdule_def ercsd ON ercsd.schdule_def_id = rcs.schdule_def_id
+        LEFT JOIN sys_common_classify ecc ON ecc.classify_id = ercsd.risk_inspect_type
+        AND ecc.del_flag = 0
+        AND ecc.classify_type = 4
+        AND ecc.company_id = ercsd.company_id
+        LEFT JOIN sys_group sg ON sg.group_id = ercsd.group_id
+        LEFT JOIN sys_group psg ON psg.group_id = sg.group_parent
+        AND sg.company_id = psg.company_id
+        LEFT JOIN sys_position sp ON sp.position_id = rcs.inspect_position_id
+        AND sp.company_id = rcs.company_id
+        LEFT JOIN sys_user acc ON acc.user_id = rcs.executor
+
+        <where>
+            if ( ercsd.inspect_type = 'random', ( ( now( ) BETWEEN rcs.start_date AND rcs.end_date ) ), '1=1' )
+            and rcs.del_flag = 0
+            and rcs.status in (0,1)
+            AND rcs.company_id = #{companyId}
+            AND FIND_IN_SET( sg.group_id, fu_getChildrenGroup (#{groupId}))
+            and rcs.inspect_def_id = #{inspectDefId}
+        </where>
+        order by rcs.created_time desc
+    </select>
+
+    <!--我的任务/历史任务-->
+    <select id="findMyTask" resultType="InspectSchdule">
+        SELECT
+            rcs.inspect_schedule_id,
+            rcs.inspect_def_id,
+            bcd.inspect_def_name,
+            rcs.inspect_schedule_count,
+            rcs.company_id,
+            rcs.schdule_def_id,
+            ercsd.risk_inspect_def_title,
+            ercsd.inspect_type,
+           <!-- (
+            CASE
+                ercsd.schedule_frequency
+                WHEN 'year' THEN
+                '每年'
+                WHEN 'half_year' THEN
+                '半年'
+                WHEN 'quarter' THEN
+                '三个月'
+                WHEN 'month' THEN
+                '每月'
+                WHEN 'week' THEN
+                '每周'
+                WHEN 'day' THEN
+                '每天' ELSE '临时'
+            END
+            ) AS schedule_frequency,-->
+        (
+        CASE
+        ercsd.inspect_type
+        WHEN 'random' THEN
+        '临时'
+        WHEN 'fixed' THEN
+        '常规'
+        END) AS  inspectTypeStr,
+        ecc.classify_name AS riskInspectTypeName,
+            ecc.classify_value AS risk_inspect_type,
+            rcs.inspect_group_id,
+            ( SELECT c.group_name FROM sys_group c WHERE rcs.inspect_group_id = c.group_id ) AS inspectGroupName,
+            rcs.inspect_position_id,
+            sp.position_title AS inspectPositionName,
+            rcs.executor,
+            acc.user_name AS executorName,
+            rcs.STATUS,
+            rcs.inspect_mode,
+        IF
+            ( psg.group_name IS NULL, sg.group_name, concat( psg.group_name, "-", sg.group_name ) ) AS group_name,
+            rcs.start_date,
+            rcs.end_date,
+            DATE_FORMAT( rcs.start_date, "%Y-%m-%d %H:%i:%s" ) AS  start_date_str,
+            DATE_FORMAT( rcs.end_date, "%Y-%m-%d %H:%i:%s" ) AS end_date_str,
+            rcs.created_time,
+            rcs.executor_date,
+            rcs.finish_date,
+            rcs.inspect_total_count,
+            rcs.finish_by,
+            rcs.position_rel_persons
+        FROM
+            scyf_inspect_schdule rcs
+            LEFT JOIN scyf_inspect_def bcd ON rcs.inspect_def_id = bcd.inspect_def_id
+            LEFT JOIN scyf_inspect_schdule_def ercsd ON ercsd.schdule_def_id = rcs.schdule_def_id
+            LEFT JOIN sys_common_classify ecc ON ecc.classify_id = ercsd.risk_inspect_type
+            AND ecc.del_flag = 0
+            AND ecc.classify_type = 4
+           <!-- AND ecc.company_id = ercsd.company_id-->
+            LEFT JOIN sys_group sg ON sg.group_id = ercsd.group_id
+            LEFT JOIN sys_group psg ON psg.group_id = sg.group_parent
+            AND sg.company_id = psg.company_id
+            LEFT JOIN sys_position sp ON sp.position_id = rcs.inspect_position_id
+            AND sp.company_id = rcs.company_id
+            LEFT JOIN sys_user acc ON acc.user_id = rcs.executor
+        <where>
+            rcs.del_flag = 0
+            <if test='action == "0"'>
+                AND IF (ercsd.inspect_type = 'random',(rcs.status IN ( 0,1,2 ) ),rcs.del_flag = 0)
+                AND IF (ercsd.inspect_type = 'fixed',(rcs.status IN ( 0,1 ) ),rcs.del_flag = 0)
+            </if>
+            and (rcs.executor = #{userId} or (rcs.inspect_position_id = #{positionId}
+            and rcs.executor is null and rcs.inspect_group_id = #{groupId}))
+            <if test='action == "0" '>
+                <![CDATA[
+                AND IF (ercsd.inspect_type = 'random',(
+                    (now() between  rcs.start_date and rcs.end_date)
+                ),ercsd.del_flag = 0)
+                AND IF (ercsd.inspect_type = 'fixed',(
+                    (now() between  rcs.start_date and rcs.end_date)
+                ),ercsd.del_flag = 0)
+            ]]>
+            </if>
+
+            <if test="status != null">
+                and rcs.status = #{status}
+            </if>
+
+            <!--web查询条件 已逾期-->
+            <if test='action == "3" and api == "no" '>
+                and rcs.status = 3
+                <if test="startDate != null and startDate != ''">
+                    and DATE_FORMAT( rcs.start_date, "%Y-%m-%d" ) &gt;= DATE_FORMAT(#{startDate}, "%Y-%m-%d" )
+                </if>
+                <if test="endDate != null and endDate != ''">
+                    and DATE_FORMAT( rcs.end_date, "%Y-%m-%d" ) &lt;= DATE_FORMAT(#{endDate}, "%Y-%m-%d" )
+                </if>
+            </if>
+            <if test='action == "3" and api == "yes" '>
+                and rcs.status = 3
+                <if test="startDate != null and startDate != ''">
+                    and DATE_FORMAT( rcs.start_date, "%Y-%m-%d" ) &gt;= DATE_FORMAT(#{startDate}, "%Y-%m-%d" )
+                </if>
+                <!--<if test="endDate != null and endDate != ''">
+                    and DATE_FORMAT( rcs.end_date, "%Y-%m-%d" )  &gt;= DATE_FORMAT(#{endDate}, "%Y-%m-%d" )
+                </if>-->
+            </if>
+            <!--web查询条件已检查-->
+            <if test='action == "2" and api == "no" '>
+                and rcs.status = 2
+            </if>
+            <if test="companyId != null">
+                and rcs.company_id = #{companyId}
+            </if>
+            <if test="inspectType != null">
+                and ercsd.inspect_type = #{inspectType}
+            </if>
+            <if test="classifyValue != null">
+                and ecc.classify_value = #{classifyValue}
+            </if>
+            <!--我的历史任务(已检查/已逾期)-->
+            <if test="historyStatus == 1 ">
+                and rcs.status in (2,3)
+            </if>
+            <if test="dateTime != null and historyStatus == 1 ">
+                <![CDATA[
+                     AND DATE_FORMAT( rcs.created_time, "%Y-%m-%d" ) = #{dateTime}
+                ]]>
+            </if>
+            <if test="keyword != null and keyword != ''">
+                and ( ercsd.risk_inspect_def_title like "%"#{keyword}"%"
+                or sg.group_name like "%"#{keyword}"%"
+                )
+            </if>
+        </where>
+
+        GROUP BY
+            rcs.inspect_schedule_id
+        ORDER BY
+            rcs.start_date DESC
+    </select>
+
+
+
+   <!--api 首页统计待办 /逾期任务数量-->
+    <select id="findMyTaskCountForAPI" resultType="Integer" parameterType="Map">
+        SELECT IFNULL(count(rcs.inspect_schedule_id),0)
+        FROM
+        scyf_inspect_schdule rcs
+        LEFT JOIN scyf_inspect_def bcd ON rcs.inspect_def_id = bcd.inspect_def_id
+        LEFT JOIN scyf_inspect_schdule_def ercsd ON ercsd.schdule_def_id = rcs.schdule_def_id
+        LEFT JOIN sys_common_classify ecc ON ecc.classify_id = ercsd.risk_inspect_type
+        AND ecc.del_flag = 0
+        AND ecc.classify_type = 4
+        AND ecc.company_id = ercsd.company_id
+        LEFT JOIN sys_group sg ON sg.group_id = ercsd.group_id
+        LEFT JOIN sys_group psg ON psg.group_id = sg.group_parent
+        AND sg.company_id = psg.company_id
+        LEFT JOIN sys_position sp ON sp.position_id = rcs.inspect_position_id
+        AND sp.company_id = rcs.company_id
+        LEFT JOIN sys_user acc ON acc.user_id = rcs.executor
+        <where>
+            rcs.del_flag = 0 and ercsd.del_flag=0
+            <if test='action == "0"'>
+                AND IF (ercsd.inspect_type = 'random',(rcs.status IN ( 0,1,2 ) ),rcs.del_flag = 0)
+                AND IF (ercsd.inspect_type = 'fixed',(rcs.status IN ( 0,1 ) ),rcs.del_flag = 0)
+            </if>
+            and (rcs.executor = #{userId} or (rcs.inspect_position_id = #{positionId}
+            and rcs.executor is null and rcs.inspect_group_id = #{groupId}))
+            <if test='action == "0" '>
+                <![CDATA[
+                AND IF (ercsd.inspect_type = 'random',(
+                    (now() between  rcs.start_date and rcs.end_date)
+                ),rcs.del_flag = 0)
+                AND IF (ercsd.inspect_type = 'fixed',(
+                    (now() between  rcs.start_date and rcs.end_date)
+                ),rcs.del_flag = 0)
+            ]]>
+            </if>
+
+            <if test="status != null">
+                and rcs.status = #{status}
+            </if>
+
+            <!--web查询条件 已逾期-->
+          <!--  <if test='action == "3" and api == "no" '>-->
+            <if test='action == "3" and api == "yes"'>
+                and rcs.status = 3
+                   <if test="startDate != null and startDate != ''">
+                    and DATE_FORMAT( rcs.start_date, "%Y-%m-%d" ) &gt;= DATE_FORMAT(#{startDate}, "%Y-%m-%d" )
+                </if>
+               <!-- <if test="endDate != null and endDate != ''">
+                    and DATE_FORMAT( rcs.end_date, "%Y-%m-%d" ) >= DATE_FORMAT(#{endDate}, "%Y-%m-%d" )
+                </if>-->
+            </if>
+            <!--web查询条件已检查-->
+            <if test='action == "2" and api == "no" '>
+                and rcs.status = 2
+            </if>
+            <if test="companyId != null">
+                and rcs.company_id = #{companyId}
+            </if>
+            <if test="inspectType != null">
+                and ercsd.inspect_type = #{inspectType}
+            </if>
+            <if test="classifyValue != null">
+                and ecc.classify_value = #{classifyValue}
+            </if>
+            <!--我的历史任务(已检查/已逾期)-->
+            <if test="historyStatus == 1 ">
+                and rcs.status in (2,3)
+            </if>
+            <if test="dateTime != null and historyStatus == 1 ">
+                <![CDATA[
+                     AND DATE_FORMAT( rcs.created_time, "%Y-%m-%d" ) = #{dateTime}
+                ]]>
+            </if>
+            <if test="keyword != null and keyword != ''">
+                and ( ercsd.risk_inspect_def_title like "%"#{keyword}"%"
+                or sg.group_name like "%"#{keyword}"%"
+                )
+            </if>
+        </where>
+
+    </select>
+
+    <select id="findById" resultType="com.hngf.entity.danger.InspectSchdule" parameterType="Long">
+        select
+        <include refid="InspectSchduleColumns"/>
+        from
+        scyf_inspect_schdule a
+        where
+        a.del_flag = 0 and a.inspect_schedule_id = #{id}
+    </select>
+
+    <select id="findDetailByIdAndType" resultType="InspectSchdule">
+        SELECT
+        rcs.inspect_schedule_id,
+        rcs.inspect_def_id,
+        bcd.inspect_def_name,
+        rcs.inspect_schedule_count,
+        rcs.company_id,
+        rcs.schdule_def_id,
+        ercsd.risk_inspect_def_title,
+        ercsd.inspect_type,
+        ecc.classify_name AS riskInspectTypeName,
+        rcs.inspect_group_id,
+        ( SELECT c.group_name FROM sys_group c WHERE rcs.inspect_group_id = c.group_id ) AS inspectGroupName,
+        rcs.inspect_position_id,
+        sp.position_title AS inspectPositionName,
+        rcs.executor,
+        acc.user_name AS executorName,
+        rcs.STATUS,
+        rcs.inspect_mode,
+        IF
+        ( psg.group_name IS NULL, sg.group_name, concat( psg.group_name, "-", sg.group_name ) ) AS group_name,
+        rcs.start_date,
+        rcs.end_date,
+        rcs.created_time,
+        rcs.executor_date,
+        rcs.finish_date,
+        rcs.inspect_total_count,
+        rcs.finish_by,
+        rcs.next_task_generated,
+        rcs.position_rel_persons,
+        <if test='type != null and type != "" and (type == "0" || type == "2")'>
+            GROUP_CONCAT(acco.user_name) as riskInspectParticipantName,
+            ercsd.risk_inspect_def_desc,
+            ercsd.schedule_frequency,
+            ercsd.schedule_count,
+        </if>
+        rcs.del_flag
+        FROM
+        scyf_inspect_schdule rcs
+        LEFT JOIN scyf_inspect_def bcd ON rcs.inspect_def_id = bcd.inspect_def_id
+        LEFT JOIN scyf_inspect_schdule_def ercsd ON  ercsd.schdule_def_id = rcs.schdule_def_id
+        LEFT JOIN sys_common_classify ecc ON ecc.classify_id = ercsd.risk_inspect_type
+        AND ecc.del_flag = 0
+        AND ecc.classify_type = 4
+        AND ecc.company_id = ercsd.company_id
+
+        <if test='type == "0" || type == "2"'>
+            LEFT JOIN sys_group sg ON sg.group_id = ercsd.group_id
+            LEFT JOIN sys_group psg ON psg.group_id = sg.group_parent AND sg.company_id = psg.company_id
+        </if>
+
+        <if test='type == "1"'>
+            LEFT JOIN sys_group sg ON sg.group_id = ercsd.group_id
+            LEFT JOIN sys_group psg ON psg.group_id = sg.group_parent AND sg.company_id = psg.company_id
+        </if>
+
+        LEFT JOIN sys_position sp ON sp.position_id = rcs.inspect_position_id AND sp.company_id = rcs.company_id
+        LEFT JOIN sys_user acc ON acc.user_id = rcs.executor
+
+        <if test='type != null and type != "" and (type == "0" || type == "2")'>
+            left join sys_user acco on FIND_IN_SET(acco.user_id , ercsd.risk_inspect_participant)
+        </if>
+
+        <where>
+            rcs.del_flag = 0
+            <if test='type != null and type != "" and type == "0"'>
+                and rcs.parent_schedule_id = 0 and rcs.inspect_schedule_id = #{scheduleId}
+            </if>
+            <if test='type != null and type != "" and type == "1"'>
+                and rcs.parent_schedule_id = #{scheduleId}
+            </if>
+            <if test='type != null and type != "" and type == "2"'>
+                and rcs.inspect_schedule_id = #{scheduleId}
+            </if>
+        </where>
+
+        GROUP BY rcs.inspect_schedule_id
+    </select>
+
+    <insert id="add" parameterType="com.hngf.entity.danger.InspectSchdule">
+        INSERT INTO scyf_inspect_schdule (
+           /* inspect_total_count,
+            inspect_schedule_count,*/
+            status,
+            executor,
+            inspect_mode,
+            inspect_def_id,
+            company_id,
+            schdule_def_id,
+          /*  parent_schedule_id,*/
+            inspect_group_id,
+            inspect_position_id,
+         /*   start_date,
+            end_date,*/
+            executor_date,
+            finish_date,
+            finish_by,
+             /*  created_time,
+            next_task_generated,
+            position_rel_persons,
+            created_by */
+            )
+        VALUES (
+        /*    #{inspectTotalCount},
+            #{inspectScheduleCount},*/
+            #{status},
+            #{executor},
+            #{inspectMode},
+            #{inspectDefId},
+            #{companyId},
+            #{schduleDefId},
+         /*   #{parentScheduleId},*/
+            #{inspectGroupId},
+            #{inspectPositionId},
+           /* #{startDate},
+            #{endDate},*/
+            #{executorDate},
+            #{finishDate},
+            #{finishBy},
+         /*   #{nextTaskGenerated},
+            #{positionRelPersons},*/
+          /*    #{createdTime},
+          #{createdBy},*/
+        )
+    </insert>
+    <insert id="addList" parameterType="java.util.List">
+        INSERT INTO scyf_inspect_schdule (
+            status,
+            executor,
+            inspect_mode,
+            inspect_def_id,
+            company_id,
+            schdule_def_id,
+            inspect_group_id,
+            inspect_position_id,
+            start_date,
+             end_date
+            )
+        VALUES
+        <foreach collection="inspectSchdules" index="index" item="InspectSchdule"   separator=",">
+            (
+            #{InspectSchdule.status},
+            #{InspectSchdule.executor},
+            #{InspectSchdule.inspectMode},
+            #{InspectSchdule.inspectDefId},
+            #{InspectSchdule.companyId},
+            #{InspectSchdule.schduleDefId},
+            #{InspectSchdule.inspectGroupId},
+            #{InspectSchdule.inspectPositionId},
+            #{InspectSchdule.startDate},
+            #{InspectSchdule.endDate}
+            )
+        </foreach>
+        /* date_sub(curdate(),interval -1 day)*/
+    </insert>
+
+    <update id="update" parameterType="com.hngf.entity.danger.InspectSchdule">
+        UPDATE scyf_inspect_schdule a
+        <trim prefix="set" suffixOverrides=",">
+        <if test="inspectTotalCount != null and inspectTotalCount != ''">
+            a.inspect_total_count = #{inspectTotalCount},
+        </if>
+        <if test="inspectScheduleCount != null and inspectScheduleCount != ''">
+            a.inspect_schedule_count = #{inspectScheduleCount},
+        </if>
+        <if test="status != null and status != '' or 0==status ">
+            a.status = #{status},
+        </if>
+        <if test="executor != null and executor != ''">
+            a.executor = #{executor},
+        </if>
+        <if test="inspectMode != null and inspectMode != ''">
+            a.inspect_mode = #{inspectMode},
+        </if>
+        <if test="inspectDefId != null and inspectDefId != ''">
+            a.inspect_def_id = #{inspectDefId},
+        </if>
+        <if test="companyId != null and companyId != ''">
+            a.company_id = #{companyId},
+        </if>
+        <if test="schduleDefId != null and schduleDefId != ''">
+            a.schdule_def_id = #{schduleDefId},
+        </if>
+        <if test="parentScheduleId != null and parentScheduleId != ''">
+            a.parent_schedule_id = #{parentScheduleId},
+        </if>
+        <if test="inspectGroupId != null and inspectGroupId != ''">
+            a.inspect_group_id = #{inspectGroupId},
+        </if>
+        <if test="inspectPositionId != null and inspectPositionId != ''">
+            a.inspect_position_id = #{inspectPositionId},
+        </if>
+        <if test="startDate != null">
+            a.start_date = #{startDate},
+        </if>
+        <if test="endDate != null">
+            a.end_date = #{endDate},
+        </if>
+        <if test="executorDate != null">
+            a.executor_date = #{executorDate},
+        </if>
+        <if test="finishDate != null">
+            a.finish_date = #{finishDate},
+        </if>
+        <if test="finishBy != null and finishBy != ''">
+            a.finish_by = #{finishBy},
+        </if>
+        <if test="nextTaskGenerated != null and nextTaskGenerated != ''">
+            a.next_task_generated = #{nextTaskGenerated},
+        </if>
+        <if test="positionRelPersons != null and positionRelPersons != ''">
+            a.position_rel_persons = #{positionRelPersons},
+        </if>
+        <if test="updatedTime != null">
+            a.updated_time = #{updatedTime},
+        </if>
+        <if test="updatedBy != null and updatedBy != ''">
+            a.updated_by = #{updatedBy},
+        </if>
+        </trim>
+        where inspect_schedule_id = #{inspectScheduleId}
+    </update>
+
+    <update id="deleteById" parameterType="Long">
+        UPDATE scyf_inspect_schdule a SET
+            a.del_flag = 1
+        where a.inspect_schedule_id = #{id}
+    </update>
+
+    <update id="deleteAllTaskById" parameterType="Map">
+        UPDATE scyf_inspect_schdule a SET
+            a.del_flag = 1
+        where
+        a.schdule_def_id = #{scheduleDefId}
+    </update>
+
+    <update id="deleteByIds" parameterType="java.util.List">
+        UPDATE scyf_inspect_schdule a SET
+        a.del_flag = 1
+        where a.inspect_schedule_id in
+        <foreach collection="ids" item="id" open="(" close=")" separator="," index="idx">
+            #{id}
+        </foreach>
+    </update>
+
+
+    <!--    今日检查（企业大屏）-->
+    <select id="todayCheck" parameterType="java.util.Map" resultType="map">
+        SELECT
+        ercsd.risk_inspect_def_title AS title,
+        sg.group_name AS groupName,
+        (
+        CASE
+        ercs.`status`
+		        WHEN 0 THEN
+		        '未检查'
+		        WHEN 1 THEN
+		        '检查中'
+		        WHEN 2 THEN
+		        '已检查'
+		        WHEN 3 THEN
+		        '已逾期'
+		        WHEN 4 THEN
+		        '忽略检查'
+		        END
+        ) AS status
+        FROM
+        scyf_inspect_schdule ercs
+        LEFT JOIN scyf_inspect_schdule_def ercsd ON ercsd.schdule_def_id = ercs.schdule_def_id
+        LEFT JOIN sys_group sg ON sg.group_id = ercs.inspect_group_id
+        <trim prefix="where" prefixOverrides="and">
+            ercs.parent_schedule_id = 0
+            AND ercs.`status` in (0,1)
+            AND ercs.del_flag = 0
+            <if test="groupId != null and groupId != ''">
+                AND FIND_IN_SET(sg.group_id ,fu_getChildrenGroup(#{groupId}))
+            </if>
+            <if test="startDate != null and startDate != '' and endDate != null and endDate != ''">
+                and
+                <![CDATA[
+                (
+                (ercs.start_date <= #{startDate,jdbcType=TIMESTAMP} AND #{endDate,jdbcType=TIMESTAMP} <= ercs.end_date)
+                OR
+                (ercs.start_date <= #{startDate,jdbcType=TIMESTAMP} AND #{startDate,jdbcType=TIMESTAMP} <= ercs.end_date)
+                OR
+                (ercs.start_date <= #{endDate,jdbcType=TIMESTAMP} AND #{endDate,jdbcType=TIMESTAMP} <= ercs.end_date)
+                OR
+                (#{startDate} <= ercs.start_date  AND ercs.end_date <= #{endDate,jdbcType=TIMESTAMP})
+                )
+                ]]>
+            </if>
+            <if test="companyId != null and companyId != '' ">
+                and ercs.company_id = #{companyId}
+            </if>
+        </trim>
+        GROUP BY
+        ercs.inspect_schedule_id
+    </select>
+
+    <!-- 任务详情中所属任务定义的当前任务列表 -->
+    <select id="executorScheduleList" resultType="InspectSchdule">
+        SELECT
+        rcs.inspect_schedule_id,
+        rcs.inspect_def_id,
+        bcd.inspect_def_name,
+        rcs.inspect_schedule_count,
+        rcs.company_id,
+        rcs.schdule_def_id,
+        ercsd.risk_inspect_def_title,
+        ercsd.inspect_type,
+        ecc.classify_name AS risk_inspect_type_name,
+        rcs.inspect_group_id,
+        ( SELECT c.group_name FROM sys_group c WHERE rcs.inspect_group_id = c.group_id ) AS inspect_group_name,
+        rcs.inspect_position_id,
+        sp.position_title AS inspect_position_name,
+        rcs.executor,
+        acc.user_name AS executorName,
+        rcs.STATUS,
+        ( CASE ercsd.inspect_type WHEN 'random' THEN '临时' WHEN 'fixed' THEN '常规' END ) AS inspectTypeStr,
+        rcs.inspect_mode,
+        IF
+        ( psg.group_name IS NULL, sg.group_name, concat( psg.group_name, "-", sg.group_name ) ) AS group_name,
+        rcs.start_date,
+        rcs.end_date,
+        DATE_FORMAT( rcs.start_date, "%Y-%m-%d %H:%i:%s" ) AS  start_date_str,
+        DATE_FORMAT( rcs.end_date, "%Y-%m-%d %H:%i:%s" ) AS end_date_str,
+        rcs.created_time,
+        rcs.executor_date,
+        rcs.finish_date,
+        rcs.inspect_total_count,
+        rcs.finish_by,
+        rcs.next_task_generated,
+        rcs.position_rel_persons,
+        rcs.del_flag
+        FROM
+        scyf_inspect_schdule rcs
+        LEFT JOIN scyf_inspect_def bcd ON rcs.inspect_def_id = bcd.inspect_def_id
+        LEFT JOIN scyf_inspect_schdule_def ercsd ON ercsd.schdule_def_id = rcs.schdule_def_id
+        LEFT JOIN sys_common_classify ecc ON ecc.classify_id = ercsd.risk_inspect_type
+        AND ecc.del_flag = 0
+        AND ecc.classify_type = 4
+        AND ecc.company_id = ercsd.company_id
+        LEFT JOIN sys_group sg ON sg.group_id = ercsd.group_id
+        LEFT JOIN sys_group psg ON psg.group_id = sg.group_parent
+        AND sg.company_id = psg.company_id
+        LEFT JOIN sys_position sp ON sp.position_id = rcs.inspect_position_id
+        AND sp.company_id = rcs.company_id
+        LEFT JOIN sys_user acc ON acc.user_id = rcs.executor
+
+        <where>
+            rcs.del_flag = 0
+            AND EXISTS  (  select rcsd.schdule_def_id from scyf_inspect_schdule_def rcsd where  EXISTS
+            ( select srcs.inspect_schedule_id from scyf_inspect_schdule srcs
+            where srcs.inspect_schedule_id = #{scheduleId} and  srcs.schdule_def_id = rcsd.schdule_def_id  )
+            and rcs.schdule_def_id = rcsd.schdule_def_id
+            )
+            <if test="status != null and status != ''">
+                AND rcs.status = #{status}
+            </if>
+            <!--web查询条件 未检查-->
+            <if test='action == "0"'>
+                AND rcs.status in (0,1)
+                AND now() between  rcs.start_date and rcs.end_date
+            </if>
+            <!--web查询条件 已逾期-->
+            <if test='action == "3"'>
+                AND rcs.STATUS IN ( 0, 1 )
+                <![CDATA[
+                    AND rcs.end_date < now()
+                ]]>
+            </if>
+            <!--web查询条件已检查-->
+            <if test='action == "2"'>
+                AND rcs.status = 2
+            </if>
+        </where>
+        order by rcs.created_time desc
+    </select>
+
+</mapper>

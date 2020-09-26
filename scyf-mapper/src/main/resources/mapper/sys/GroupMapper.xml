@@ -1,0 +1,304 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.hngf.mapper.sys.GroupMapper">
+
+    <select id="findList" resultType="com.hngf.entity.sys.Group">
+		SELECT
+		A.*,C.group_type_title groupTypeTitle,B.group_name groupParentName
+		FROM
+		sys_group             AS A
+		LEFT JOIN sys_group       AS B ON A.group_parent = B.group_id
+		LEFT JOIN sys_group_type  AS C ON A.group_type_id= C.group_type_id
+		LEFT JOIN sys_group_member  AS D ON (D.company_id= A.company_id AND D.group_id = A.group_id)
+		WHERE A.del_flag = 0
+
+		<if test="companyId != null">
+			AND A.company_id = #{companyId, jdbcType=BIGINT}
+		</if>
+
+		<if test="groupId != null and groupId != ''">
+			AND A.group_id = #{groupId}
+		</if>
+
+		<if test="keyword != null and keyword != ''">
+			and (
+			A.group_name like "%"#{keyword}"%"
+			or A.group_desc like "%"#{keyword}"%"
+			or A.group_select like "%"#{keyword}"%"
+			)
+		</if>
+
+		<!--
+			controller中带有@DataFilter注解的方法，在对应的查询中加入 and ${sql_filter}
+			注意查询需要做相应的修改，生成的过滤sql如下，供参考：
+			(t1.group_id in(16,17,18) or t2.user_id=30)
+			t1为注解字段 tableAliasGroup 的值
+			t2为注解字段 tableAliasUser 的值
+			如果使用@DataFilter注解，一定要修改查询，匹配这两个别名对应的数据库字段
+		-->
+		<if test="sql_filter != null">
+			and ${sql_filter}
+		</if>
+
+		GROUP BY A.group_id
+		ORDER BY A.group_id
+	</select>
+
+    <select id="findById" resultType="com.hngf.entity.sys.Group"
+            parameterType="Long">
+		select a.*,b.group_type_title from sys_group a
+		left join sys_group_type b on b.group_type_id = a.group_type_id
+		where a.del_flag = 0 and a.group_id = #{id}
+	</select>
+
+    <select id="findGroupIdList" resultType="Long" parameterType="Long">
+		select group_id from sys_group
+		where del_flag = 0 and group_parent = #{value}
+	</select>
+
+	<select id="findGroupDetailList" resultType="com.hngf.entity.sys.Group" parameterType="Long">
+		select `group_id` groupId, `company_id` companyId, `group_name` groupName, `group_type_id` groupTypeId,  `group_parent` groupParent,
+		 `group_level` groupLevel
+		from sys_group
+
+		where del_flag = 0 and group_parent = #{value}
+	</select>
+	<select id="findByMap" resultType="com.hngf.dto.sys.GroupDetailDto">
+		SELECT
+			A.*,C.group_type_title groupTypeTitle,B.group_name groupParentName
+		FROM
+		sys_group             AS A
+		LEFT JOIN sys_group       AS B ON A.group_parent = B.group_id
+		LEFT JOIN sys_group_type  AS C ON A.group_type_id= C.group_type_id
+		WHERE A.del_flag = 0
+		<if test="companyOrOrgId != null">
+			AND  A.company_id = #{companyOrOrgId,jdbcType=BIGINT}
+		</if>
+
+		<if test="groupId !=null">
+			AND  A.group_id  = #{groupId  ,jdbcType=BIGINT}
+		</if>
+	</select>
+
+	<!--获取某个群组的所有下级群组列表-->
+	<select id="getChildren" parameterType="java.util.Map"  resultType="com.hngf.dto.sys.GroupDetailDto">
+		SELECT
+			A.*,C.group_type_title groupTypeTitle,B.group_name groupParentName
+		FROM
+		sys_group             AS A
+		LEFT JOIN sys_group       AS B ON A.group_parent = B.group_id
+		LEFT JOIN sys_group_type  AS C ON A.group_type_id= C.group_type_id
+		WHERE A.del_flag = 0
+		<if test="companyOrOrgId != null">
+			AND A.company_id = #{companyOrOrgId,jdbcType=BIGINT}
+		</if>
+		<if test="groupLeft != null and groupRight != null">
+			<![CDATA[
+                AND A.group_left  >= #{groupLeft  ,jdbcType=BIGINT}
+                AND A.group_right <= #{groupRight ,jdbcType=BIGINT}
+                ]]>
+		</if>
+		<if test="groupTypeId!=null">
+			AND A.group_type_id = #{groupTypeId,jdbcType=BIGINT}
+		</if>
+		<if test="groupIds !=null and groupIds.length > 0">
+			AND A.group_id in
+			<foreach collection="groupIds" item="groupId" open="(" separator="," close=")">
+				#{groupId}
+			</foreach>
+		</if>
+		<if test="groupId !=null">
+			AND FIND_IN_SET(A.group_id ,fu_getChildrenGroup(#{groupId}))
+		</if>
+		<if test="groupParent != null">
+			AND A.group_parent = #{groupParent, jdbcType=BIGINT}
+		</if>
+		ORDER BY A.group_order ASC
+	</select>
+
+    <insert id="add" parameterType="com.hngf.entity.sys.Group"  useGeneratedKeys="true" keyProperty="groupId">
+		INSERT INTO sys_group (
+		company_id
+		,
+		group_name
+		,
+		group_type_id
+		,
+		group_left
+		,
+		group_right
+		,
+		group_parent
+		,
+		group_level
+		,
+		group_leaf
+		,
+		group_path
+		,
+		group_desc
+		,
+		group_status
+		,
+		group_fixed
+		,
+		group_code
+		,
+		group_order
+		,
+		group_sort
+		,
+		group_select
+		,
+		created_time
+		,
+		created_by
+		,
+		del_flag
+		)
+		VALUES (
+		#{companyId}
+		,
+		#{groupName}
+		,
+		#{groupTypeId}
+		,
+		#{groupLeft}
+		,
+		#{groupRight}
+		,
+		#{groupParent}
+		,
+		#{groupLevel}
+		,
+		#{groupLeaf}
+		,
+		#{groupPath}
+		,
+		#{groupDesc}
+		,
+		#{groupStatus}
+		,
+		#{groupFixed}
+		,
+		#{groupCode}
+		,
+		#{groupOrder}
+		,
+		#{groupSort}
+		,
+		#{groupSelect}
+		,
+		#{createdTime}
+		,
+		#{createdBy}
+		,
+		0
+		)
+
+	</insert>
+
+    <update id="update" parameterType="com.hngf.entity.sys.Group">
+		UPDATE sys_group
+		<trim prefix="set" suffixOverrides=",">
+		<if test="companyId != null and companyId !=''">
+			company_id = #{companyId},
+		</if>
+		<if test="groupName != null and groupName !=''">
+			group_name = #{groupName},
+		</if>
+		<if test="groupTypeId != null and groupTypeId !=''">
+			group_type_id = #{groupTypeId},
+		</if>
+		<if test="groupLeft != null and groupLeft !=''">
+			group_left = #{groupLeft},
+		</if>
+		<if test="groupRight != null and groupRight !=''">
+			group_right = #{groupRight},
+		</if>
+		<if test="groupParent != null and groupParent !=''">
+			group_parent = #{groupParent},
+		</if>
+		<if test="groupLevel != null and groupLevel !=''">
+			group_level = #{groupLevel},
+		</if>
+		<if test="groupLeaf != null and groupLeaf !=''">
+			group_leaf = #{groupLeaf},
+		</if>
+		<if test="groupPath != null and groupPath !=''">
+			group_path = #{groupPath},
+		</if>
+		<if test="groupDesc != null and groupDesc !=''">
+			group_desc = #{groupDesc},
+		</if>
+		<if test="groupStatus != null and groupStatus !=''">
+			group_status = #{groupStatus},
+		</if>
+		<if test="groupFixed != null and groupFixed !=''">
+			group_fixed = #{groupFixed},
+		</if>
+		<if test="groupCode != null and groupCode !=''">
+			group_code = #{groupCode},
+		</if>
+		<if test="groupOrder != null and groupOrder !=''">
+			group_order = #{groupOrder},
+		</if>
+		<if test="groupSort != null and groupSort !=''">
+			group_sort = #{groupSort},
+		</if>
+		<if test="groupSelect != null and groupSelect !=''">
+			group_select = #{groupSelect},
+		</if>
+		<if test="updatedTime != null">
+			updated_time = #{updatedTime},
+		</if>
+		<if test="updatedBy != null and updatedBy !=''">
+			updated_by = #{updatedBy},
+		</if>
+		<if test="longitude != null">
+			longitude = #{longitude},
+		</if>
+		<if test="latitude != null">
+			latitude = #{latitude},
+		</if>
+		</trim>
+		<where>
+			group_id = #{groupId}
+		</where>
+	</update>
+
+    <update id="deleteById" parameterType="Long">
+		UPDATE sys_group SET
+		del_flag = 1
+		where FIND_IN_SET( group_id, fu_getChildrenGroup (  #{id}  ) )
+	</update>
+
+	<!-- 根据cids删除群组信息 -->
+	<update id="deleteByCompanyIds">
+        UPDATE sys_group
+        SET del_flag = 1
+        WHERE FIND_IN_SET(company_id, #{value})
+    </update>
+
+    <update id="deleteByIds" parameterType="java.util.List">
+        UPDATE sys_group SET
+        del_flag = 1
+        where group_id in
+        <foreach collection="ids" item="id" open="(" close=")"
+                 separator="," index="idx">
+            #{id}
+        </foreach>
+    </update>
+
+	<select id="findCountByGroupTypeId" parameterType="Long" resultType="java.lang.Integer">
+		select count(group_id) from sys_group where group_type_id = #{groupTypeId} and del_flag = 0
+	</select>
+
+	<update id="deleteByCompanyId" parameterType="java.lang.Long">
+        UPDATE sys_group SET
+		del_flag = 1 , updated_by = #{updatedBy}, updated_time = now()
+		where company_id = #{companyId}
+    </update>
+
+</mapper>

@@ -1,0 +1,239 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.hngf.mapper.sys.MessageMapper">
+
+    <sql id="MessageColumns">
+        a.msg_id,
+        a.msg_title,
+        a.msg_type,
+        a.addressee_group_id,
+        a.addressee_id,
+        a.addresser_group_id,
+        a.addresser_id,
+        a.addressee_time,
+        a.expired_time,
+        a.msg_content,
+        a.msg_status,
+        a.if_push,
+        a.push_type,
+        a.company_id,
+        a.msg_record_id,
+        a.msg_parent_id,
+        a.created_time,
+        a.created_by,
+        a.updated_time,
+        a.updated_by
+    </sql>
+
+    <select id="findList" resultType="Message">
+        select
+            <include refid="MessageColumns"/>
+        from
+            sys_message a
+        where
+            a.del_flag = 0
+	</select>
+
+    <!--1收件箱、2发件箱-->
+    <select id="findByMap" resultType="Message">
+        SELECT
+            sme.msg_id,
+            sme.msg_title,
+            sme.msg_content,
+            sme.addressee_time,
+            sme.msg_status,
+            sme.msg_type,
+        CASE
+
+            WHEN sme.addresser_id IS NULL THEN
+            '系统推送'
+            WHEN acc.user_name IS NULL
+            AND acc.user_name IS NOT NULL THEN
+            '管理员发送' ELSE acc.user_name
+        END AS addresser_name
+        FROM
+            sys_message sme
+            LEFT JOIN sys_user acc ON ( acc.user_id = sme.addresser_id )
+        WHERE
+            sme.del_flag = 0
+            AND sme.company_id = 1
+            AND ( sme.msg_type = 1 OR sme.msg_type = 2 )
+        <if test="msgStatus != null">
+            and sme.msg_status = #{msgStatus}
+        </if>
+        <if test="action == 1">
+            and sme.addressee_id = #{userId}
+        </if>
+        <if test="action == 2">
+            and sme.addresser_id = #{userId}
+            and (sme.msg_parent_id is null or sme.msg_parent_id = '' or sme.msg_parent_id = 0)
+        </if>
+        <if test="type != null and type != ''">
+            and sme.addresser_id is not null and sme.addresser_id != '0'
+        </if>
+        group by sme.msg_id
+        order by sme.msg_status,sme.addressee_time DESC
+	</select>
+
+    <!--消息未读统计-->
+    <select id="findMessageCount" resultType="int" parameterType="map">
+        select count(sme.msg_id)
+        from sys_message sme
+        where
+        sme.del_flag = 0
+        and sme.company_id = #{companyId}
+        and sme.msg_status = #{msgStatus}
+        and sme.addressee_id = #{userId}
+
+    </select>
+
+    <select id="findById" resultType="Message" parameterType="Long">
+        select
+            <include refid="MessageColumns"/>
+        from
+            sys_message a
+        where
+            a.del_flag = 0 and a.msg_id = #{id}
+	</select>
+
+    <insert id="add" parameterType="Message">
+        INSERT INTO sys_message (
+            msg_title,
+            msg_type,
+            addressee_group_id,
+            addressee_id,
+            addresser_group_id,
+            addresser_id,
+            addressee_time,
+            expired_time,
+            msg_content,
+            msg_status,
+            if_push,
+            push_type,
+            company_id,
+            msg_record_id,
+            msg_parent_id,
+            created_time,
+            created_by,
+            del_flag)
+        VALUES (
+            #{msgTitle},
+            #{msgType},
+            #{addresseeGroupId},
+            #{addresseeId},
+            #{addresserGroupId},
+            #{addresserId},
+            #{addresseeTime},
+            #{expiredTime},
+            #{msgContent},
+            #{msgStatus},
+            #{ifPush},
+            #{pushType},
+            #{companyId},
+            #{msgRecordId},
+            #{msgParentId},
+            #{createdTime},
+            #{createdBy},
+            0
+        )
+
+    </insert>
+
+    <update id="update" parameterType="Message">
+        UPDATE sys_message a
+        <trim prefix="set" suffixOverrides=",">
+            <if test="msgTitle != null and msgTitle != ''">
+                a.msg_title = #{msgTitle},
+            </if>
+            <if test="msgType != null">
+                a.msg_type = #{msgType},
+            </if>
+            <if test="addresseeGroupId != null">
+                a.addressee_group_id = #{addresseeGroupId},
+            </if>
+            <if test="addresseeId != null">
+                a.addressee_id = #{addresseeId},
+            </if>
+            <if test="addresserGroupId != null">
+                a.addresser_group_id = #{addresserGroupId},
+            </if>
+            <if test="addresserId != null">
+                a.addresser_id = #{addresserId},
+            </if>
+            <if test="addresseeTime != null">
+                a.addressee_time = #{addresseeTime},
+            </if>
+            <if test="expiredTime != null">
+                a.expired_time = #{expiredTime},
+            </if>
+            <if test="msgContent != null and msgContent != ''">
+                a.msg_content = #{msgContent},
+            </if>
+            <if test="msgStatus != null">
+                a.msg_status = #{msgStatus},
+            </if>
+            <if test="ifPush != null">
+                a.if_push = #{ifPush},
+            </if>
+            <if test="pushType != null">
+                a.push_type = #{pushType},
+            </if>
+            <if test="companyId != null">
+                a.company_id = #{companyId},
+            </if>
+            <if test="msgRecordId != null">
+                a.msg_record_id = #{msgRecordId},
+            </if>
+            <if test="msgParentId != null">
+                a.msg_parent_id = #{msgParentId},
+            </if>
+            <if test="updatedTime != null">
+                a.updated_time = #{updatedTime},
+            </if>
+            <if test="updatedBy != null and updatedBy != ''">
+                a.updated_by = #{updatedBy},
+            </if>
+        </trim>
+        where msg_id = #{msgId}
+    </update>
+
+    <update id="deleteById" parameterType="Long">
+        UPDATE sys_message a SET
+            a.del_flag = 1
+        where a.msg_id = #{id}
+    </update>
+
+    <update id="deleteByIds" parameterType="java.util.List">
+        UPDATE sys_message a SET
+            a.del_flag = 1
+        where a.msg_id in
+        <foreach collection="ids" item="id" open="(" close=")" separator="," index="idx">
+            #{id}
+        </foreach>
+    </update>
+
+    <!--设置为已读-->
+    <update id="setRead" parameterType="map">
+        UPDATE sys_message
+        <trim suffixOverrides=",">
+            <set>
+                msg_status = 1,
+                <if test="updatedTime != null">
+                    updated_time = #{updatedTime},
+                </if>
+                <if test="userId != null">
+                    updated_by = #{userId},
+                </if>
+            </set>
+        </trim>
+        WHERE
+        addressee_id = #{userId}
+        <if test="msgId != null">
+            AND msg_id = #{msgId}
+        </if>
+        <if test="companyId != null">
+            AND company_id = #{companyId}
+        </if>
+    </update>
+</mapper>

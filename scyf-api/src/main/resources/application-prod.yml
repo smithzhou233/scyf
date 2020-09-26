@@ -1,0 +1,55 @@
+spring:
+  datasource:
+    type: com.alibaba.druid.pool.DruidDataSource
+    druid:
+      driver-class-name: com.mysql.cj.jdbc.Driver
+      url: jdbc:mysql://123.57.242.189:3306/slj_scyf?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai&tinyInt1isBit=false&allowMultiQueries=true
+      username: root
+      password: hngf!@#$%982434
+      initial-size: 10
+      max-active: 100
+      min-idle: 10
+      max-wait: 60000
+      pool-prepared-statements: true
+      max-pool-prepared-statement-per-connection-size: 20
+      time-between-eviction-runs-millis: 60000
+      min-evictable-idle-time-millis: 300000
+      test-while-idle: true
+      test-on-borrow: false
+      test-on-return: false
+      stat-view-servlet:
+        enabled: true
+        url-pattern: /druid/*
+        #login-username: admin
+        #login-password: admin
+      filter:
+        stat:
+          log-slow-sql: true
+          slow-sql-millis: 1000
+          merge-sql: false
+        wall:
+          config:
+            multi-statement-allow: true
+  redis:
+    host: 123.57.242.189
+    # host: 127.0.0.1
+    password: aaaaaa
+    port: 6379
+    timeout: 3000
+    pool:
+      max-active: 1000
+      max-idle: 50
+
+scyf:
+  uploaddir: d:/scyf/upload/ #文件上传路径
+  accessPath: /source/**  #文件访问路径
+  riskPoints: '{"rp1": 10, "rp2": 5, "rp3": 3, "rp4": 1}' #风险指数
+  securityPoints: '{"hd1": 10, "hd2": 5, "hd3": 3, "hd4": 1}' #安全指数
+  appDownBasePath: 'http://123.57.242.189:8091'
+  jwt:
+    secret: YlMWRe4Tj1dYQL3xtfqf #token密钥
+    expire: 604800 # token有效时长，7天，单位秒
+    header: token
+
+swagger:
+  enabled: false #swagger2自定义开关:false关闭

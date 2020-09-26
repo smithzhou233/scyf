@@ -1,0 +1,245 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.hngf.mapper.danger.InspectItemDefMapper">
+
+    <sql id="InspectItemDefColumns">
+        a.inspect_item_def_id,
+        a.inspect_def_id AS inspectDefId,
+        a.company_id AS companyId,
+        a.inspect_item_def_name AS inspectItemDefName,
+        a.inspect_item_def_desc AS inspectItemDefDesc,
+        a.inspect_item_def_method AS inspectItemDefMethod,
+        a.inspect_item_def_rule AS inspectItemDefRule,
+        a.penalize_item_def_rule AS penalizeItemDefRule,
+        a.parent_id AS parentId,
+        a.is_root AS isRoot,
+        a.created_by AS createdBy,
+        a.created_time AS createdTime,
+        a.updated_by AS updatedBy,
+        a.updated_time AS updatedTime
+    </sql>
+
+    <select id="findList" resultType="com.hngf.entity.danger.InspectItemDef">
+        select
+        <include refid="InspectItemDefColumns"/>
+        from
+        scyf_inspect_item_def a
+        where
+        a.del_flag = 0
+        <if test="inspectDefId != null">
+            and  a.inspect_def_id = #{inspectDefId}
+        </if>
+        <if test="companyId!=null">
+            and a.company_id = #{companyId}
+        </if>
+        <if test="parentId != null ">
+            and a.parent_id = #{parentId}
+        </if>
+        order by a.created_time
+    </select>
+
+    <select id="findById" resultType="com.hngf.entity.danger.InspectItemDef" parameterType="Long">
+        select
+        <include refid="InspectItemDefColumns"/>
+        from
+        scyf_inspect_item_def a
+        where
+        a.del_flag = 0 and a.inspect_item_def_id = #{id}
+    </select>
+
+    <select id="findInspectItemCount" resultType="int" parameterType="map">
+        SELECT
+            count( bcid.inspect_item_def_id)
+        FROM
+            scyf_inspect_item_def bcid
+        WHERE
+            bcid.del_flag = 0
+            AND bcid.parent_id != 0
+        <if test="inspectDefId != null and inspectDefId != 0 ">
+            and bcid.inspect_def_id = #{inspectDefId}
+        </if>
+        <if test="companyId != null">
+            and bcid.company_id = #{companyId}
+        </if>
+    </select>
+
+    <!--基础任务检查 查询检查项-->
+    <!--checkResult：0未检查；1检查通过；2检查不通过；3存在隐患；4不涉及-->
+    <select id="findSchduleInspectItems" resultType="InspectItemDef" parameterType="map">
+        select
+        bcid.inspect_item_def_id ,
+        bcid.inspect_def_id,
+        bcid.parent_id,
+        bcid.inspect_item_def_name,
+        bcid.inspect_item_def_desc,
+        bcid.inspect_item_def_method,
+        bcid.inspect_item_def_rule,
+        bcid.penalize_item_def_rule,
+        ( CASE
+        (select rcrl.inspect_result
+        from scyf_risk_inspect_record rcrl
+        where rcrl.risk_measure_id = bcid.inspect_item_def_id
+        and rcrl.company_id = #{companyId}
+        <if test="inspectDefId != null and inspectDefId != '' and inspectDefId != 0 ">
+            and rcrl.schdule_def_id = #{inspectDefId}
+        </if>
+        <if test="scheduleId != null and scheduleId != '' and scheduleId != 0">
+            and rcrl.inspect_schedule_id = #{scheduleId}
+        </if>
+        <if test="riskPointId != null and riskPointId != '' and riskPointId != 0">
+            and rcrl.risk_point_id = #{riskPointId}
+        </if>
+     <!--   <if test="inspectNumber != null and inspectNumber != ''">
+            and rcrl.inspect_number = #{inspectNumber}
+        </if>-->
+        <if test="userId != null and userId != ''">
+            and rcrl.created_by = #{userId}
+        </if>
+
+        group by rcrl.inspect_record_id
+        order by rcrl.created_time desc
+        limit 1
+        )
+        WHEN 1 THEN 1 WHEN 2 THEN 2 WHEN 3 THEN 3 WHEN 4 THEN 4 ELSE 0 END ) AS inspect_result,
+        (select rcrl.inspect_record_no
+        from scyf_risk_inspect_record_log rcrl
+        where rcrl.risk_measure_id = bcid.inspect_item_def_id
+        and rcrl.company_id = #{companyId}
+        <if test="inspectDefId != null and inspectDefId != '' and inspectDefId != 0">
+            and rcrl.schdule_def_id = #{inspectDefId}
+        </if>
+        <if test="scheduleId != null and scheduleId != '' and scheduleId != 0">
+            and rcrl.inspect_schedule_id = #{scheduleId}
+        </if>
+        <if test="riskPointId != null and riskPointId != '' and riskPointId != ''">
+            and rcrl.risk_point_id = #{riskPointId}
+        </if>
+        <if test="inspectNumber != null and inspectNumber != ''">
+            and rcrl.inspect_number = #{inspectNumber}
+        </if>
+        <if test="userId != null and userId != ''">
+            and rcrl.created_by = #{aId}
+        </if>
+        group by rcrl.inspect_record_id
+        order by rcrl.created_time desc
+        limit 1
+        ) as inspect_record_no,
+        (select rcrl.inspect_record_id
+        from scyf_risk_inspect_record_log rcrl
+        where rcrl.risk_measure_id = bcid.inspect_item_def_id
+        and rcrl.company_id = #{companyId}
+        <if test="inspectDefId != null and inspectDefId != '' and inspectDefId != ''">
+            and rcrl.schdule_def_id = #{inspectDefId}
+        </if>
+        <if test="scheduleId != null and scheduleId != '' and scheduleId != 0">
+            and rcrl.inspect_schedule_id = #{scheduleId}
+        </if>
+        <if test="riskPointId != null and riskPointId != '' and riskPointId != 0">
+            and rcrl.risk_point_id = #{riskPointId}
+        </if>
+        <if test="inspectNumber != null and inspectNumber != ''">
+            and rcrl.inspect_number = #{inspectNumber}
+        </if>
+        <if test="userId != null and userId != ''">
+            and rcrl.created_by = #{userId}
+        </if>
+        group by rcrl.inspect_record_id
+        order by rcrl.created_time desc
+        limit 1
+        ) as inspect_record_log_id
+        from scyf_inspect_item_def bcid
+        where bcid.del_flag=0
+        <if test="inspectDefId != null and inspectDefId != ''">
+            and  bcid.inspect_def_id = #{inspectDefId}
+        </if>
+        <if test="companyId != null and companyId != ''">
+            and bcid.company_id = #{companyId}
+        </if>
+        <if test="parentId != null and parentId != ''">
+            and bcid.parent_id = #{parentId}
+        </if>
+
+        order by bcid.created_time
+    </select>
+
+    <insert id="add" parameterType="com.hngf.entity.danger.InspectItemDef">
+        INSERT INTO scyf_inspect_item_def (
+            inspect_def_id,
+            company_id,
+            inspect_item_def_name,
+            inspect_item_def_desc,
+            inspect_item_def_method,
+            inspect_item_def_rule,
+            penalize_item_def_rule,
+            parent_id,
+            is_root,
+            created_by,
+            del_flag)
+        VALUES (
+            #{inspectDefId},
+            #{companyId},
+            #{inspectItemDefName},
+            #{inspectItemDefDesc},
+            #{inspectItemDefMethod},
+            #{inspectItemDefRule},
+            #{penalizeItemDefRule},
+            #{parentId},
+            #{isRoot},
+            #{createdBy},
+            0
+        )
+
+    </insert>
+
+    <update id="update" parameterType="com.hngf.entity.danger.InspectItemDef">
+        UPDATE scyf_inspect_item_def a SET
+        <if test="inspectDefId != null and inspectDefId != ''">
+            a.inspect_def_id = #{inspectDefId},
+        </if>
+        <if test="companyId != null and companyId != ''">
+            a.company_id = #{companyId},
+        </if>
+        <if test="inspectItemDefName != null and inspectItemDefName != ''">
+            a.inspect_item_def_name = #{inspectItemDefName},
+        </if>
+        <if test="inspectItemDefDesc != null and inspectItemDefDesc != ''">
+            a.inspect_item_def_desc = #{inspectItemDefDesc},
+        </if>
+        <if test="inspectItemDefMethod != null and inspectItemDefMethod != ''">
+            a.inspect_item_def_method = #{inspectItemDefMethod},
+        </if>
+        <if test="inspectItemDefRule != null and inspectItemDefRule != ''">
+            a.inspect_item_def_rule = #{inspectItemDefRule},
+        </if>
+        <if test="penalizeItemDefRule != null and penalizeItemDefRule != ''">
+            a.penalize_item_def_rule = #{penalizeItemDefRule},
+        </if>
+        <if test="parentId != null and parentId != ''">
+            a.parent_id = #{parentId},
+        </if>
+        <if test="isRoot != null and isRoot != ''">
+            a.is_root = #{isRoot},
+        </if>
+        <if test="updatedBy != null and updatedBy != ''">
+            a.updated_by = #{updatedBy}
+        </if>
+        where inspect_item_def_id = #{inspectItemDefId}
+    </update>
+
+    <update id="deleteById" parameterType="Long">
+        UPDATE scyf_inspect_item_def a SET
+            a.del_flag = 1
+        where a.inspect_item_def_id = #{id}
+    </update>
+
+    <update id="deleteByIds" parameterType="java.util.List">
+        UPDATE scyf_inspect_item_def a SET
+        a.del_flag = 1
+        where a.inspect_item_def_id in
+        <foreach collection="ids" item="id" open="(" close=")" separator="," index="idx">
+            #{id}
+        </foreach>
+    </update>
+
+</mapper>

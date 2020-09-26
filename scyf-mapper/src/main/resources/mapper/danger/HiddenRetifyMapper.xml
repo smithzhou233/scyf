@@ -1,0 +1,176 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.hngf.mapper.danger.HiddenRetifyMapper">
+
+    <sql id="HiddenRetifyColumns">
+        a.company_id AS companyId,
+        a.hidden_id AS hiddenId,
+        a.hidden_retify_reasons AS hiddenRetifyReasons,
+        a.hidden_retify_measures AS hiddenRetifyMeasures,
+        a.hidden_retify_group AS hiddenRetifyGroup,
+        a.hidden_retify_by AS hiddenRetifyBy,
+        a.hidden_old_retify_by AS hiddenOldRetifyBy,
+        a.hidden_retify_type AS hiddenRetifyType,
+        a.hidden_retify_assisting AS hiddenRetifyAssisting,
+        a.hidden_retify_amount AS hiddenRetifyAmount,
+        a.hidden_retify_deadline AS hiddenRetifyDeadline,
+        a.created_by AS createdBy,
+        a.created_time AS createdTime,
+        a.updated_by AS updatedBy,
+        a.updated_time AS updatedTime,
+        a.del_flag AS delFlag
+    </sql>
+
+    <select id="findList" resultType="com.hngf.entity.danger.HiddenRetify">
+        select
+        <include refid="HiddenRetifyColumns"/>
+        from
+        scyf_hidden_retify a
+        where
+        a.del_flag = 0
+    </select>
+
+    <select id="findById" resultType="com.hngf.entity.danger.HiddenRetify" parameterType="Long">
+        select
+        <include refid="HiddenRetifyColumns"/>
+        from
+        scyf_hidden_retify a
+        where
+        a.del_flag = 0 and a.hidden_retify_id = #{id}
+    </select>
+
+    <select id="findByHiddenId" resultType="HiddenRetify" parameterType="Long">
+        SELECT
+            a.hidden_retify_id ,
+            a.hidden_retify_reasons ,
+            a.hidden_retify_measures ,
+            a.hidden_retify_assisting ,
+            a.hidden_retify_amount ,
+            a.created_time ,
+            a.sign_url,
+            (
+            CASE a.hidden_retify_type
+            WHEN 2 THEN '委托整改'
+            WHEN 1 THEN '协助整改'
+            WHEN 0 THEN '自行整改' ELSE '未知'
+            END
+            ) AS hidden_retify_type_name,
+            DATE_FORMAT( a.hidden_retify_deadline, "%Y-%m-%d %H:%i:%s" )  as hidden_retify_deadline_str,
+            a.hidden_retify_deadline ,
+            b.group_name AS hidden_retify_group_name,
+            c.user_id AS hidden_retify_by_name,
+            GROUP_CONCAT( hdatt.hidden_attach_path) as hidden_attach_path
+          <!-- hdatt.hidden_attach_id,
+            hdatt.hidden_attach_type,
+            hdatt.hidden_attach_path-->
+        FROM
+            scyf_hidden_retify a
+        LEFT JOIN sys_group b ON a.hidden_retify_group=b.group_id
+        LEFT JOIN sys_user c ON c.user_id=a.hidden_retify_by
+        LEFT JOIN scyf_hidden_attach hdatt ON a.hidden_retify_id = hdatt.hidden_detail_id
+        where
+          a.hidden_id = #{value} and    hdatt.hidden_detail_type = 3
+        order by a.created_time desc
+    </select>
+
+    <!--保存后返回自增主键-->
+    <insert id="add" parameterType="HiddenRetify" useGeneratedKeys="true" keyProperty="hiddenRetifyId">
+        INSERT INTO scyf_hidden_retify (
+            company_id,
+            hidden_id,
+            hidden_retify_reasons,
+            hidden_retify_measures,
+            hidden_retify_group,
+            hidden_retify_by,
+            hidden_old_retify_by,
+            hidden_retify_type,
+            hidden_retify_assisting,
+            hidden_retify_amount,
+            hidden_retify_deadline,
+            created_by,
+            created_time,
+            del_flag,
+            sign_url)
+        VALUES (
+            #{companyId},
+            #{hiddenId},
+            #{hiddenRetifyReasons},
+            #{hiddenRetifyMeasures},
+            #{hiddenRetifyGroup},
+            #{hiddenRetifyBy},
+            #{hiddenOldRetifyBy},
+            #{hiddenRetifyType},
+            #{hiddenRetifyAssisting},
+            #{hiddenRetifyAmount},
+            #{hiddenRetifyDeadline},
+            #{createdBy},
+            #{createdTime},
+            0,
+            #{signUrl}
+        )
+
+    </insert>
+
+    <update id="update" parameterType="com.hngf.entity.danger.HiddenRetify">
+        UPDATE scyf_hidden_retify a
+        <trim prefix="set" suffixOverrides=",">
+        <if test="companyId != null and companyId != ''">
+            a.company_id = #{companyId},
+        </if>
+        <if test="hiddenId != null and hiddenId != ''">
+            a.hidden_id = #{hiddenId},
+        </if>
+        <if test="hiddenRetifyReasons != null and hiddenRetifyReasons != ''">
+            a.hidden_retify_reasons = #{hiddenRetifyReasons},
+        </if>
+        <if test="hiddenRetifyMeasures != null and hiddenRetifyMeasures != ''">
+            a.hidden_retify_measures = #{hiddenRetifyMeasures},
+        </if>
+        <if test="hiddenRetifyGroup != null and hiddenRetifyGroup != ''">
+            a.hidden_retify_group = #{hiddenRetifyGroup},
+        </if>
+        <if test="hiddenRetifyBy != null and hiddenRetifyBy != ''">
+            a.hidden_retify_by = #{hiddenRetifyBy},
+        </if>
+        <if test="hiddenOldRetifyBy != null and hiddenOldRetifyBy != ''">
+            a.hidden_old_retify_by = #{hiddenOldRetifyBy},
+        </if>
+        <if test="hiddenRetifyType != null and hiddenRetifyType != ''">
+            a.hidden_retify_type = #{hiddenRetifyType},
+        </if>
+        <if test="hiddenRetifyAssisting != null and hiddenRetifyAssisting != ''">
+            a.hidden_retify_assisting = #{hiddenRetifyAssisting},
+        </if>
+        <if test="hiddenRetifyAmount != null and hiddenRetifyAmount != ''">
+            a.hidden_retify_amount = #{hiddenRetifyAmount},
+        </if>
+        <if test="hiddenRetifyDeadline != null and hiddenRetifyDeadline != ''">
+            a.hidden_retify_deadline = #{hiddenRetifyDeadline},
+        </if>
+        <if test="updatedTime != null">
+            a.updated_time = #{updatedTime},
+        </if>
+        <if test="updatedBy != null">
+            a.updated_by = #{updatedBy},
+        </if>
+        </trim>
+        where hidden_retify_id = #{hiddenRetifyId}
+    </update>
+
+    <update id="deleteById" parameterType="Long">
+        UPDATE scyf_hidden_retify a SET
+            a.del_flag = 1
+        where a.hidden_retify_id = #{id}
+    </update>
+
+    <update id="deleteByIds" parameterType="java.util.List">
+        UPDATE scyf_hidden_retify a SET
+        a.del_flag = 1
+        where a.hidden_retify_id in
+        <foreach collection="ids" item="id" open="(" close=")" separator="," index="idx">
+            #{id}
+        </foreach>
+    </update>
+
+</mapper>

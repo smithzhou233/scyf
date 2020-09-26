@@ -1,0 +1,189 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.hngf.mapper.sys.CommonClassifyMapper">
+
+
+    <select id="findList" resultType="com.hngf.entity.sys.CommonClassify">
+		select
+        classify_id as "classifyId",
+        classify_type as "classifyType",
+        company_id as "companyId",
+        classify_name as "classifyName",
+        classify_value as "classifyValue",
+        classify_desc as "classifyDesc",
+        sort_no as "sortNo",
+        created_time as "createdTime",
+        updated_time as "updatedTime",
+        created_by as "createdBy",
+        updated_by as "updatedBy",
+        del_flag as "delFlag"
+		from sys_common_classify
+		<where>
+		     del_flag='0'
+            <if test="companyId != null and companyId != ''">
+              and  company_id=#{companyId}
+            </if>
+            <if test="classifyType != null and classifyType != ''">
+                and classify_type=#{classifyType}
+            </if>
+            <if test="classifyValue != null and classifyValue != ''">
+                and classify_value=#{classifyValue}
+            </if>
+            <if test="keyword != null and keyword != ''">
+               and (classify_name like "%"#{keyword}"%" or classify_desc like "%"#{keyword}"%")
+            </if>
+        </where>
+        order by created_time desc
+	</select>
+
+    <!--根据类型查询-->
+    <select id="findByClassifyByType" resultType="CommonClassify">
+        SELECT
+            classify_id,
+            classify_name,
+            classify_value,
+            classify_desc
+        FROM
+            sys_common_classify
+        WHERE
+            del_flag = 0
+            AND company_id = #{companyId}
+            AND classify_type = #{classifyType}
+        <if test="classifyValue != null and classifyValue != ''">
+            and classify_value=#{classifyValue}
+        </if>
+    </select>
+
+    <select id="findById" resultType="com.hngf.entity.sys.CommonClassify" parameterType="Long">
+		select * from sys_common_classify
+        where del_flag = 0 and classify_id = #{id}
+	</select>
+    <select id="selectById" resultType="com.hngf.entity.sys.CommonClassify">
+        select * from sys_common_classify
+        where del_flag = 0 and company_id =#{companyId}
+    </select>
+
+    <insert id="add" parameterType="com.hngf.entity.sys.CommonClassify" useGeneratedKeys="true" keyProperty="classifyId">
+        INSERT INTO sys_common_classify (
+        classify_type,
+        company_id,
+        classify_name,
+        classify_value,
+        classify_desc,
+        sort_no,
+        created_time,
+        updated_time,
+        created_by,
+        updated_by,
+        del_flag
+        )
+        VALUES (
+        #{classifyType},
+        #{companyId},
+        #{classifyName},
+        #{classifyValue},
+        #{classifyDesc},
+        #{sortNo},
+        #{createdTime},
+        #{updatedTime},
+        #{createdBy},
+        #{updatedBy},
+        #{delFlag}
+        )
+
+    </insert>
+
+    <update id="update" parameterType="com.hngf.entity.sys.CommonClassify">
+        UPDATE sys_common_classify
+        <trim suffixOverrides=",">
+        <set>
+        <if test="classifyType != null and classifyType != ''">
+        classify_type = #{classifyType},
+        </if>
+        <if test="companyId != null and companyId != ''">
+        company_id = #{companyId},
+        </if>
+        <if test="classifyName != null and classifyName != ''">
+        classify_name = #{classifyName},
+        </if>
+        <if test="classifyValue != null and classifyValue != ''">
+        classify_value = #{classifyValue},
+        </if>
+        <if test="classifyDesc != null and classifyDesc != ''">
+        classify_desc = #{classifyDesc},
+        </if>
+        <if test="sortNo != null and sortNo != ''">
+        sort_no = #{sortNo},
+        </if>
+        <if test="createdTime != null">
+        created_time = #{createdTime},
+        </if>
+        <if test="updatedTime != null">
+        updated_time = #{updatedTime},
+        </if>
+        <if test="createdBy != null and createdBy != ''">
+        created_by = #{createdBy},
+        </if>
+        <if test="updatedBy != null and updatedBy != ''">
+        updated_by = #{updatedBy},
+        </if>
+        <if test="delFlag != null and delFlag != ''">
+        del_flag = #{delFlag},
+        </if>
+        </set>
+        </trim>
+        where classify_id = #{classifyId}
+    </update>
+
+    <update id="deleteById" parameterType="Long">
+        UPDATE sys_common_classify SET
+        del_flag = 1
+        where classify_id = #{id}
+    </update>
+
+    <update id="deleteByIds" parameterType="java.util.List">
+        UPDATE sys_common_classify SET
+        del_flag = 1
+        where classify_id in
+        <foreach collection="ids" item="id" open="(" close=")" separator="," index="idx">
+            #{id}
+        </foreach>
+    </update>
+
+    <update id="deleteBatchByCompanyId" parameterType="java.lang.Long">
+        UPDATE sys_common_classify SET
+        del_flag = 1 , updated_by = #{updatedBy} ,updated_time = now()
+        WHERE company_id = #{companyId}
+    </update>
+
+    <insert id="addBatch" parameterType="java.util.List">
+         INSERT INTO sys_common_classify (
+                classify_type,
+                company_id,
+                classify_name,
+                classify_value,
+                classify_desc,
+                sort_no,
+                created_time,
+                updated_time,
+                created_by,
+                updated_by,
+                del_flag
+                ) VALUES
+                <foreach collection="commonClassifyList" item="item" index="index"   separator="," >
+                (#{item.classifyType},
+                #{item.companyId},
+                #{item.classifyName},
+                #{item.classifyValue},
+                #{item.classifyDesc},
+                #{item.sortNo},
+                #{item.createdTime},
+                #{item.updatedTime},
+                #{item.createdBy},
+                #{item.updatedBy},
+                #{item.delFlag})
+                </foreach>
+    </insert>
+
+</mapper>

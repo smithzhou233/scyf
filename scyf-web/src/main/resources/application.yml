@@ -1,0 +1,29 @@
+scyfmanage:
+  session-timeout: 1800
+  login-need-msg: 0
+  sms-expire-seconds: 300
+
+server:
+  tomcat:
+    uri-encoding: UTF-8
+  port: 8091
+  servlet:
+    context-path: /
+
+spring:
+  profiles:
+    active: dev
+  jackson:
+    date-format: yyyy-MM-dd HH:mm:ss
+    time-zone: GMT+8
+  servlet:
+    multipart:
+      max-file-size: 50MB
+      max-request-size: 50MB
+      enabled: true
+  application:
+    name: web-server
+
+mybatis:
+  mapperLocations: classpath:mapper/**/*.xml
+  config-location: classpath:mybatis-config.xml

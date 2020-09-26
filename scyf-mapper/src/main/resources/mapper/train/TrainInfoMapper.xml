@@ -1,0 +1,243 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.hngf.mapper.train.TrainInfoMapper">
+
+
+
+    <select id="findList" resultType="java.util.Map">
+		select
+		a.train_info_id      AS  "trainInfoId",
+        a.train_info_name    AS  "trainInfoName",
+        a.train_type         AS  "trainType",
+        a.train_num          AS  "trainNum",
+        DATE_FORMAT(a.start_date,'%Y-%m-%d %H:%i:%s')AS  startDate,
+        DATE_FORMAT(a.end_date,'%Y-%m-%d %H:%i:%s') AS  "endDate",
+        a.train_group_ids    AS "trainGroupIds",
+        a.train_info_lesson  AS  "trainInfoLesson",
+        a.train_info_address AS  "trainInfoAddress",
+        a.train_info_content AS  "trainInfoContent",
+        b.train_plan_name    AS  "trainPlanName",
+        GROUP_CONCAT(e.train_attachment_name) AS "trainAttachmentName",
+        GROUP_CONCAT(e.train_save_path) AS "trainSavePath",
+        CASE
+        WHEN a.created_by=#{userId} THEN "1"
+        ELSE "0" END
+        as "belongMe"
+        from scyf_train_info a
+        LEFT JOIN scyf_train_plan b on a.train_plan_id=b.train_plan_id
+        LEFT JOIN scyf_train_attachment e on  a.train_info_id = e.train_key_id
+        <where>
+            a.del_flag = 0
+            <if test="groupId != null and groupId != ''">
+                AND find_in_set(#{groupId},a.train_group_ids)
+            </if>
+            <if test="companyId != null and companyId != ''">
+                and   a.company_id = #{companyId}
+            </if>
+            <if test="keyword != null and keyword != ''">
+             and  LOCATE(#{keyword},a.train_info_name)  &gt; 0
+            </if>
+            <if test="trainPlan != null and trainPlan != ''">
+             and  LOCATE(#{trainPlan},b.train_plan_name) &gt; 0
+            </if>
+        </where>
+        group by a.train_info_id
+	</select>
+
+    <select id="findById" resultType="java.util.Map" parameterType="Long">
+        SELECT
+        a.train_info_id      AS  "trainInfoId",
+        a.train_info_name    AS  "trainInfoName",
+        a.train_type         AS  "trainType",
+        a.train_num          AS  "trainNum",
+        a.start_date         AS  "startDate",
+        a.end_date           AS  "endDate",
+        a.train_group_ids    AS "trainGroupIds",
+        a.train_info_lesson  AS  "trainInfoLesson",
+        a.train_info_address AS  "trainInfoAddress",
+        a.train_info_content AS  "trainInfoContent",
+        a.train_plan_id  as "trainPlanId",
+        b.train_plan_name    AS  "trainPlanName",
+        c.dict_name          AS  "dictName"
+        from scyf_train_info a LEFT JOIN scyf_train_plan b on a.train_plan_id=b.train_plan_id LEFT JOIN sys_dict c on a.train_type=c.dict_code
+        <where>
+            a.del_flag = 0 and b.del_flag = 0
+            and a.train_info_id = #{id} and c.dict_type='train_type'
+        </where>
+	</select>
+
+    <!--查询公司培训计划-->
+    <select id="selectPlans" resultType="java.util.Map">
+        select
+        a.train_plan_id       AS  "trainPlanId",
+        a.train_plan_name     AS   "trainPlanName"
+        from scyf_train_plan a
+        <where>
+            a.del_flag = 0
+            and a.company_id=#{companyId}
+        </where>
+    </select>
+    <!--查看培训内容相关的附件信息-->
+    <select id="findTrainInfoAttachMent" resultType="java.util.Map">
+        SELECT
+        a.train_attachment_name  AS  "trainAttachmentName",
+        a.train_extend_name   AS "trainExtendName",
+        a.train_save_path AS "trainSavePath",
+        a.train_thumbnail_url AS "trainThumbnailUrl",
+        a.file_size AS "fileSize"
+        FROM  scyf_train_attachment a
+        <where>
+            a.del_flag=0
+            and a.train_key_id=#{trainInfoId}
+            and a.attachment_type=#{attachMentType}
+        </where>
+    </select>
+    <!--删除培训内容附件-->
+    <update id="delAttachment" parameterType="integer">
+            UPDATE scyf_train_attachment SET
+            del_flag=1
+            where train_key_id=#{trainId} and attachment_type=#{attachmentType}
+    </update>
+    <insert id="add" parameterType="com.hngf.entity.train.TrainInfo" useGeneratedKeys="true" keyProperty="trainInfoId">
+        INSERT INTO scyf_train_info (
+                                         train_plan_id
+        ,                                company_id
+        ,                                group_id
+        ,                                train_info_name
+        ,                                train_type
+        ,                                train_num
+        ,                                start_date
+        ,                                end_date
+        ,                                train_info_lesson
+        ,                                train_info_address
+        ,                                train_info_content
+        ,                                train_group_ids
+        ,                                created_time
+        ,                                created_by
+        ,                                updated_time
+        ,                                updated_by
+        ,                                del_flag
+                                )
+        VALUES (
+                                           #{trainPlanId}
+        ,                                  #{companyId}
+        ,                                  #{groupId}
+        ,                                  #{trainInfoName}
+        ,                                  #{trainType}
+        ,                                  #{trainNum}
+        ,                                  #{startDate}
+        ,                                  #{endDate}
+        ,                                  #{trainInfoLesson}
+        ,                                  #{trainInfoAddress}
+        ,                                  #{trainInfoContent}
+        ,                                  #{trainGroupIds}
+        ,                                  #{createdTime}
+        ,                                  #{createdBy}
+        ,                                  #{updatedTime}
+        ,                                  #{updatedBy}
+        ,                                  #{delFlag}
+                                  )
+
+    </insert>
+    <!--新增培训内容附件-->
+    <insert id="insertAttachment">
+         INSERT INTO scyf_train_attachment (
+                train_key_id,
+                attachment_type,
+                train_attachment_name,
+                train_extend_name,
+                train_save_path,
+                file_size,
+                created_by,
+                created_time,
+                updated_by,
+                updated_time,
+                del_flag
+        )VALUES (
+                #{trainInfoId},
+                #{attachmentType},
+                #{trainAttachmentName},
+                #{trainExtendName},
+                #{trainSavePath},
+                #{fileSize},
+                #{userId},
+                #{createTime},
+                #{userId},
+                #{createTime},
+                0
+         )
+    </insert>
+
+    <update id="update" parameterType="com.hngf.entity.train.TrainInfo">
+                         UPDATE scyf_train_info
+                          <trim prefix="set" suffixOverrides=",">
+                            <if test="trainPlanId != null and trainPlanId != ''">
+                            train_plan_id = #{trainPlanId} ,
+                            </if>
+                            <if test="companyId != null and companyId != ''">
+                            company_id = #{companyId} ,
+                            </if>
+                            <if test="groupId != null and groupId != ''">
+                            group_id = #{groupId} ,
+                            </if>
+                            <if test="trainInfoName != null and trainInfoName != ''">
+                            train_info_name = #{trainInfoName} ,
+                            </if>
+                            <if test="trainType != null and trainType != ''">
+                            train_type = #{trainType} ,
+                            </if>
+                            <if test="trainGroupIds != null and trainGroupIds != ''">
+                                train_group_ids = #{trainGroupIds} ,
+                            </if>
+                            <if test="trainNum != null and trainNum != ''">
+                            train_num = #{trainNum} ,
+                            </if>
+                            <if test=" 0 == trainNum ">
+                            train_num = #{trainNum} ,
+                            </if>
+
+                            <if test="startDate != null">
+                            start_date = #{startDate} ,
+                            </if>
+                            <if test="endDate != null">
+                            end_date = #{endDate} ,
+                            </if>
+                            <if test="trainInfoLesson != null and trainInfoLesson != ''">
+                            train_info_lesson = #{trainInfoLesson} ,
+                            </if>
+                            <if test=" 0== trainInfoLesson ">
+                            train_info_lesson = #{trainInfoLesson} ,
+                            </if>
+                            <if test="trainInfoAddress != null and trainInfoAddress != ''">
+                            train_info_address = #{trainInfoAddress} ,
+                            </if>
+                            <if test="trainInfoContent != null and trainInfoContent != ''">
+                            train_info_content = #{trainInfoContent} ,
+                            </if>
+                            <if test="updatedTime != null">
+                            updated_time = #{updatedTime} ,
+                            </if>
+                            <if test="updatedBy != null and updatedBy != ''">
+                            updated_by = #{updatedBy} ,
+                            </if>
+                          </trim>
+                            where train_info_id = #{trainInfoId}
+    </update>
+
+    <update id="deleteById" parameterType="Long">
+        UPDATE scyf_train_info SET
+        del_flag = 1 , updated_by = #{updatedBy}, updated_time = now()
+        where train_info_id = #{id}
+    </update>
+
+    <update id="deleteByIds" parameterType="java.util.List">
+        UPDATE scyf_train_info SET
+        del_flag = 1
+        where train_info_id in
+        <foreach collection="ids" item="id" open="(" close=")" separator="," index="idx">
+            #{id}
+        </foreach>
+    </update>
+
+</mapper>

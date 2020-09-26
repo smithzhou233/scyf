@@ -1,0 +1,174 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.hngf.mapper.sys.PositionMapper">
+
+    <sql id="Base_Column_List">
+        company_id,
+        position_id,
+        position_title,
+        position_desc,
+        position_fixed,
+        position_order,
+        created_by,
+        created_time,
+        updated_by,
+        updated_time
+    </sql>
+
+    <select id="findList" resultType="Position">
+        select * from sys_position
+        where del_flag = 0
+
+        <if test="companyId != null and companyId != ''">
+            and company_id = #{companyId}
+        </if>
+        <if test="keyword != null and keyword != ''">
+            and (
+            position_title like "%"#{keyword}"%"
+            or position_desc like "%"#{keyword}"%"
+            )
+        </if>
+        order by company_id,position_order
+    </select>
+
+    <select id="findById" resultType="Position" parameterType="Long">
+		select * from sys_position
+		where del_flag = 0 and position_id = #{id}
+	</select>
+
+    <select id="findByMap" resultType="Position" parameterType="Map">
+		select * from sys_position
+		where del_flag = 0
+        <if test="companyId != null and companyId != ''">
+            and company_id = #{companyId}
+        </if>
+        <if test="positionTitle != null and positionTitle != ''">
+            and position_title = #{positionTitle}
+        </if>
+        <if test="positionDesc != null and positionDesc != ''">
+            position_desc = #{positionDesc}
+        </if>
+        <if test="positionId != null and positionId != ''">
+            and position_id = #{positionId},
+        </if>
+	</select>
+
+    <select id="findByTitle" resultType="Position" parameterType="String">
+		select * from sys_position
+		where del_flag = 0 and position_title = #{value}
+	</select>
+    <!--查询岗位是否存在-->
+    <select id="findPositionTitle" resultType="Position">
+        select * from sys_position
+         where del_flag='0' and position_title=#{positionTitle} and company_id=#{companyId}
+    </select>
+
+    <!-- 根据企业id查询岗位表信息-->
+    <select id="getPositionListById" resultType="com.hngf.entity.sys.Position">
+        SELECT
+        <include refid="Base_Column_List"/>
+        FROM sys_position
+        WHERE del_flag = 0
+        <if test="companyId != null and companyId != ''">
+            AND company_id = #{companyId}
+        </if>
+    </select>
+
+    <insert id="add" parameterType="Position">
+		INSERT INTO sys_position (
+		position_id
+		, company_id
+		, position_title
+		, position_desc
+		, position_order
+		, position_fixed
+		, created_time
+		, created_by
+		, del_flag
+		)
+		VALUES (
+		#{positionId}
+		,#{companyId}
+		, #{positionTitle}
+		, #{positionDesc}
+		, #{positionOrder}
+		, #{positionFixed}
+		, #{createdTime}
+		, #{createdBy}
+		, 0
+		)
+
+	</insert>
+
+    <update id="update" parameterType="Position">
+        UPDATE sys_position SET
+        <if test="companyId != null and companyId != ''">
+            company_id = #{companyId} ,
+        </if>
+        <if test="positionTitle != null and positionTitle != ''">
+            position_title = #{positionTitle} ,
+        </if>
+        <if test="positionDesc != null and positionDesc != ''">
+            position_desc = #{positionDesc} ,
+        </if>
+        <if test="positionOrder != null and positionOrder != ''">
+            position_order = #{positionOrder} ,
+        </if>
+        <if test="positionFixed != null and positionFixed != ''">
+            position_fixed = #{positionFixed} ,
+        </if>
+        <if test="updatedTime != null">
+            updated_time = #{updatedTime} ,
+        </if>
+        <if test="updatedBy != null and updatedBy != ''">
+            updated_by = #{updatedBy}
+        </if>
+
+        where position_id = #{positionId}
+    </update>
+
+    <update id="deleteById" parameterType="Long">
+		UPDATE sys_position SET
+		del_flag = 1
+		where position_id = #{id}
+	</update>
+
+    <update id="deleteByIds" parameterType="java.util.List">
+        UPDATE sys_position SET
+        del_flag = 1
+        where position_id in
+        <foreach collection="ids" item="id" open="(" close=")"
+                 separator="," index="idx">
+            #{id}
+        </foreach>
+    </update>
+    <select id="getPositionByGroup" resultType="com.hngf.entity.sys.Position">
+        SELECT
+        a.position_id as positionId,
+        a.company_id as companyId,
+        a.position_title as positionTitle,
+        a.position_desc as positionDesc,
+        a.position_order as positionOrder
+        FROM
+        sys_position a
+        LEFT JOIN sys_group_member_position b ON a.position_id = b.position_id
+        LEFT JOIN sys_group c ON b.group_id = c.group_id
+        <where>
+            a.del_flag  = 0
+            <if test="companyId != null and companyId != ''">
+                and a.company_id = #{companyId}
+            </if>
+
+            <if test="groupId != null and groupId != ''">
+                AND FIND_IN_SET(b.group_id ,fu_getChildrenGroup(#{groupId})) <!-- and b.group_id = #{groupId}-->
+            </if>
+        </where>
+        group by a.position_id
+    </select>
+    <update id="deleteByCompanyId" parameterType="java.lang.Long">
+        UPDATE sys_position SET
+		del_flag = 1 , updated_by = #{updatedBy}, updated_time = now()
+		where company_id = #{companyId}
+    </update>
+</mapper>

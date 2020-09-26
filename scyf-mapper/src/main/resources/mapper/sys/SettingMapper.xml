@@ -1,0 +1,160 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.hngf.mapper.sys.SettingMapper">
+     <sql id="Base_Column_List">
+        setting_id,
+        setting_key_name,
+        setting_key,
+        setting_value,
+        setting_desc,
+        created_by,
+        created_time,
+        updated_by,
+        updated_time,
+        del_flag
+     </sql>
+
+    <select id="findList" resultType="com.hngf.entity.sys.Setting">
+		select * from sys_setting
+        where del_flag = 0
+        <if test="null!=ids and ids!=''">
+            and setting_id in (${ids})
+        </if>
+	</select>
+    <!--【APP】判断版本是否已经更新-->
+    <select id="findBySettingKey" resultType="Setting">
+        select
+        <include refid="Base_Column_List"/>
+         from sys_setting where setting_key=#{settingKey}  and del_flag=0
+    </select>
+    <select id="findById" resultType="com.hngf.entity.sys.Setting" parameterType="Long">
+		select * from sys_setting
+        where del_flag = 0 and setting_id = #{id}
+	</select>
+
+    <insert id="add" parameterType="com.hngf.entity.sys.Setting">
+        INSERT INTO sys_setting (
+                                                                                                                setting_key_name
+                                            ,
+                                                                                    setting_key
+                                            ,
+                                                                                    setting_value
+                                            ,
+                                                                                    setting_desc
+                                            ,
+                                                                                    created_by
+                                            ,
+                                                                                    created_time
+                                            ,
+                                                                                    updated_by
+                                            ,
+                                                                                    updated_time
+                                            ,
+                                                                                    del_flag
+                                                        )
+        VALUES (
+                                                                                                                #{settingKeyName}
+
+                                            ,
+                                                                                    #{settingKey}
+
+                                            ,
+                                                                                    #{settingValue}
+
+                                            ,
+                                                                                    #{settingDesc}
+
+                                            ,
+                                                                                    #{createdBy}
+
+                                            ,
+                                                                                    #{createdTime}
+
+                                            ,
+                                                                                    #{updatedBy}
+
+                                            ,
+                                                                                    #{updatedTime}
+
+                                            ,
+                                                                                    #{delFlag}
+
+                                                        )
+
+    </insert>
+
+    <update id="update" parameterType="com.hngf.entity.sys.Setting">
+        UPDATE sys_setting SET
+
+                                                        setting_key_name = #{settingKeyName}
+
+                                    ,
+                                                                setting_key = #{settingKey}
+
+                                    ,
+                                                                setting_value = #{settingValue}
+
+                                    ,
+                                                                setting_desc = #{settingDesc}
+
+                                    ,
+                                                                created_by = #{createdBy}
+
+                                    ,
+                                                                created_time = #{createdTime}
+
+                                    ,
+                                                                updated_by = #{updatedBy}
+
+                                    ,
+                                                                updated_time = #{updatedTime}
+
+                                    ,
+                                                                del_flag = #{delFlag}
+
+                                    
+        where setting_id = #{settingId}
+    </update>
+
+    <update id="deleteById" parameterType="Long">
+        UPDATE sys_setting SET
+        del_flag = 1
+        where setting_id = #{id}
+    </update>
+
+    <update id="deleteByIds" parameterType="java.util.List">
+        UPDATE sys_setting SET
+        del_flag = 1
+        where setting_id in
+        <foreach collection="ids" item="id" open="(" close=")" separator="," index="idx">
+            #{id}
+        </foreach>
+    </update>
+
+    <update id="updateBySettingKey" parameterType="com.hngf.entity.sys.Setting" >
+        UPDATE sys_setting SET setting_value = #{settingValue} , updated_by = #{updatedBy} , updated_time = #{updatedTime}
+        WHERE  setting_key = #{settingKey}
+    </update>
+
+    <select id="selectListBySettingKey" parameterType="java.lang.String" resultType="com.hngf.entity.sys.Setting">
+        select
+        setting_key_name,
+        setting_key,
+        setting_value,
+        setting_desc
+        from sys_setting
+        where LOCATE( #{settingKey} , setting_key) &gt; 0 and del_flag = 0
+    </select>
+
+    <select id="getAndroidLastestVersion" resultType="Map">
+        select
+        max(if(setting_key='android_version_name',setting_value,'')) as "versionName",
+        max(if(setting_key='android_version',setting_value,0))as "versionCode",
+        max(if(setting_key='android_desc',setting_value,''))as "versionDesc",
+        max(if(setting_key='android_url',setting_value,''))as "versionUrl",
+        max(if(setting_key='android_title',setting_value,''))as "versionTitle"
+        from sys_setting where locate('android' ,setting_key) &gt; 0  and del_flag = 0  group by del_flag
+    </select>
+
+</mapper>

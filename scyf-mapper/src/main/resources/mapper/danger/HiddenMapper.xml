@@ -1,0 +1,1618 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.hngf.mapper.danger.HiddenMapper">
+
+
+    <select id="findList" resultType="com.hngf.entity.danger.Hidden">
+		select * from scyf_hidden
+        where del_flag = 0
+	</select>
+
+    <!--隐患未处理-->
+    <select id="findGroupHidden" resultType="Hidden">
+        SELECT
+
+        a.hidden_id   AS "hiddenId",
+        a.hidden_title AS "hiddenTitle",
+        a.hidden_desc as "hiddenDesc",
+        a.hidden_level AS "hiddenLevel",
+        a.status AS "status",
+        a.hidden_retify_by AS "hiddenRetifyBy",
+        a.hidden_accepted_by AS "hiddenAcceptedBy",
+        a.hidden_review_by AS "hiddenReviewBy",
+        a.created_by AS "createdBy",
+        a.company_id as companyId ,
+        a.group_id as groupId,
+        a.hidden_cat_id as  hiddenCatId,
+        <!-- #{aId} as aId,-->
+        concat(
+        (
+        SELECT
+        concat( '【', sg.group_name, '】', IFNULL( psg.group_name, '' ) ) AS group_name
+        FROM
+        sys_group sg
+        LEFT JOIN sys_group psg ON ( sg.group_parent = psg.group_id )
+        WHERE
+        b.group_id = sg.group_id
+        )
+        ) AS groupName,
+        a.hidden_review_group AS "hiddenReviewTroup",
+        a.hidden_retify_group AS "hiddenRetifyGroup",
+        a.hidden_quondam_retify_by AS "hiddenQuondamRetifyBy",
+        a.hidden_retify_deadline AS hiddenRetifyDeadlineStr,
+        a.created_time AS createdTimeStr,
+        a.hidden_accepted_group AS "hiddenAcceptedGroup",
+        c.user_name AS hiddenCreatedByName,
+        (
+        CASE
+        a.inspect_item_id
+        WHEN '' THEN
+        (
+        SELECT
+        bci.inspect_item_def_name
+        FROM
+        scyf_inspect_item_def_content bcicd,
+        scyf_inspect_item_def bci
+        WHERE
+        a.risk_point_id = bcicd.inspect_item_def_content_id
+        AND bcicd.inspect_item_def_id = bci.inspect_item_def_id
+        ) ELSE e.risk_danger_name
+        END
+        ) AS riskDangerName,
+        f.classify_name AS hiddenCatTitle,
+        (
+        CASE
+        a.`status`
+        WHEN 0 THEN
+        c.user_name
+        WHEN 1 THEN
+        ( SELECT user_name FROM sys_user WHERE user_id = a.hidden_review_by )
+        WHEN 2 THEN
+        ( SELECT user_name FROM sys_user WHERE user_id = a.hidden_retify_by )
+        WHEN 3 THEN
+        ( SELECT user_name FROM sys_user WHERE user_id = a.hidden_accepted_by )
+        WHEN 4 THEN
+        '[已完成]'
+        WHEN 5 THEN
+        ( SELECT user_name FROM sys_user WHERE user_id = a.hidden_retify_by )
+        WHEN 6 THEN
+        c.user_name
+        WHEN 7 THEN
+        c.user_name ELSE '[已完成]'
+        END
+        ) AS executor,
+        (
+        CASE
+        a.`status`
+        WHEN 0 THEN
+        c.user_id
+        WHEN 1 THEN
+        ( SELECT user_id FROM sys_user WHERE user_id = a.hidden_review_by )
+        WHEN 2 THEN
+        ( SELECT user_id FROM sys_user WHERE user_id = a.hidden_retify_by )
+        WHEN 3 THEN
+        ( SELECT user_id FROM sys_user WHERE user_id = a.hidden_accepted_by )
+        WHEN 4 THEN
+        '[已完成]'
+        WHEN 5 THEN
+        ( SELECT user_id FROM sys_user WHERE user_id = a.hidden_retify_by )
+        WHEN 6 THEN
+        c.user_id
+        WHEN 7 THEN
+        c.user_id ELSE '[已完成]'
+        END
+        ) AS executorId,     <!-- 方便前端页面判断-->
+        (
+        CASE
+        ( SELECT erp.risk_point_type FROM scyf_risk_point erp WHERE a.risk_point_id = erp.risk_point_id )
+        WHEN 1 THEN
+        '设备设施'
+        WHEN 2 THEN
+        '作业活动' ELSE '其他'
+        END
+        ) AS riskPointTypeName,
+        ifnull( ( SELECT g.risk_point_name FROM scyf_risk_point g WHERE a.risk_point_id = g.risk_point_id ), '* 不涉及风险点' ) AS riskPointName,
+        ifnull( ( SELECT bcd.inspect_def_name FROM scyf_inspect_def bcd WHERE bcd.inspect_def_id = a.inspect_def_id ), '未知' ) AS inspectDefName,
+        (
+        CASE
+        a.`status`
+        WHEN 0 THEN
+        '待提交'
+        WHEN 1 THEN
+        '待评审'
+        WHEN 2 THEN
+        '待整改'
+        WHEN 3 THEN
+        '待验收'
+        WHEN 4 THEN
+        '验收通过'
+        WHEN 5 THEN
+        '重新整改'
+        WHEN 6 THEN
+        '已撤销'
+        END
+        ) AS disposeStatusStr,
+       <!-- ( CASE a.hidden_level WHEN 1 THEN '重大' WHEN 2 THEN '较大' WHEN 3 THEN '一般' WHEN 4 THEN '较低' END ) AS hiddenLevelStr,-->
+       ( CASE a.hidden_level WHEN 1 THEN '重大'  WHEN 3 THEN '一般'  END ) AS hiddenLevelStr,
+        ( SELECT hdah.hidden_attach_path FROM scyf_hidden_attach hdah WHERE hdah.hidden_detail_id = a.hidden_id LIMIT 1 ) AS imgUrl,
+        GROUP_CONCAT("{hiddenAttachId:", hdatt.hidden_attach_id,",hiddenAttachType:", hdatt.hidden_attach_type,",hiddenAttachPath:",hdatt.hidden_attach_path,"}") as hiddenAttachMap
+        FROM
+        scyf_hidden a
+        LEFT JOIN sys_common_classify f ON a.hidden_cat_id = f.classify_id
+        LEFT JOIN sys_group b ON a.group_id = b.group_id
+        LEFT JOIN sys_user c ON a.created_by = c.user_id
+        LEFT JOIN scyf_risk d ON a.inspect_item_id = d.risk_id
+        LEFT JOIN scyf_risk_source e ON e.risk_danger_id = d.risk_danger_id
+        LEFT JOIN scyf_hidden_attach hdatt ON a.hidden_id = hdatt.hidden_detail_id
+        <where>
+            a.company_id is not null
+            and a.`status` != 7
+            <!--api type == 0未处理的数据（我的module == 1）-->
+            <if test="type == 0 and module == 1">
+                and(
+                (a.hidden_review_by = #{userId} and a.status = 1)
+                or (a.created_by = #{userId} and a.status = 0)
+                or (a.hidden_retify_by = #{userId} and a.status = 2)
+                or (a.hidden_retify_by = #{userId} and a.status = 5)
+                or (a.hidden_accepted_by = #{userId} and a.status = 3)
+                )
+            </if>
+            <if test="keyword != null and keyword != ''">
+                and (a.hidden_title like "%"#{keyword}"%")
+            </if>
+            <!--api  type == 0未处理的数据（部门module == 2）-->
+            <if test="type == 0 and module == 2">
+                and(
+                (a.status = 1)or (a.status = 0)or (a.status = 2)or (a.status = 5)or (a.status = 3)
+                )
+            </if>
+
+            <!--WEB 隐患列表-->
+            <if test="webModule == 1">
+                <if test="groupId !=null">
+                    AND FIND_IN_SET(b.group_id ,fu_getChildrenGroup(#{groupId}))
+                </if>
+
+                <!-- <if test="gLId != null and gLId != '' and gRId != null and gRId != ''">
+                     <![CDATA[
+                      and  b.group_left >= #{gLId }
+                      and b.group_right <= #{gRId }
+                     ]]>
+                 </if>-->
+            </if>
+
+            <!--风险点 下的 隐患-->
+            <if test="riskPoint == 2">
+                and((a.status = 2)or (a.status = 5)or (a.status = 3))
+            </if>
+            <if test="riskPointId != null">
+                and a.risk_point_id = #{riskPointId}
+            </if>
+            <!--api 未处理的数据（部门）-->
+            <!--<if test="gLId != null and gLId != '' and gRId != null and gRId != '' and module == 2">
+                <![CDATA[
+                     and  b.group_left >= #{gLId }
+                     and b.group_right <= #{gRId }
+                ]]>
+            </if>-->
+            <!--api未处理的数据（我的）-->
+           <!-- <if test="riskChildGroupId != null and riskChildGroupId!='' and riskChildGroupId!=0 and module == 1">-->
+            <if test="riskChildGroupId != null and riskChildGroupId!='' and riskChildGroupId!=0 ">
+                and a.group_id = #{riskChildGroupId}
+            </if>
+            <if test="groupId != null and groupId!=''">
+                AND FIND_IN_SET(a.group_id ,fu_getChildrenGroup(#{groupId}))
+            </if>
+            <!--隐患等级过滤-->
+            <if test="hiddenLevel != null and hiddenLevel !=-1  and hiddenLevel!='' ">
+                and a.hidden_level = #{hiddenLevel}
+            </if>
+            <!--隐患类型过滤-->
+            <if test="hiddenCatId != null and hiddenCatId!=''">
+                and a.hidden_cat_id = #{hiddenCatId}
+            </if>
+            <!--检查表过滤-->
+            <if test="inspectDefId != null and inspectDefId!=''">
+                and a.inspect_def_id = #{inspectDefId}
+            </if>
+            <!--企业过滤-->
+            <if test="companyId != null">
+                and a.company_id = #{companyId}
+            </if>
+
+            <!--隐患统计模块记录列表开始******************************************************-->
+            <if test="statistics == 1">
+                <!--类型统计-->
+                <if test="typeStatisticsRecord == 1">
+                    and a.hidden_cat_id is not null and a.hidden_cat_id > 0
+                    and((a.status = 2)or (a.status = 5)or (a.status = 3))
+                    <if test="startTime != null and startTime != '' and endTime != null and endTime != ''">
+                        <![CDATA[
+                              AND DATE_FORMAT( a.created_time, "%Y-%m-%d" ) >= #{startTime}
+                              AND DATE_FORMAT( a.created_time, "%Y-%m-%d" ) <= #{endTime}
+                          ]]>
+                    </if>
+                </if>
+                <!--年度统计-->
+                <if test="yearStatisticsRecord == 1">
+                    and((a.status = 2)or (a.status = 3)or (a.status = 4)or (a.status = 5))
+                    <if test="hiddenYear != null and hiddenYear != ''">
+                        <if test="hiddenYear == null or hiddenYear == ''">
+                            AND DATE_FORMAT( a.created_time, "%Y" ) = #{hiddenYear}DATE_FORMAT( now(), "%Y" )
+                        </if>
+                        <if test="hiddenYear != null and hiddenYear != ''">
+                            AND DATE_FORMAT( a.created_time, "%Y" ) =#{hiddenYear}
+                        </if>
+                    </if>
+                </if>
+                <if test="gLId != null and gLId != '' and gRId != null and gRId != ''">
+                    <![CDATA[
+                         and  b.group_left >= #{gLId }
+                         and b.group_right <= #{gRId }
+                    ]]>
+                </if>
+            </if>
+            <!--隐患统计模块记列表录结束*********************************************************-->
+
+            <!--模糊查询-->
+            <if test="keyword != null and keyword != ''">
+                and (
+                a.hidden_title like "%"#{keyword}"%"
+                or c.user_name like "%"#{keyword}"%"
+                )
+            </if>
+
+            <!--隐患状态过滤-->
+            <if test="status == 2 ">
+                <!--待整改 and 重新整改-->
+                and (a.status = 2 or a.status = 5)
+            </if>
+
+            <if test="status != null and  status!='' and status != 2 and status != -1 ">
+                and a.status= #{status}
+            </if>
+            <!--隐患整改已超时-->
+            <if test="overTimeRetify == 1 ">
+                and (a.status = 2 or a.status = 5)
+                <![CDATA[
+                     AND now() > a.hidden_retify_deadline
+                ]]>
+            </if>
+            <!--隐患清单：待整改 and 重新整改 and 待验收-->
+            <if test="hiddenList == 1 ">
+                and (a.status = 2 or a.status = 5 or a.status = 3)
+            </if>
+        </where>
+        GROUP BY a.hidden_id
+        order by a.created_time desc
+	</select>
+
+    <!-- 查询企业下的所有隐患数据 -->
+    <select id="findByCompanyId" resultType="Hidden">
+        SELECT
+            ehd.hidden_id,
+            ehd.hidden_title,
+            ehd.risk_level,
+            ehd.hidden_level,
+            ehd.hidden_retify_deadline,
+            ehd.hidden_retify_by,
+            ehd.hidden_cat_id,
+            ehd.happened_time
+        FROM
+            scyf_hidden ehd
+        WHERE
+        ehd.company_id = #{value}
+        and ehd.status != 7
+    </select>
+
+    <select id="findHiddenById" resultType="Hidden" parameterType="Long">
+            select * from scyf_hidden where del_flag = 0 and hidden_id = #{value}
+    </select>
+
+    <select id="findById" resultType="Hidden" parameterType="Long">
+		SELECT
+        a.hidden_id,
+        a.hidden_title,
+        a.hidden_desc,
+        a.programme_id,
+        DATE_FORMAT( a.created_time, '%Y-%m-%d %H:%i' ) createdTimeStr,
+        if(isnull(a.happened_time),'', DATE_FORMAT( a.happened_time, '%Y-%m-%d %H:%i' )) AS happened_time_str,
+        if(isnull(a.finished_time),'', DATE_FORMAT( a.finished_time, '%Y-%m-%d %H:%i' )) AS finished_time_str,
+        a.status,
+        a.hidden_level,
+        a.hidden_retify_deadline,
+        a.hidden_retify_group,
+        a.hidden_retify_by,
+        a.hidden_accepted_group,
+        a.hidden_accepted_by,
+        a.hidden_review_group,
+        a.hidden_review_by,
+        a.group_id,
+        a.sign_url,
+        ( SELECT sgp.group_name FROM sys_group sgp WHERE sgp.group_id = a.hidden_review_group ) AS hidden_review_group_name,
+        ( SELECT acc.user_name FROM sys_user acc WHERE acc.user_id = a.hidden_review_by ) AS hidden_review_by_name,
+        ( SELECT sgp.group_name FROM sys_group sgp WHERE sgp.group_id = a.hidden_retify_group ) AS hidden_retify_group_name,
+        ( SELECT acc.user_name FROM sys_user acc WHERE acc.user_id = a.hidden_retify_by ) AS hidden_retify_by_name,
+        ( SELECT sgp.group_name FROM sys_group sgp WHERE sgp.group_id = a.hidden_accepted_group ) AS hidden_accepted_group_name,
+        ( SELECT acc.user_name FROM sys_user acc WHERE acc.user_id = a.hidden_accepted_by ) AS hidden_accepted_by_name,
+        ( SELECT acc.user_name FROM sys_user acc WHERE acc.user_id = a.created_by ) AS hidden_created_by_name,
+        concat(
+            (SELECT
+            concat('【',sg.group_name,'】',IFNULL(psg.group_name,'')) as group_name
+            FROM sys_group sg
+            left join sys_group psg on (sg.group_parent = psg.group_id)
+            where b.group_id = sg.group_id
+            )) as groupName,
+        (select comp.company_name from sys_company comp where a.company_id = comp.company_id) as companyName,
+        c.user_name AS hidden_created_by_name,
+        ifnull((
+          select bcd.inspect_def_name
+          from scyf_inspect_def bcd
+          where bcd.inspect_def_id = a.inspect_def_id
+        ),'未知') as inspectDefName,
+        ifnull((case a.inspect_item_id when '' then (SELECT bci.inspect_item_def_name
+            FROM scyf_inspect_item_def_content bcicd ,scyf_inspect_item_def bci
+            WHERE a.risk_point_id = bcicd.inspect_item_def_content_id and bcicd.inspect_item_def_id = bci.inspect_item_def_id) else
+            e.risk_danger_name end ),'未知') AS risk_danger_name,
+        ifnull(
+        (SELECT g.risk_point_name
+        FROM scyf_risk_point g
+        WHERE a.risk_point_id = g.risk_point_id)
+        ,'注：本次检查不涉及风险点') AS riskPointName,
+        (
+            CASE (SELECT erp.risk_point_type
+            FROM scyf_risk_point erp
+            WHERE a.risk_point_id = erp.risk_point_id )
+            WHEN 1 THEN '设备设施'
+            WHEN 2 THEN '作业活动' ELSE '其他'
+            END
+            ) AS riskPointTypeName,
+            (
+            CASE (SELECT erp.risk_point_level
+            FROM scyf_risk_point erp
+            WHERE a.risk_point_id = erp.risk_point_id )
+            WHEN 1 THEN '重大'
+            WHEN 2 THEN '较大'
+            WHEN 3 THEN '一般'
+            WHEN 4 THEN '较低'
+            ELSE '未知'
+            END
+            ) AS riskPointLevelName,
+        a.hidden_cat_id ,
+        f.classify_name AS hiddenCatTitle,
+        d.risk_hram_factor,
+        ifnull(a.inspect_content_desc,'未知的检查内容（可能为直接登记隐患，没有通过安全检查表检查，或数据已删除）') AS inspect_content_desc,
+        (
+        CASE
+            a.`status`
+            WHEN 0 THEN
+            c.user_name
+            WHEN 1 THEN
+            ( SELECT user_name FROM sys_user WHERE user_id = a.hidden_review_by )
+            WHEN 2 THEN
+            ( SELECT user_name FROM sys_user WHERE user_id = a.hidden_retify_by )
+            WHEN 3 THEN
+            ( SELECT user_name FROM sys_user WHERE user_id = a.hidden_accepted_by )
+            WHEN 4 THEN
+            '[流程已完成]'
+            WHEN 5 THEN
+            ( SELECT user_name FROM sys_user WHERE user_id = a.hidden_retify_by )
+            WHEN 6 THEN
+            c.user_name
+            WHEN 7 THEN
+            c.user_name
+            WHEN 9 THEN
+            ( SELECT user_name FROM sys_user WHERE user_id = a.hidden_retify_by )
+            ELSE '[流程已完成]'
+        END
+        ) AS executor,
+        <!--( CASE a.hidden_level WHEN 1 THEN '重大' WHEN 2 THEN '较大' WHEN 3 THEN '一般' WHEN 4 THEN '较低' ELSE '暂无' END ) AS   hiddenLevelStr,-->
+        ( CASE a.hidden_level WHEN 1 THEN '重大'   WHEN 3 THEN '一般'   ELSE '暂无' END ) AS   hiddenLevelStr,
+        ( CASE a.status
+        WHEN 0 THEN '待提交'
+        WHEN 1 THEN '待评审'
+        WHEN 2 THEN '待整改'
+        WHEN 3 THEN '待验收'
+        WHEN 4 THEN '验收通过'
+        WHEN 5 THEN '验收不通过，重新整改'
+        WHEN 6 THEN '已撤销'
+        ELSE '暂无' END
+        ) AS disposeStatusStr,
+        <!--  GROUP_CONCAT("{hiddenAttachId:", hdatt.hidden_attach_id,",hiddenAttachType:", hdatt.hidden_attach_type,",hiddenAttachPath:",hdatt.hidden_attach_path,"}")  as hiddenAttachMap -->
+        GROUP_CONCAT( hdatt.hidden_attach_path)  as hiddenAttachMap
+        FROM
+            scyf_hidden a
+        LEFT JOIN sys_group b ON a.group_id = b.group_id
+        LEFT JOIN sys_user c ON a.created_by = c.user_id
+        LEFT JOIN scyf_risk d ON a.inspect_item_id = d.risk_id
+        LEFT JOIN scyf_risk_source e ON e.risk_danger_id = d.risk_danger_id
+        LEFT JOIN sys_common_classify f ON a.hidden_cat_id = f.classify_id
+        LEFT JOIN scyf_hidden_attach hdatt ON a.hidden_id = hdatt.hidden_detail_id and hdatt.del_flag = 0
+        WHERE
+          a.del_flag = 0 and a.hidden_id = #{value}
+	</select>
+
+    <insert id="add" parameterType="Hidden">
+		INSERT INTO scyf_hidden (
+		hidden_id
+		,company_id
+		, group_id
+		, risk_point_id
+		, inspect_def_id
+		, inspect_schedule_id
+		, inspect_record_id
+		, inspect_item_id
+		, inspect_content_id
+		, inspect_content_desc
+		, hidden_cat_id
+		, hidden_level
+		, hidden_title
+		, hidden_desc
+		, risk_level
+		, hidden_rectify_dept
+		, hidden_retify_group
+		, hidden_quondam_retify_by
+		, hidden_retify_by
+		, hidden_retify_deadline
+		, hidden_accepted_group
+		, hidden_accepted_by
+		, hidden_review_group
+		, hidden_review_by
+		, programme_id
+		, happened_time
+		, finished_time
+		, status
+		, created_time
+		, created_by
+		, del_flag
+		,sign_url
+		)
+		VALUES (
+		#{hiddenId}
+		,#{companyId}
+		, #{groupId}
+		, #{riskPointId}
+		, #{inspectDefId}
+		, #{inspectScheduleId}
+		, #{inspectRecordId}
+		, #{inspectItemId}
+		, #{inspectContentId}
+		, #{inspectContentDesc}
+		, #{hiddenCatId}
+		, #{hiddenLevel}
+		, #{hiddenTitle}
+		, #{hiddenDesc}
+		, #{riskLevel}
+		, #{hiddenRectifyDept}
+		, #{hiddenRetifyGroup}
+		, #{hiddenQuondamRetifyBy}
+		, #{hiddenRetifyBy}
+		, #{hiddenRetifyDeadline}
+		, #{hiddenAcceptedGroup}
+		, #{hiddenAcceptedBy}
+		, #{hiddenReviewGroup}
+		, #{hiddenReviewBy}
+		, #{programmeId}
+		, #{happenedTime}
+		, #{finishedTime}
+		, #{status}
+		, #{createdTime}
+		, #{createdBy}
+		, 0
+		,#{signUrl}
+		)
+
+	</insert>
+
+    <update id="update" parameterType="Hidden">
+        UPDATE scyf_hidden
+        <trim prefix="set" suffixOverrides=",">
+        <if test="companyId != null and companyId != ''">
+            company_id = #{companyId} ,
+        </if>
+        <if test="groupId != null and groupId != ''">
+            group_id = #{groupId} ,
+        </if>
+        <if test="riskPointId != null and riskPointId != ''">
+            risk_point_id = #{riskPointId} ,
+        </if>
+        <if test="inspectDefId != null and inspectDefId != ''">
+            inspect_def_id = #{inspectDefId} ,
+        </if>
+        <if test="inspectScheduleId != null and inspectScheduleId != ''">
+            inspect_schedule_id = #{inspectScheduleId} ,
+        </if>
+        <if test="inspectRecordId != null and inspectRecordId != ''">
+            inspect_record_id = #{inspectRecordId} ,
+        </if>
+        <if test="inspectItemId != null and inspectItemId != ''">
+            inspect_item_id = #{inspectItemId} ,
+        </if>
+        <if test="inspectContentId != null and inspectContentId != ''">
+            inspect_content_id = #{inspectContentId} ,
+        </if>
+        <if test="inspectContentDesc != null and inspectContentDesc != ''">
+            inspect_content_desc = #{inspectContentDesc} ,
+        </if>
+        <if test="hiddenCatId != null and hiddenCatId != ''">
+            hidden_cat_id = #{hiddenCatId} ,
+        </if>
+        <if test="hiddenLevel != null and hiddenLevel != ''">
+            hidden_level = #{hiddenLevel} ,
+        </if>
+        <if test="hiddenTitle != null and hiddenTitle != ''">
+            hidden_title = #{hiddenTitle} ,
+        </if>
+        <if test="hiddenDesc != null and hiddenDesc != ''">
+            hidden_desc = #{hiddenDesc} ,
+        </if>
+        <if test="riskLevel != null and riskLevel != ''">
+            risk_level = #{riskLevel} ,
+        </if>
+        <if test="hiddenRectifyDept != null and hiddenRectifyDept != ''">
+            hidden_rectify_dept = #{hiddenRectifyDept} ,
+        </if>
+        <if test="hiddenRetifyGroup != null and hiddenRetifyGroup != ''">
+            hidden_retify_group = #{hiddenRetifyGroup} ,
+        </if>
+        <if     test="hiddenQuondamRetifyBy != null and hiddenQuondamRetifyBy != ''">
+            hidden_quondam_retify_by = #{hiddenQuondamRetifyBy} ,
+        </if>
+        <if test="hiddenRetifyBy != null and hiddenRetifyBy != ''">
+            hidden_retify_by = #{hiddenRetifyBy} ,
+        </if>
+        <if   test="hiddenRetifyDeadline != null">
+            hidden_retify_deadline = #{hiddenRetifyDeadline} ,
+        </if>
+        <if   test="hiddenAcceptedGroup != null and hiddenAcceptedGroup != ''">
+            hidden_accepted_group = #{hiddenAcceptedGroup} ,
+        </if>
+        <if test="hiddenAcceptedBy != null and hiddenAcceptedBy != ''">
+            hidden_accepted_by = #{hiddenAcceptedBy} ,
+        </if>
+        <if test="hiddenReviewGroup != null and hiddenReviewGroup != ''">
+            hidden_review_group = #{hiddenReviewGroup} ,
+        </if>
+        <if test="hiddenReviewBy != null and hiddenReviewBy != ''">
+            hidden_review_by = #{hiddenReviewBy} ,
+        </if>
+        <if test="programmeId != null and programmeId != ''">
+            programme_id = #{programmeId} ,
+        </if>
+        <if test="happenedTime != null">
+            happened_time = #{happenedTime} ,
+        </if>
+        <if test="finishedTime != null">
+            finished_time = #{finishedTime} ,
+        </if>
+        <if test="status != null ">
+            status = #{status} ,
+        </if>
+        <if test="updatedTime != null">
+            updated_time = #{updatedTime} ,
+        </if>
+        <if test="updatedBy != null">
+            updated_by = #{updatedBy},
+        </if>
+        <if test="signUrl!=null">
+            sign_url  =#{signUrl},
+        </if>
+        </trim>
+        where hidden_id = #{hiddenId}
+    </update>
+
+    <update id="deleteById" parameterType="Long">
+        UPDATE scyf_hidden SET
+        del_flag = 1
+        where hidden_id = #{id}
+    </update>
+
+    <update id="deleteByIds" parameterType="java.util.List">
+        UPDATE scyf_hidden SET
+        del_flag = 1
+        where hidden_id in
+        <foreach collection="ids" item="id" open="(" close=")" separator="," index="idx">
+            #{id}
+        </foreach>
+    </update>
+
+
+    <!--yss  -->
+    <!--隐患已处理-->
+    <select id="queryAlreadyHDangerRecordByPage" parameterType="java.util.Map" resultType="Hidden">
+  select hd.hidden_id as hiddenId, f.classify_name AS hiddenCatTitle,hd.hidden_title AS hiddenTitle, hd.hidden_desc as hiddenDesc, hd.company_id ,
+        hd.group_id,hd.hidden_cat_id,
+        (
+        CASE hd.`status`
+        WHEN 0 THEN c.user_name
+        WHEN 1 THEN ( SELECT user_name FROM sys_user WHERE user_id = hd.hidden_review_by )
+        WHEN 2 THEN ( SELECT user_name FROM sys_user WHERE user_id = hd.hidden_retify_by )
+        WHEN 3 THEN ( SELECT user_name FROM sys_user WHERE user_id = hd.hidden_accepted_by )
+        WHEN 4 THEN '[已完成]'
+        WHEN 5 THEN ( SELECT user_name FROM sys_user WHERE user_id = hd.hidden_retify_by )
+        WHEN 6 THEN c.user_name
+        WHEN 7 THEN c.user_name
+        ELSE '[已完成]'
+        END
+        ) AS executor,
+        (
+        CASE (SELECT srp.risk_point_type
+        FROM scyf_risk_point srp
+        WHERE hd.risk_point_id = srp.risk_point_id )
+        WHEN 1 THEN '设备设施'
+        WHEN 2 THEN '作业活动' ELSE '其他'
+        END
+        ) AS riskPointTypeName,
+        ifnull((SELECT g.risk_point_name
+        FROM scyf_risk_point g
+        WHERE hd.risk_point_id = g.risk_point_id ),'*不涉及风险点') AS riskPointName,
+        ifnull((
+        select bcd.inspect_def_name
+        from scyf_inspect_def bcd
+        where bcd.inspect_def_id = hdrd.inspect_def_id
+        ),'未知') as inspectDefName,
+        concat(
+        (SELECT
+        concat('【',sg.group_name,'】',IFNULL(psg.group_name,'')) as group_name
+        FROM sys_group sg
+        left join sys_group psg on (sg.group_parent = psg.group_id)
+        where b.group_id = sg.group_id
+        )) as groupName,
+        (
+        CASE
+        hdrd.`status`
+        WHEN 1 THEN '已提交'
+        WHEN 2 THEN '已评审'
+        WHEN 3 THEN '已整改'
+        WHEN 4 THEN '已验收'
+        WHEN 6 THEN '已撤销'
+        WHEN 5 THEN '已删除'
+        END
+        ) AS disposeStatusStr,
+        hd.created_by as createdBy,
+        ( DATE_FORMAT( hd.hidden_retify_deadline, '%Y-%m-%d %H:%i' ) ) AS hiddenRetifyDeadlineStr,
+        ( DATE_FORMAT( hd.created_time, '%Y-%m-%d %H:%i' ) ) AS createdTimeStr,
+        hd.hidden_retify_deadline AS hiddenRetifyDeadline,
+        hd.hidden_level as hiddenLevel, hd.status as status,hdrd.created_time as createdTime,
+        (
+        select hdah.hidden_attach_path
+        from scyf_hidden_attach hdah
+        where
+        hdah.hidden_detail_id = hd.hidden_id
+        limit 1
+        ) as imgUrl
+        from scyf_hidden_record hdrd
+        LEFT JOIN sys_group b ON hdrd.group_id = b.group_id
+        left join scyf_hidden as hd on hd.hidden_id = hdrd.hidden_id
+        LEFT JOIN sys_common_classify f ON hdrd.hidden_cat_id = f.classify_id
+        LEFT JOIN sys_user c ON hd.created_by = c.user_id
+        <where>
+            hd.company_id is not null
+            and hd.`status` != 7
+            <if test="keyword != null and keyword != ''">
+                and (hd.hidden_title like "%"#{keyword}"%")
+            </if>
+            <if test="userId != null and userId!=''">
+                and hdrd.created_by = #{userId}
+            </if>
+            <if test="hiddenLevel != null and hiddenLevel!='' and hiddenLevel!=-1 ">
+                and hd.hidden_level = #{hiddenLevel }
+            </if>
+            <!--隐患等级过滤-->
+            <if test="hiddenLevel != null and hiddenLevel != '' and hiddenLevel !='-1' ">
+                and hd.hidden_level = #{hiddenLevel}
+            </if>
+            <!--隐患类型过滤-->
+            <if test="hiddenCatId != null and hiddenCatId!='' ">
+                and hd.hidden_cat_id = #{hiddenCatId}
+            </if>
+            <!--检查表过滤-->
+            <if test="inspectDefId != null and inspectDefId!='' ">
+                and hd.inspect_def_id = #{inspectDefId}
+            </if>
+            <if test="groupId != null and groupId!='' ">
+                AND FIND_IN_SET(hd.group_id ,fu_getChildrenGroup(#{groupId}))
+            </if>
+            <if test="status != null and status != '' and status != -1">and hd.status = #{status}</if>
+            <if test="companyId != null and companyId != '' ">and hd.company_id = #{companyId}</if>
+            <if test="riskPointId != null and riskPointId != '' ">and hd.risk_point_id = #{riskPointId}</if>
+
+        </where>
+        order by hdrd.created_time desc
+    </select>
+    <!--隐患类型统计-->
+    <select id="getHdangerTypeStatistics">
+        SELECT
+        (
+        SELECT COUNT(hd.hidden_id)
+        FROM scyf_hidden hd
+        LEFT JOIN sys_group sg ON hd.group_id = sg.group_id
+        LEFT JOIN sys_company cbi ON hd.company_id = cbi.company_id
+        WHERE udi.classify_id = hd.hidden_cat_id
+
+          and hd.company_id = #{companyId}
+
+        and (hd.status = 2 or hd.status = 3 or hd.status = 5)
+        and hd.hidden_level = 1
+        <if test="startTime != null and startTime != '' and endTime != null and endTime != ''">
+            and hd.created_time between #{startTime} and #{endTime}
+        </if>
+        ) sumCount1,
+      <!--  (
+        SELECT COUNT(hd.hidden_id)
+        FROM scyf_hidden hd
+        LEFT JOIN sys_group sg ON hd.group_id = sg.group_id
+        LEFT JOIN sys_company cbi ON hd.company_id = cbi.company_id
+        WHERE udi.classify_id = hd.hidden_cat_id
+
+        and hd.company_id = #{companyId}
+        and (hd.status = 2 or hd.status = 3 or hd.status = 5)
+        and hd.hidden_level = 2
+        <if test="startTime != null and startTime != '' and endTime != null and endTime != ''">
+          and hd.created_time between #{startTime} and #{endTime}
+        </if>
+        ) sumCount2,-->
+        (
+        SELECT COUNT(hd.hidden_id)
+        FROM scyf_hidden hd
+        LEFT JOIN sys_group sg ON hd.group_id = sg.group_id
+        LEFT JOIN sys_company cbi ON hd.company_id = cbi.company_id
+        WHERE
+        udi.classify_id = hd.hidden_cat_id
+
+        and hd.company_id = #{companyId}
+        and (hd.status = 2 or hd.status = 3 or hd.status = 5)
+        and hd.hidden_level = 3
+          <if test="startTime != null and startTime != '' and endTime != null and endTime != ''">
+            and hd.created_time between #{startTime} and #{endTime}
+         </if>
+        ) sumCount3,
+        <!--(
+        SELECT COUNT(hd.hidden_id)
+        FROM scyf_hidden hd
+        LEFT JOIN sys_group sg ON hd.group_id = sg.group_id
+        LEFT JOIN sys_company cbi ON hd.company_id = cbi.company_id
+        WHERE udi.classify_id = hd.hidden_cat_id
+        and hd.company_id = #{companyId}
+        and (hd.status = 2 or hd.status = 3 or hd.status = 5)
+        and hd.hidden_level = 4
+          <if test="startTime != null and startTime != '' and endTime != null and endTime != ''">
+            and hd.created_time between #{startTime} and #{endTime}
+          </if>
+        ) sumCount4,-->
+        udi.`classify_id` classifyId,
+        udi.`classify_name` classifyName
+        FROM
+        sys_common_classify udi
+        where udi.classify_type =1 and udi.del_flag = 0
+        and udi.company_id = #{companyId}
+        GROUP BY udi.classify_id
+        ORDER BY udi.created_time
+    </select>
+
+    <!-- 根据隐患类型统计 -->
+    <select id="hiddenLvlCount" parameterType="java.util.Map" resultType="map">
+        SELECT
+        count(a.hidden_id) as hiddenLevelCount,
+        a.hidden_level as hiddenLevel
+        FROM
+        scyf_hidden a
+        LEFT JOIN sys_group b ON a.group_id = b.group_id
+        LEFT JOIN sys_user c ON a.created_by = c.user_id
+        where
+        a.company_id is not null
+        and a.`status` != 7
+        <!--api未处理的数据（我的）-->
+        <if test="module == 1">
+            and( (a.hidden_review_by =  #{userId} and a.status = 1)
+            or (a.created_by = #{userId} and a.status = 0)
+            or (a.hidden_retify_by =  #{userId} and a.status = 2)
+            or (a.hidden_retify_by =  #{userId} and a.status = 5)
+            or (a.hidden_accepted_by = #{userId} and a.status = 3))
+        </if>
+        <if test="module == 2">
+            and (a.status = 0 or a.status = 2 or a.status = 3 or a.status = 1 or a.status = 5 )
+        </if>
+
+        <!--api未处理的数据（我的）-->
+        <if test="riskChildGroupId != null and riskChildGroupId!='' and riskChildGroupId!=0 and module == 1">
+            and a.group_id = #{riskChildGroupId }
+        </if>
+        <if test="companyId != null and companyId != '' ">
+            and a.company_id=#{companyId}
+        </if>
+        <if test="type != null">
+            and a.status= #{type}
+        </if>
+        GROUP BY a.hidden_level
+        order by a.hidden_level
+    </select>
+
+
+    <select id="hiddenDangerLvAndStatusCount" resultType="Map">
+   SELECT
+        CONCAT( ehd.hidden_level ) AS `key`,
+        COUNT( ehd.hidden_id ) AS `value`
+        FROM
+        scyf_hidden ehd
+        LEFT JOIN sys_group sg ON sg.group_id = ehd.group_id
+        where ehd.company_id=#{companyId}
+        and ehd.`status` in(2,3,4,5)
+        GROUP BY ehd.hidden_level
+        UNION
+        SELECT
+        CONCAT( 's', ehd.`status` ) AS `key`,
+        COUNT( ehd.hidden_id ) AS `value`
+        FROM
+        scyf_hidden ehd
+        LEFT JOIN sys_group sg ON sg.group_id = ehd.group_id
+        where ehd.company_id=#{companyId}
+        and ehd.`status` in(2,3,4,5)
+        GROUP BY    ehd.`status`
+    </select>
+    <!--api首页隐患逾期统计-->
+    <select id="findHomePageHiddenOverdueCount" resultType="Integer">
+        SELECT
+        IFNULL(count(a.hidden_id),0)
+        FROM
+        scyf_hidden a
+        <where>
+            a.company_id is not null
+            and a.`status` != 7
+            <!--api type == 0未处理的数据（我的module == 1）-->
+            <if test="type == 0 and module == 1">
+                and(
+                (a.hidden_review_by = #{userId} and a.status = 1)
+                or (a.created_by = #{userId} and a.status = 0)
+                or (a.hidden_retify_by = #{userId} and a.status = 2)
+                or (a.hidden_retify_by = #{userId} and a.status = 5)
+                or (a.hidden_accepted_by = #{userId} and a.status = 3)
+                )
+            </if>
+            <!--api  type == 0未处理的数据（部门module == 2）-->
+            <if test="type == 0 and module == 2">
+                and(
+                (a.status = 1)or (a.status = 0)or (a.status = 2)or (a.status = 5)or (a.status = 3)
+                )
+            </if>
+            <!--企业过滤-->
+            <if test="companyId != null">
+                and a.company_id = #{companyId}
+            </if>
+            <!--隐患状态过滤-->
+            <if test="status == 2 ">
+                <!--待整改 and 重新整改-->
+                and (a.status = 2 or a.status = 5)
+            </if>
+
+            <if test="status != null and status != 2 and status != -1 ">
+                and a.status= #{status}
+            </if>
+            <if test="groupId != null and groupId!='' ">
+                AND FIND_IN_SET(a.group_id ,fu_getChildrenGroup(#{groupId}))
+            </if>
+            <!--隐患整改已超时-->
+            <if test="overTimeRetify == 1 ">
+                and (a.status = 2 or a.status = 5)
+                <![CDATA[
+                     AND now() > a.hidden_retify_deadline
+                ]]>
+            </if>
+        </where>
+    </select>
+
+    <!-- 查询隐患台账清单整改台账-->
+    <select id="queryRectifyStandingBookByPage" parameterType="java.util.Map" resultType="map">
+        SELECT
+        a.hidden_title AS hiddenTitle,
+        concat(
+        (SELECT
+        concat('【',sg.group_name,'】',IFNULL(psg.group_name,'')) as group_name
+        FROM sys_group sg
+        left join sys_group psg on (sg.group_parent = psg.group_id)
+        where b.group_id = sg.group_id
+        )) as groupName,
+        (
+        SELECT
+        h.hidden_retify_reasons
+        FROM
+        scyf_hidden_retify AS h
+        WHERE
+        h.hidden_id = a.hidden_id
+        ORDER BY
+        h.created_time DESC
+        LIMIT 0,
+        1
+        ) AS hiddenRetifyReasons,
+        a.created_time AS hiddenCreatedTime,
+        concat('验收通过') AS hiddenAcceptedResult,
+        (
+        select ehda.hidden_accepted_time
+        from scyf_hidden_accept ehda
+        where ehda.hidden_id = a.hidden_id
+        and ehda.company_id = a.company_id
+        order by ehda.created_time desc
+        limit 1
+        ) as hiddenAcceptedTime,
+        (
+        select acc.user_name
+        from scyf_hidden_accept ehda
+        left join sys_user acc on (acc.user_id = ehda.hidden_accepted_by)
+        where ehda.hidden_id = a.hidden_id
+        and ehda.company_id = a.company_id
+        order by ehda.created_time desc
+        limit 1
+        ) as hiddenAcceptedByName,
+        (
+        select ehda.hidden_accepted_desc
+        from scyf_hidden_accept ehda
+        where ehda.hidden_id = a.hidden_id
+        and ehda.company_id = a.company_id
+        order by ehda.created_time desc
+        limit 1
+        ) as remark,
+        a.hidden_desc AS hiddenDesc,
+        (
+        SELECT
+        h.hidden_retify_measures
+        FROM
+        scyf_hidden_retify AS h
+        WHERE
+        h.hidden_id = a.hidden_id
+        ORDER BY
+        h.created_time DESC
+        LIMIT 0,
+        1
+        ) AS hiddenRetifyMeasures,
+        e.user_name AS hiddenRetifyByName,
+        IFNULL(
+        ( SELECT GROUP_CONCAT( hidden_retify_assisting, ',' ) FROM scyf_hidden_retify AS h WHERE h.hidden_id
+        =
+        a.hidden_id ORDER BY h.created_time DESC ),
+        '无'
+        ) AS hiddenRetifyAssisting,
+        IFNULL(
+        ( SELECT sum( h.hidden_retify_amount ) FROM scyf_hidden_retify AS h WHERE h.hidden_id =
+        a.hidden_id
+        ORDER BY h.created_time DESC ),
+        0
+        ) AS hiddenRetifyAmount,
+        a.hidden_retify_deadline AS hiddenRetifyDeadline,
+        a.finished_time AS finishedTime,
+        a.hidden_level as hiddenLevel,
+        DATE_FORMAT( NOW( ), '%Y-%m-%d %H:%i:%s' ) AS reportTime
+        FROM
+        scyf_hidden a
+        LEFT JOIN sys_group b ON a.group_id = b.group_id
+        LEFT JOIN sys_common_classify d ON a.hidden_cat_id = d.classify_id
+        LEFT JOIN sys_user e ON a.hidden_retify_by = e.user_id
+        <where>
+            a.status= 4
+            <if test="weighty == 1 ">
+                and a.hidden_level = 1
+            </if>
+            <if test="companyId != null and companyId != '' ">
+                and a.company_id = #{companyId}
+            </if>
+            <if test="groupId != null and groupId != '' ">
+                and a.group_id = #{groupId}
+            </if>
+            <if test="startTime != null and startTime != ''  and endTime != null and endTime != '' ">
+                and a.finished_time between #{startTime} and #{endTime}
+            </if>
+        </where>
+        order by a.created_time desc
+    </select>
+    <!-- 查询隐患台账清单排查清单-->
+    <select id="queryHiddenCheckedListByPage" parameterType="java.util.Map" resultType="map">
+        SELECT
+        a.schdule_def_id AS riskInspectDefId,
+        a.risk_inspect_def_title AS riskInspectDefTitle,
+        a.risk_inspect_level AS riskInspectLevel,
+        a.inspect_mode AS inspectMode,
+        if(psg.group_name is null, sg.group_name, concat(psg.group_name, "-", sg.group_name)) as groupName,
+        (SELECT c.group_name FROM sys_group c WHERE a.risk_inspect_group = c.group_id ) AS riskInspectGroupName,
+        (SELECT classify_name as classify_name FROM sys_common_classify
+        WHERE classify_type=4 and company_id=#{companyId} and  classify_value=a.risk_inspect_type) AS
+        riskInspectTypeName,
+        pos.position_title AS riskInspectPositionName,
+        a.risk_inspect_type AS riskInspectType,
+        a.inspect_type AS inspectType,
+        a.schedule_frequency AS scheduleFrequency,
+        a.schedule_count AS scheduleCount,
+        a.last_inspect_date AS lastInspectDate,
+        a.risk_inspect_participant AS riskInspectParticipant,
+        a.start_date AS startDate,
+        a.end_date AS endDate,
+        a.is_open AS isOpen,
+        a.created_by AS createdBy,
+        a.created_time AS createdTime,
+        a.executor AS executor,
+        bcd.inspect_def_name AS inspectDefName
+        FROM
+        scyf_inspect_schdule_def a
+        LEFT JOIN sys_group sg ON a.group_id = sg.group_id
+        left join sys_group psg on psg.group_id = sg.group_parent and sg.company_id = psg.company_id
+        left join sys_position pos on a.risk_inspect_position = pos.position_id and a.company_id = pos.company_id
+        left join scyf_inspect_def bcd on a.inspect_def_id=bcd.inspect_def_id
+        <where>
+            a.del_flag = 0
+            <if test="companyId != null and companyId != '' ">
+                and a.company_id = #{companyId}
+            </if>
+            <if test="positionId != null and positionId != '' ">
+                and a.risk_inspect_position = #{positionId}
+            </if>
+            <if test="groupId != null and groupId != '' ">
+                and a.group_id = #{groupId}
+            </if>
+        </where>
+        group by a.schdule_def_id
+    </select>
+
+    <!--隐患统计（企业大屏）-->
+    <select id="hiddenCount" parameterType="Map" resultType="Map">
+        SELECT
+        count(a.hidden_id) as hdCount,
+        a.hidden_level as hdLevel,
+        a.status as hdStatus
+        FROM
+        scyf_hidden a
+        LEFT JOIN sys_group b ON a.group_id = b.group_id
+        where
+        a.company_id = #{companyId}
+        and a.`status` != 7
+        <!--按等级状态统计-->
+        <if test="module == 1">
+            and( a.status=2 or a.status = 3 or a.status = 5)
+        </if>
+        <!--按状态统计-->
+        <if test="module == 2">
+            and (a.status =2 or a.status = 3 or a.status = 4)
+        </if>
+       <!-- <if test="gLId != null and gLId != '' and gRId != null and gRId != '' and module == 2">
+            <![CDATA[
+                     and  b.s_group_left >= #{gLId }
+                     and b.s_group_right <= #{gRId }
+                ]]>
+        </if>-->
+        <if test="groupId != null and groupId != ''  and module == 2">
+            AND FIND_IN_SET(b.group_id ,fu_getChildrenGroup(#{groupId}))
+        </if>
+        <if test="module == 1">
+            GROUP BY a.hidden_level
+        </if>
+        <if test="module == 2">
+            GROUP BY a.status
+        </if>
+        order by a.hidden_level
+    </select>
+
+    <!--隐患列表（企业大屏）-->
+    <select id="findHiddenListForBigScreen" parameterType="java.util.Map" resultType="map">
+        SELECT
+        a.hidden_id as hiddenId,
+        a.`status`,
+        a.hidden_title AS hiddenTitle,
+        <!--( CASE a.hidden_level WHEN 1 THEN '重大' WHEN 2 THEN '较大' WHEN 3 THEN '一般' WHEN 4 THEN '较低' END ) AS    hiddenLevel,-->
+         ( CASE a.hidden_level WHEN 1 THEN '重大'  WHEN 3 THEN '一般'   END ) AS    hiddenLevel,
+
+        (
+        CASE
+        a.`status`
+        WHEN 0 THEN
+        '待提交'
+        WHEN 1 THEN
+        '待评审'
+        WHEN 2 THEN
+        '待整改'
+        WHEN 3 THEN
+        '待验收'
+        WHEN 4 THEN
+        '验收通过'
+        WHEN 5 THEN
+        '待整改'
+        WHEN 6 THEN
+        '已撤销'
+        END
+        ) AS hdStatus,
+        (
+        CASE
+        a.`status`
+        WHEN 0 THEN
+        c.user_name
+        WHEN 1 THEN
+        ( SELECT user_name FROM sys_user WHERE user_id = a.hidden_review_by )
+        WHEN 2 THEN
+        ( SELECT user_name FROM sys_user WHERE user_id = a.hidden_retify_by )
+        WHEN 3 THEN
+        ( SELECT user_name FROM sys_user WHERE user_id = a.hidden_accepted_by )
+        WHEN 4 THEN
+        '[已完成]'
+        WHEN 5 THEN
+        ( SELECT user_name FROM sys_user WHERE user_id = a.hidden_retify_by )
+        WHEN 6 THEN
+        c.user_name
+        WHEN 7 THEN
+        c.user_name ELSE '[已完成]'
+        END
+        ) AS executor,
+        (
+        CASE
+        a.`status`
+        WHEN 0 THEN
+        b.group_name
+        WHEN 1 THEN
+        ( SELECT group_name FROM sys_group WHERE group_id = a.hidden_review_group )
+        WHEN 2 THEN
+        ( SELECT group_name FROM sys_group WHERE group_id = a.hidden_retify_group )
+        WHEN 3 THEN
+        ( SELECT group_name FROM sys_group WHERE group_id = a.hidden_accepted_group )
+        WHEN 4 THEN
+        b.group_name
+        WHEN 5 THEN
+        ( SELECT group_name FROM sys_group WHERE group_id = a.hidden_retify_group )
+        WHEN 6 THEN
+        b.group_name
+        WHEN 7 THEN
+        b.group_name ELSE b.group_name
+        END
+        ) AS groupName,
+        ( DATE_FORMAT( a.hidden_retify_deadline, '%Y-%m-%d %H:%i' ) ) AS hiddenRetifyTime
+        FROM
+        scyf_hidden a
+        LEFT JOIN sys_group b ON a.group_id = b.group_id
+        LEFT JOIN sys_user c ON a.created_by = c.user_id
+        where
+        a.company_id = #{companyId}
+        and a.status != 7
+        and( a.status=2 or a.status = 3 or a.status = 5)
+        <if test="groupId != null and groupId != ''">
+            AND FIND_IN_SET(b.group_id ,fu_getChildrenGroup(#{groupId}))
+        </if>
+        order by a.hidden_level
+    </select>
+
+    <!--隐患通报（企业大屏）-->
+    <select id="hiddenBulletin" parameterType="Map" resultType="Map">
+        SELECT
+        ehd.hidden_title AS title,
+        DATE_FORMAT(ehd.hidden_retify_deadline, '%Y-%m-%d %H:%i' )  AS `time`,
+        (
+        CASE
+        ehd.`status`
+        WHEN 2 THEN
+        ( SELECT user_name FROM sys_user WHERE user_id = ehd.hidden_retify_by )
+        WHEN 3 THEN
+        ( SELECT user_name FROM sys_user WHERE user_id = ehd.hidden_accepted_by )
+        WHEN 5 THEN
+        ( SELECT user_name FROM sys_user WHERE user_id = ehd.hidden_retify_by )
+        END
+        ) AS personLiable,
+        (
+        CASE
+        ehd.`status`
+        WHEN 2 THEN
+        ( SELECT group_name FROM sys_group WHERE group_id = ehd.hidden_retify_group )
+        WHEN 3 THEN
+        ( SELECT group_name FROM sys_group WHERE group_id = ehd.hidden_accepted_group )
+        WHEN 5 THEN
+        ( SELECT group_name FROM sys_group WHERE group_id = ehd.hidden_retify_group )
+        END
+        ) AS groupName
+        FROM
+        scyf_hidden ehd
+        LEFT JOIN sys_group sg ON sg.group_id = ehd.group_id
+        WHERE
+        ( ehd.`status` = 2 OR ehd.`status` = 3 OR ehd.`status` = 5 )
+        and ehd.company_id = #{companyId }
+        <if test="groupId != null and groupId != ''">
+            AND FIND_IN_SET(sg.group_id ,fu_getChildrenGroup(#{groupId}))
+        </if>
+        order by ehd.hidden_retify_deadline desc
+    </select>
+
+
+    <!-- 分页查询集团、企业下的风险点隐患 -->
+    <select id="findRiskPointHiddenListForGent" parameterType="map" resultType="Hidden">
+        SELECT
+        a.hidden_id   AS "hiddenId",
+        a.hidden_title AS "hiddenTitle",
+        a.hidden_desc as "hiddenDesc",
+        a.hidden_level AS "hiddenLevel",
+        a.status AS "status",
+        a.hidden_retify_by AS "hiddenRetifyBy",
+        a.hidden_accepted_by AS "hiddenAcceptedBy",
+        a.hidden_review_by AS "hiddenReviewBy",
+        a.created_by AS "createdBy",
+        #{userId} AS userId,
+        concat(
+        (
+        SELECT
+        concat( '【', sg.group_name, '】', IFNULL( psg.group_name, '' ) ) AS group_name
+        FROM
+        sys_group sg
+        LEFT JOIN sys_group psg ON ( sg.group_parent = psg.group_id )
+        WHERE
+        b.group_id = sg.group_id
+        )
+        ) AS groupName,
+        a.hidden_review_group, a.hidden_review_by, a.hidden_retify_group,
+        a.hidden_retify_by, a.hidden_quondam_retify_by, a.hidden_retify_deadline,
+        a.created_time,
+        a.hidden_accepted_group, a.hidden_accepted_by,
+        c.user_name AS hiddenCreatedByName,
+        (
+        CASE
+        a.inspect_item_id
+        WHEN '' THEN
+        (
+        SELECT
+        bci.inspect_item_def_name
+        FROM
+        scyf_inspect_item_def_content bcicd,
+        scyf_inspect_item_def bci
+        WHERE
+        a.risk_point_id = bcicd.inspect_item_def_content_id
+        AND bcicd.inspect_item_def_id = bci.inspect_item_def_id
+        ) ELSE e.risk_danger_name
+        END
+        ) AS riskDangerName,
+        f.classify_name AS hiddenCatTitle,
+        (
+        CASE
+        a.`status`
+        WHEN 0 THEN
+        c.user_name
+        WHEN 1 THEN
+        ( SELECT user_name FROM sys_user WHERE user_id = a.hidden_review_by )
+        WHEN 2 THEN
+        ( SELECT user_name FROM sys_user WHERE user_id = a.hidden_retify_by )
+        WHEN 3 THEN
+        ( SELECT user_name FROM sys_user WHERE user_id = a.hidden_accepted_by )
+        WHEN 4 THEN
+        '[已完成]'
+        WHEN 5 THEN
+        ( SELECT user_name FROM sys_user WHERE user_id = a.hidden_retify_by )
+        WHEN 6 THEN
+        c.user_name
+        WHEN 7 THEN
+        c.user_name ELSE '[已完成]'
+        END
+        ) AS executor,
+        (
+        CASE
+        ( SELECT erp.risk_point_type FROM scyf_risk_point erp WHERE a.risk_point_id = erp.risk_point_id )
+        WHEN 1 THEN
+        '设备设施'
+        WHEN 2 THEN
+        '作业活动' ELSE '其他'
+        END
+        ) AS riskPointTypeName,
+        ifnull( ( SELECT g.risk_point_name FROM scyf_risk_point g WHERE a.risk_point_id = g.risk_point_id ), '* 不涉及风险点' ) AS riskPointName,
+        ifnull( ( SELECT bcd.inspect_def_name FROM scyf_inspect_def bcd WHERE bcd.inspect_def_id = a.inspect_def_id ), '未知' ) AS inspectDefName,
+        (
+        CASE
+        a.`status`
+        WHEN 0 THEN
+        '待提交'
+        WHEN 1 THEN
+        '待评审'
+        WHEN 2 THEN
+        '待整改'
+        WHEN 3 THEN
+        '待验收'
+        WHEN 4 THEN
+        '验收通过'
+        WHEN 5 THEN
+        '待整改'
+        WHEN 6 THEN
+        '已撤销'
+        END
+        ) AS disposeStatusStr,
+        <!--( CASE a.hidden_level WHEN 1 THEN '重大' WHEN 2 THEN '较大' WHEN 3 THEN '一般' WHEN 4 THEN '较低' END ) AS hiddenLevelStr,-->
+        ( CASE a.hidden_level WHEN 1 THEN '重大'  WHEN 3 THEN '一般'  END ) AS hiddenLevelStr,
+        ( SELECT hdah.hidden_attach_path FROM scyf_hidden_attach hdah WHERE hdah.hidden_detail_id = a.hidden_id LIMIT 1 ) AS imgUrl,
+        cbi.company_name
+        FROM scyf_hidden a
+        LEFT JOIN sys_common_classify f ON a.hidden_cat_id = f.classify_id
+        LEFT JOIN sys_group b ON a.group_id = b.group_id
+        LEFT JOIN sys_user c ON a.created_by = c.user_id
+        LEFT JOIN scyf_risk d ON a.inspect_item_id = d.risk_id
+        LEFT JOIN scyf_risk_source e ON e.risk_danger_id = d.risk_danger_id
+        LEFT JOIN sys_company cbi on cbi.company_id = a.company_id
+        <where>
+            and a.status != 7
+            AND FIND_IN_SET(a.company_id, fu_getChildrenCompany(#{companyId}))
+
+            <if test="riskPointId != null and riskPointId != '' ">
+                AND a.risk_point_id = #{riskPointId }
+            </if>
+            <!-- 隐患等级过滤 -->
+            <if test="hiddenLevel != null and hiddenLevel != '' and hiddenLevel !='-1' ">
+                and a.hidden_level = #{hiddenLevel}
+            </if>
+            <!-- 隐患类型过滤 -->
+            <if test="hiddenCatId != null and hiddenCatId!='' ">
+                and a.hidden_cat_id = #{hiddenCatId}
+            </if>
+            <!-- 检查表过滤 -->
+            <if test="inspectDefId != null and inspectDefId!=''">
+                and a.inspect_def_id = #{inspectDefId}
+            </if>
+            <!-- 模糊查询 -->
+            <if test="keyword != null and keyword != ''">
+                AND (
+                locate(#{keyword}, a.hidden_title ) &gt; 0
+                OR
+                locate(#{keyword}, c.user_name ) &gt; 0
+                )
+            </if>
+        </where>
+        GROUP BY a.hidden_id
+        ORDER BY a.created_time DESC
+    </select>
+
+    <select id="findHiddenGroup" resultType="java.util.Map">
+        SELECT
+        ehd.hidden_id as hiddenId,
+        ehd.hidden_title AS hiddenTitle,
+        ehd.risk_level AS riskLevel,
+        ehd.hidden_level AS hiddenLevel,
+        ehd.hidden_retify_deadline AS hiddenRetifyDeadline,
+        ehd.hidden_retify_by AS hiddenRetifyBy,
+        ehd.hidden_cat_id AS hiddenCatId,
+        ehd.happened_time happenedTime,
+        a.user_name as `name`,
+        f.classify_name classifyName,
+        sg.group_name as groupName,
+        GROUP_CONCAT(ehda.hidden_attach_path) as imgUrl
+        FROM
+        scyf_hidden ehd
+        LEFT JOIN sys_group sg ON sg.group_id = ehd.group_id
+        LEFT JOIN sys_common_classify f ON ehd.hidden_cat_id = f.classify_id
+        LEFT join sys_user a on a.user_id=ehd.hidden_retify_by
+        left join scyf_hidden_attach ehda on ehda.hidden_detail_id=ehd.hidden_id and ehda.hidden_detail_type=1
+        where ehd.company_id = #{companyId }
+        and (ehd.status = 2 or ehd.status = 5)
+
+        <!-- 隐患等级过滤 -->
+        <if test="hiddenLevel != null and hiddenLevel != ''">
+            AND ehd.hidden_level = #{hiddenLevel}
+        </if>
+        <!-- 隐患类型过滤 -->
+        <if test="hiddenCatId != null and hiddenCatId!='' ">
+            AND ehd.hidden_cat_id = #{hiddenCatId}
+        </if>
+        <!-- 检查表过滤 -->
+        <if test="inspectDefId != null and inspectDefId!='' ">
+            AND ehd.inspect_def_id = #{inspectDefId}
+        </if>
+        <!-- 模糊查询 -->
+        <if test="keyword != null and keyword != ''">
+            AND (
+            ehd.hidden_title LIKE CONCAT('%', CONCAT(#{keyword}, '%'))
+            OR a.user_name LIKE CONCAT('%', CONCAT(#{keyword}, '%'))
+            )
+        </if>
+        group by ehd.hidden_id
+    </select>
+
+    <select id="findHiddenCount" resultType="KeyValue">
+        SELECT
+        CONCAT( 'lv', ehd.hidden_level ) AS `key`,
+        COUNT( ehd.hidden_id ) AS `value`
+        FROM
+        scyf_hidden ehd
+        LEFT JOIN sys_group sg ON sg.group_id = ehd.group_id
+        where ehd.company_id=#{companyId}
+        and ehd.`status` in(2,3,5)
+
+        GROUP BY ehd.hidden_level
+        UNION
+        SELECT
+        CONCAT( 's', ehd.`status` ) AS `key`,
+        COUNT( ehd.hidden_id ) AS `value`
+        FROM
+        scyf_hidden ehd
+        LEFT JOIN sys_group sg ON sg.group_id = ehd.group_id
+        where ehd.company_id=#{companyId}
+        and ehd.`status` in(2,3,4)
+        GROUP BY
+        ehd.`status`
+    </select>
+
+    <!-- 查询统计集团下素有企业重大、较大隐患数 -->
+    <select id="findHiddenDangerCountForGent" resultType="map">
+        SELECT IFNULL(
+					SUM(
+						CASE WHEN h.hidden_level = 1 THEN 1
+								 ELSE 0
+						END
+			 ), 0) biggest
+			 ,IFNULL(
+					SUM(
+						CASE WHEN h.hidden_level = 2 THEN 1
+								 ELSE 0
+						END
+			 ), 0) bigger
+			 ,IFNULL(SUM(
+                    CASE WHEN h.hidden_level = 3 THEN 1
+                             ELSE 0
+                    END
+            ), 0) third
+            ,IFNULL(
+                SUM(
+                    CASE WHEN h.hidden_level = 4 THEN 1
+                             ELSE 0
+                    END
+            ), 0) fourth
+        FROM scyf_hidden h
+        WHERE FIND_IN_SET(h.company_id, #{value})
+            AND FIND_IN_SET(h.`status`, '2,3,4,5')
+    </select>
+
+
+    <!-- 查询统计集团下所有企业待整改、待验收、已完成隐患数及完成率 -->
+    <select id="findHiddenDangerCountAndRateForGent" resultType="map">
+        SELECT status2
+             ,status3
+             ,status4
+             ,IF((status2 + status3 + status4) = 0, 0,
+                     ROUND(status4 * 100.0 / (status2 + status3 + status4), 2)
+             ) rate
+             ,(status2 + status3 + status4) total
+        FROM (
+            SELECT IFNULL(SUM(IF(h.status = 2, 1, 0)), 0) status2
+                         ,IFNULL(SUM(IF(h.status = 3, 1, 0)), 0) status3
+                         ,IFNULL(SUM(IF(h.status = 4, 1, 0)), 0) status4
+            FROM scyf_hidden h
+            WHERE FIND_IN_SET(h.`status`, '2,3,4')
+                AND FIND_IN_SET(h.company_id, #{value})
+        ) t
+    </select>
+
+    <!-- 查询隐患通报 -->
+    <select id="findHiddenListForGent" resultType="map">
+        SELECT hd.hidden_title as hiddenTitle <!-- 隐患名称 -->
+        ,DATE_FORMAT(hd.hidden_retify_deadline, '%Y-%m-%d %H:%i' ) AS hiddenRetifyDeadline <!-- 整改期限 -->
+        ,a.user_name as hiddenRetifyBy <!-- 整改人 -->
+        ,s.group_name as hiddenRetifyGroupName <!-- 整改部门 -->
+        ,c.company_name as companyName <!-- 所属单位 -->
+        ,hd.hidden_level as hiddenLevel <!-- 隐患等级 -->
+        ,hd.group_id as groupId
+        FROM scyf_hidden hd
+        LEFT JOIN sys_user a ON a.user_id = hd.hidden_retify_by
+        LEFT JOIN sys_group s ON s.group_id = hd.hidden_retify_group
+        LEFT JOIN sys_company c ON c.company_id = hd.company_id
+        WHERE 	(hd.STATUS = 2 OR hd.STATUS = 5 )
+        AND FIND_IN_SET(hd.company_id, #{value})
+    </select>
+
+    <!-- 查询下级单位安全生产分值 -->
+    <select id="findHiddenPointForGent" parameterType="map" resultType="map">
+        SELECT IFNULL(SUM(CASE WHEN hd.hidden_level = 1 THEN #{hd1}
+                    WHEN hd.hidden_level = 2 THEN #{hd2}
+                    WHEN hd.hidden_level = 3 THEN #{hd3}
+                    WHEN hd.hidden_level = 4 THEN #{hd4}
+                    ELSE 0
+               END), 0) levelPoint
+               ,c.company_name as companyName
+               ,c.company_id as companyId
+        FROM scyf_hidden hd
+        RIGHT JOIN sys_company c ON c.company_id = hd.company_id
+        WHERE find_in_set(c.company_id, #{companyIds}) and IF(	hd.`status` is not null, FIND_IN_SET(	hd.`status` ,"2,3,4,5") , "1=1")
+            AND c.del_flag = 0
+        GROUP BY c.company_id, c.company_name
+    </select>
+
+    <insert id="insertSupervise"  parameterType="Supervise">
+            INSERT INTO `slj_scyf`.`scyf_supervise`( `group_id`, `company_id`, `superviser_id`, `supervise_type`, `detail_id`, `reciver_id`, `created_by`, `created_time`)
+            VALUES (#{groupId},#{companyId},#{superviserId} ,#{superviseType},#{detailId},#{reciverId},#{createBy},NOW())
+    </insert>
+    <select id="selectHiddenListByCompanyId"  resultType="Hidden" parameterType="Map">
+        SELECT
+        a.hidden_id   AS "hiddenId",
+        a.hidden_title AS "hiddenTitle",
+        a.hidden_desc as "hiddenDesc",
+        a.hidden_level AS "hiddenLevel",
+        a.status AS "status",
+        a.hidden_retify_by AS "hiddenRetifyBy",
+        ( SELECT ut.user_name FROM sys_user ut WHERE ut.user_id = a.hidden_retify_by ) AS "hiddenRetifyByName",
+        a.hidden_accepted_by AS "hiddenAcceptedBy",
+        ( SELECT ua.user_name FROM sys_user ua WHERE ua.user_id = a.hidden_accepted_by ) AS "hiddenAcceptedByName",
+        a.hidden_review_by AS "hiddenReviewBy",
+        ( SELECT uv.user_name FROM sys_user uv WHERE uv.user_id = a.hidden_review_by ) AS "hiddenReviewByName",
+		a.hidden_review_group,
+		a.hidden_retify_group,
+        a.hidden_quondam_retify_by,
+		a.hidden_retify_deadline,
+		( DATE_FORMAT( a.hidden_retify_deadline, '%Y-%m-%d %H:%i' ) ) AS hiddenRetifyDeadlineStr,
+        ( DATE_FORMAT( a.happened_time, '%Y-%m-%d %H:%i' ) ) AS happenedTimeStr,
+        ( DATE_FORMAT( a.finished_time, '%Y-%m-%d %H:%i' ) ) AS finishedTimeStr,
+		ifnull( ( SELECT g.risk_point_name FROM scyf_risk_point g WHERE a.risk_point_id = g.risk_point_id ), '* 不涉及风险点' ) AS riskPointName,
+		(
+        CASE
+        a.`status`
+        WHEN 0 THEN
+        c.user_name
+        WHEN 1 THEN
+        ( SELECT user_name FROM sys_user WHERE user_id = a.hidden_review_by )
+        WHEN 2 THEN
+        ( SELECT user_name FROM sys_user WHERE user_id = a.hidden_retify_by )
+        WHEN 3 THEN
+        ( SELECT user_name FROM sys_user WHERE user_id = a.hidden_accepted_by )
+        WHEN 4 THEN
+        '[已完成]'
+        WHEN 5 THEN
+        ( SELECT user_name FROM sys_user WHERE user_id = a.hidden_retify_by )
+        WHEN 6 THEN
+        c.user_name
+        WHEN 7 THEN
+        c.user_name ELSE '[已完成]'
+        END
+        ) AS executor,
+
+		(
+        CASE
+        a.`status`
+        WHEN 0 THEN
+        '待提交'
+        WHEN 1 THEN
+        '待评审'
+        WHEN 2 THEN
+        '待整改'
+        WHEN 3 THEN
+        '待验收'
+        WHEN 4 THEN
+        '验收通过'
+        WHEN 5 THEN
+        '待整改'
+        WHEN 6 THEN
+        '已撤销'
+        END
+        ) AS disposeStatusStr,
+        ( CASE a.hidden_level WHEN 1 THEN '重大'  WHEN 3 THEN '一般'  END ) AS hiddenLevelStr,
+		( SELECT hdah.hidden_attach_path FROM scyf_hidden_attach hdah WHERE hdah.hidden_detail_id = a.hidden_id LIMIT 1 ) AS imgUrl,
+		cbi.company_name
+		FROM scyf_hidden a
+        LEFT JOIN sys_common_classify f ON a.hidden_cat_id = f.classify_id
+		LEFT JOIN sys_company cbi on cbi.company_id = a.company_id
+		LEFT JOIN sys_user c ON a.created_by = c.user_id  and  a.company_id IS NOT NULL    and a.status != 7
+        <where>
+            <!--企业过滤-->
+            <if test="companyId != null and companyId != '' ">
+                and a.company_id = #{companyId}
+                and a.status != 7
+            </if>
+            <!--隐患等级过滤-->
+            <if test="hiddenLevel != null and hiddenLevel != ''">
+                and a.hidden_level = #{hiddenLevel}
+            </if>
+            <!-- 行业筛选 -->
+            <if test="industyTypeCodeList != null and industyTypeCodeList.size>0">
+                and cbi.industry_type_coe in (
+                <foreach collection="industyTypeCodeList" item="item" separator=",">
+                    #{item.industryCode}
+                </foreach>
+                )
+            </if>
+            <if test="industryCode != null and industryCode != ''">
+                and cbi.industry_type_coe = #{industryCode}
+            </if>
+            <if test='status != null and status != ""'>
+                and a.status = #{status}
+            </if>
+            <if test='status == null or status == ""'>
+                and (a.status = 2 or a.status = 3 or a.status = 4 or a.status = 5)
+            </if>
+            <!--模糊查询-->
+            <if test="keyword != null and keyword != ''">
+                and a.hidden_title like "%"#{keyword}"%"
+            </if>
+        </where>
+
+    </select>
+
+</mapper>

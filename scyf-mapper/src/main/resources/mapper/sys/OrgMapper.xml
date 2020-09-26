@@ -1,0 +1,342 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.hngf.mapper.sys.OrgMapper">
+    <sql id="Base_Column_List">
+        A.org_id,
+        A.org_name,
+        A.org_code,
+        A.org_parent_id,
+        A.org_type_id,
+        A.org_left,
+        A.org_right,
+        A.org_level,
+        A.org_group_id,
+        A.org_admin_id,
+        A.org_root_id,
+        B.login_name      AS loginName,
+        B.user_name       AS userName,
+        B.user_mobile             AS userMobile,
+        E.industry_id_list,
+        E.industry_name_list,
+        F.dict_name,
+        A.org_area_code,
+        A.org_area_name,
+        A.created_time,
+        A.created_by,
+        A.updated_time,
+        A.updated_by
+ </sql>
+
+    <select id="findList" resultType="com.hngf.entity.sys.Org">
+		select * from sys_org
+		where del_flag = 0
+	</select>
+    <!--获取所有行政机构-->
+     <select id="getAllOrgs" resultType="OrgTreeDto">
+       SELECT
+         <include refid="Base_Column_List"/>
+        FROM  sys_org              AS A
+        LEFT JOIN sys_user      AS B ON A.org_admin_id = B.user_id
+        LEFT JOIN (
+            SELECT C.org_id,
+                GROUP_CONCAT(C.industry_id)    as industry_id_list,
+                GROUP_CONCAT(D.industry_name)  as industry_name_list
+            FROM sys_org_industry      as C
+            LEFT JOIN sys_industry as D ON (C.industry_id = D.industry_id)
+            WHERE C.org_id = C.group_id and C.del_flag=0 and D.del_flag=0
+            GROUP BY C.org_id
+        )                  AS E ON(E.org_id = A.org_id)
+        LEFT JOIN sys_dict AS F ON A.org_type_id = F.dict_code and F.dict_type='organization_type'
+        WHERE 1=1 AND A.del_flag=0
+        ORDER BY A.created_time DESC
+     </select>
+    <!--根据id获取所有行政机构-->
+    <select id="getOrgById" resultType="OrgTreeDto">
+        SELECT
+        <include refid="Base_Column_List"/>
+        FROM  sys_org              AS A
+        LEFT JOIN sys_user      AS B ON A.org_admin_id = B.user_id
+        LEFT JOIN (
+        SELECT C.org_id,
+        GROUP_CONCAT(C.industry_id)    as industry_id_list,
+        GROUP_CONCAT(D.industry_name)  as industry_name_list
+        FROM sys_org_industry      as C
+        LEFT JOIN sys_industry as D ON (C.industry_id = D.industry_id)
+        WHERE C.org_id = C.group_id
+        GROUP BY C.org_id
+        )                  AS E ON(E.org_id = A.org_id)
+        LEFT JOIN sys_dict AS F ON A.org_type_id = F.dict_code and F.dict_type='organization_type'
+        WHERE 1=1 AND A.del_flag=0
+        and A.org_id=#{orgId,  jdbcType=BIGINT}
+    </select>
+
+    <select id="getOrgListByPId" resultType="OrgTreeDto">
+        SELECT
+        <include refid="Base_Column_List"/>
+        FROM  sys_org              AS A
+        LEFT JOIN sys_user      AS B ON A.org_admin_id = B.user_id
+        LEFT JOIN (
+        SELECT C.org_id,
+        GROUP_CONCAT(C.industry_id)    as industry_id_list,
+        GROUP_CONCAT(D.industry_name)  as industry_name_list
+        FROM sys_org_industry      as C
+        LEFT JOIN sys_industry as D ON (C.industry_id = D.industry_id)
+        WHERE C.org_id = C.group_id
+        GROUP BY C.org_id
+        )                  AS E ON(E.org_id = A.org_id)
+        LEFT JOIN sys_dict AS F ON A.org_type_id = F.dict_code and F.dict_type='organization_type'
+        WHERE A.del_flag=0
+
+        <if test="null!= orgId">
+            and FIND_IN_SET(A.org_id,fu_getChildrenOrg(#{orgId}))
+        </if>
+        <if test="null!= orgParentId ">
+            and A.org_parent_id = #{orgParentId}
+        </if>
+        <if test="null!=orgRootId ">
+            AND A.org_root_id = #{orgRootId ,jdbcType=BIGINT}
+        </if>
+        GROUP BY A.org_id
+        ORDER BY A.org_id DESC
+
+    </select>
+
+
+
+    <select id="findById" resultType="com.hngf.entity.sys.Org"
+            parameterType="Long">
+		select * from sys_org
+		where del_flag = 0 and org_id = #{id}
+	</select>
+    <!--查询机构类型数据-->
+    <select id="dictType" resultType="Dict">
+        select
+        dict_code as "dictCode",
+        dict_name as "dictName"
+        from sys_dict sd
+        where sd.dict_type=#{dictType} and sd.del_flag=0
+    </select>
+    <select id="findByMap" resultType="com.hngf.entity.sys.Org"
+            parameterType="Map">
+		select * from sys_org
+		where del_flag = 0
+        <if test="orgName != null and orgName != ''">
+            and org_name = #{orgName}
+        </if>
+        <if test="orgCode != null and orgCode != ''">
+            and org_code = #{orgCode}
+        </if>
+	</select>
+
+    <insert id="add" parameterType="com.hngf.entity.sys.Org">
+		INSERT INTO sys_org (
+		org_id,
+		org_name
+		, org_code
+		, org_parent_id
+		, org_type_id
+		, org_left
+		, org_right
+		, org_level
+		, org_area_code
+		, org_area_name
+		, org_group_id
+		, org_admin_id
+		, org_root_id
+		, created_by
+		)
+		VALUES (
+		#{orgId},
+		#{orgName}
+		, #{orgCode}
+		, #{orgParentId}
+		, #{orgTypeId}
+		, #{orgLeft}
+		, #{orgRight}
+		, #{orgLevel}
+		, #{orgAreaCode}
+		, #{orgAreaName}
+		, #{orgGroupId}
+		, #{orgAdminId}
+		, #{orgRootId}
+		, #{createdBy}
+		)
+	</insert>
+
+    <update id="update" parameterType="Org">
+        UPDATE sys_org SET
+        <if test="orgName != null and orgName != ''">
+            org_name = #{orgName} ,
+        </if>
+        <if test="orgCode != null and orgCode != ''">
+            org_code = #{orgCode} ,
+        </if>
+        <if test="orgParentId != null and orgParentId != ''">
+            org_parent_id = #{orgParentId} ,
+        </if>
+        <if test="orgTypeId != null and orgTypeId != ''">
+            org_type_id = #{orgTypeId} ,
+        </if>
+        <if test="orgLeft != null and orgLeft != ''">
+            org_left = #{orgLeft} ,
+        </if>
+        <if test="orgRight != null and orgRight != ''">
+            org_right = #{orgRight} ,
+        </if>
+        <if test="orgLevel != null and orgLevel != ''">
+            org_level = #{orgLevel} ,
+        </if>
+        <if test="orgAreaCode != null and orgAreaCode != ''">
+            org_area_code = #{orgAreaCode} ,
+        </if>
+        <if test="orgAreaName != null and orgAreaName != ''">
+            org_area_name = #{orgAreaName} ,
+        </if>
+        <if test="orgGroupId != null and orgGroupId != ''">
+            org_group_id = #{orgGroupId} ,
+        </if>
+        <if test="orgAdminId != null and orgAdminId != ''">
+            org_admin_id = #{orgAdminId} ,
+        </if>
+        <if test="orgRootId != null and orgRootId != ''">
+            org_root_id = #{orgRootId} ,
+        </if>
+        <if test="updatedBy != null and updatedBy != ''">
+            updated_by = #{updatedBy}
+        </if>
+        where org_id = #{orgId}
+    </update>
+
+    <update id="deleteById" parameterType="Long">
+		UPDATE sys_org SET
+		del_flag = 1
+		where org_id = #{id}
+	</update>
+    <!--组织机构删除标识-->
+    <update id="updateOrgDelFlg" parameterType="OrgTreeDto">
+        UPDATE sys_org
+             set
+             del_flag = #{delFlag,jdbcType=INTEGER}
+        WHERE  1 =1
+        AND    org_id  = #{orgId   ,jdbcType = BIGINT} or org_parent_id=#{orgId   ,jdbcType = BIGINT}
+    </update>
+    <update id="deleteByIds" parameterType="java.util.List">
+        UPDATE sys_org SET
+        del_flag = 1
+        where org_id in
+        <foreach collection="ids" item="id" open="(" close=")"
+                 separator="," index="idx">
+            #{id}
+        </foreach>
+    </update>
+    <!--修改组织管理员id-->
+    <update id="updateOrgAdmin">
+        UPDATE sys_org
+        <set>
+            <if test="orgAdminId != null and orgAdminId!=''">
+                org_admin_id = #{orgAdminId,jdbcType=BIGINT},
+            </if>
+        </set>
+        WHERE org_id = #{orgId, jdbcType=BIGINT}
+    </update>
+    <!--重置管理员密码-->
+    <update id="resetAdminPwd">
+    UPDATE sys_user set
+     password=#{password,jdbcType=VARCHAR},
+     salt=#{salt,jdbcType=VARCHAR}
+    where user_id=#{userId}
+    and company_id=#{companyId}
+    and del_flag=0
+    </update>
+    <!--修改组织管理员信息-->
+    <update id="updateOrgAdminName">
+        UPDATE sys_user
+        <trim suffixOverrides=",">
+        <set>
+            <if test="loginName != null and loginName!=''">
+                login_name = #{loginName},
+            </if>
+            <if test="userMobile != null and userMobile!=''">
+                user_mobile = #{userMobile},
+            </if>
+        </set>
+        </trim>
+          where user_id=#{userId} and company_id=#{companyId} and del_flag=0
+    </update>
+    <!--添加管理员账户信息-->
+    <insert id="addUser" parameterType="User" keyProperty="userId" useGeneratedKeys="true">
+        INSERT INTO sys_user(
+             login_name,
+             user_name,
+             user_mobile,
+             user_email,
+             company_id,
+             user_status,
+             salt,
+             password,
+             remember_token,
+             user_type,
+             user_last_ip,
+             user_localize,
+             user_sex,
+             user_rank,
+             user_idcard,
+             user_work_type,
+             created_time,
+             created_by,
+             updated_time,
+             updated_by,
+             del_flag
+        ) values (
+             #{loginName},
+             #{userName},
+             #{userMobile},
+             #{userEmail},
+             #{companyId},
+             #{userStatus},
+             #{salt},
+             #{password},
+             #{rememberToken},
+             #{userType},
+             #{userLastIp},
+             #{userLocalize},
+             #{userSex},
+             #{userRank},
+             #{userIdcard},
+             #{userWorkType},
+             #{createdTime},
+             #{createdBy},
+             #{updatedTime},
+             #{updatedBy},
+             #{delFlag}
+        )
+    </insert>
+
+    <select id="findIndustrySelectByCompanyId" resultType="OrgIndustry">
+	   SELECT
+	        B.org_id as orgId,
+            B.org_industry_id orgIndustryId,
+            B.group_id groupId,
+            A.industry_id industryId,
+            A.industry_code industryCode,
+            A.industry_name industryName,
+            A.industry_parent_id industryParentId,
+            A.industry_parent_code industryParentCode,
+            A.industry_type industryType
+        FROM sys_industry      AS A
+        left join sys_org_industry soi on soi.industry_id = A.industry_id
+        LEFT JOIN (
+              SELECT *   from  sys_org_industry  AS C
+              WHERE    C.org_id = C.group_id
+              AND      C.org_id = #{orgId, jdbcType=BIGINT}
+                            )  AS B ON (A.industry_id = B.industry_id)
+        WHERE  A.del_flag = 0 and soi.org_id =#{orgId, jdbcType=BIGINT}
+        ORDER BY A.sort_no ASC,A.created_time asc
+    </select>
+
+    <update id="updateGroupId" >
+        update sys_org set org_group_id=#{groupId} where org_id = #{orgId}
+    </update>
+
+</mapper>

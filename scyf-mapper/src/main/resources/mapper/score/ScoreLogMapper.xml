@@ -1,0 +1,144 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.hngf.mapper.score.ScoreLogMapper">
+
+     <!--查询用户得分记录日志-->
+    <select id="findList" resultType="com.hngf.entity.score.ScoreLog">
+		select
+        psl.score_log_id as scoreLogId,
+        psl.performance_score as performanceScore,
+        psl.created_time as createdTime,
+        psl.performance_remark as performanceRemark
+        from scyf_score_log psl
+        <where>
+            psl.del_flag=0
+            <if test="companyId != null">
+                and   psl.company_id = #{companyId}
+            </if>
+            <if test="userId != null">
+                and   psl.user_id = #{userId}
+            </if>
+            <if test="year != null">
+                and ( DATE_FORMAT( psl.created_time, '%Y' ) ) = #{year}
+            </if>
+            <if test="groupId != null">
+                and   psl.group_id = #{groupId}
+            </if>
+        </where>
+        order by psl.created_time desc
+	</select>
+    <!--统计用户得分和部门得分情况-->
+    <select id="periodicSum" resultType="Map" parameterType="Map">
+        select
+        (ifnull(sum(psl.performance_score),0)) AS "sumScore",
+        (select count(sgm.user_id)
+        from sys_group_member sgm
+        where sgm.group_id = #{groupId} and sgm.del_flag=0
+        ) as "groupUserCount"
+        from scyf_score_log psl
+        <where>
+               psl.del_flag=0
+            <if test="companyId != null">
+             and   psl.company_id =#{companyId}
+            </if>
+            <if test="userId != null">
+                and  psl.user_id =#{userId}
+            </if>
+            <if test="groupId != null">
+                and  psl.group_id =#{groupId}
+            </if>
+            <if test="startTime != null and startTime != '' and endTime != null and endTime != ''">
+                and psl.created_time between #{startTime} and #{endTime}
+            </if>
+        </where>
+    </select>
+    <select id="findById" resultType="com.hngf.entity.score.ScoreLog" parameterType="Long">
+		select * from scyf_score_log
+        where del_flag = 0 and score_log_id = #{id}
+	</select>
+
+    <insert id="add" parameterType="com.hngf.entity.score.ScoreLog">
+        INSERT INTO scyf_score_log (
+                                                                company_id
+        ,                                group_id
+        ,                                user_id
+        ,                                profession_id
+        ,                                performance_score
+        ,                                performance_remark
+        ,                                updated_time
+        ,                                updated_by
+        ,                                created_time
+        ,                                created_by
+        ,                                del_flag
+                                )
+        VALUES (
+                                                            #{companyId}
+        ,                                  #{groupId}
+        ,                                  #{userId}
+        ,                                  #{professionId}
+        ,                                  #{performanceScore}
+        ,                                  #{performanceRemark}
+        ,                                  #{updatedTime}
+        ,                                  #{updatedBy}
+        ,                                  #{createdTime}
+        ,                                  #{createdBy}
+        ,                                  #{delFlag}
+                                  )
+
+    </insert>
+
+    <update id="update" parameterType="com.hngf.entity.score.ScoreLog">
+                        UPDATE scyf_score_log SET
+                            <if test="companyId != null and companyId != ''">
+                            company_id = #{companyId} ,
+                            </if>
+                            <if test="groupId != null and groupId != ''">
+                            group_id = #{groupId} ,
+                            </if>
+                            <if test="userId != null and userId != ''">
+                            user_id = #{userId} ,
+                            </if>
+                            <if test="professionId != null and professionId != ''">
+                            profession_id = #{professionId} ,
+                            </if>
+                            <if test="performanceScore != null and performanceScore != ''">
+                            performance_score = #{performanceScore} ,
+                            </if>
+                            <if test="performanceRemark != null and performanceRemark != ''">
+                            performance_remark = #{performanceRemark} ,
+                            </if>
+                            <if test="updatedTime != null">
+                            updated_time = #{updatedTime} ,
+                            </if>
+                            <if test="updatedBy != null and updatedBy != ''">
+                            updated_by = #{updatedBy} ,
+                            </if>
+                            <if test="createdTime != null">
+                            created_time = #{createdTime} ,
+                            </if>
+                            <if test="createdBy != null and createdBy != ''">
+                            created_by = #{createdBy} ,
+                            </if>
+                            <if test="delFlag != null and delFlag != ''">
+                            del_flag = #{delFlag}
+                            </if>
+                            where score_log_id = #{scoreLogId}
+    </update>
+
+    <update id="deleteById" parameterType="Long">
+        UPDATE scyf_score_log SET
+        del_flag = 1
+        where score_log_id = #{id}
+    </update>
+
+    <update id="deleteByIds" parameterType="java.util.List">
+        UPDATE scyf_score_log SET
+        del_flag = 1
+        where score_log_id in
+        <foreach collection="ids" item="id" open="(" close=")" separator="," index="idx">
+            #{id}
+        </foreach>
+    </update>
+
+</mapper>

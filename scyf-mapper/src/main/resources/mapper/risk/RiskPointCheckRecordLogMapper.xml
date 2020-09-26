@@ -1,0 +1,164 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.hngf.mapper.risk.RiskPointCheckRecordLogMapper">
+
+	<sql id="RiskPointCheckRecordLogColumns">
+		a.check_record_no,
+		a.inspect_def_id,
+		a.inspect_schedule_id,
+		a.company_id,
+		a.risk_point_id,
+		a.checked_count,
+		a.group_id,
+		a.position_id,
+		a.status,
+		a.longitude,
+		a.latitude,
+		a.address,
+		a.phone_code,
+		a.evaluate_desc,
+		a.result,
+		a.created_by,
+		a.updated_by,
+		a.created_time,
+		a.updated_time
+	</sql>
+
+	<select id="findList" resultType="RiskPointCheckRecordLog">
+		select
+		<include refid="RiskPointCheckRecordLogColumns" />
+		from
+		scyf_risk_point_check_record_log a
+		where
+		a.del_flag = 0
+	</select>
+
+	<select id="findById" resultType="RiskPointCheckRecordLog"
+		parameterType="Long">
+		select
+		<include refid="RiskPointCheckRecordLogColumns" />
+		from
+		scyf_risk_point_check_record_log a
+		where
+		a.del_flag = 0 and a.record_id = #{id}
+	</select>
+
+	<insert id="add" parameterType="RiskPointCheckRecordLog">
+		INSERT INTO scyf_risk_point_check_record_log (
+		check_record_no,
+		inspect_def_id,
+		inspect_schedule_id,
+		company_id,
+		risk_point_id,
+		checked_count,
+		group_id,
+		position_id,
+		status,
+		longitude,
+		latitude,
+		address,
+		phone_code,
+		evaluate_desc,
+		result,
+		created_time,
+		created_by,
+		del_flag)
+		VALUES (
+		#{checkRecordNo},
+		#{inspectDefId},
+		#{inspectScheduleId},
+		#{companyId},
+		#{riskPointId},
+		#{checkedCount},
+		#{groupId},
+		#{positionId},
+		#{status},
+		#{longitude},
+		#{latitude},
+		#{address},
+		#{phoneCode},
+		#{evaluateDesc},
+		#{result},
+		#{createdTime},
+		#{createdBy},
+		0
+		)
+
+	</insert>
+
+	<update id="update" parameterType="RiskPointCheckRecordLog">
+		UPDATE scyf_risk_point_check_record_log a SET
+		<if test="checkRecordNo != null and checkRecordNo != ''">
+			a.check_record_no = #{checkRecordNo},
+		</if>
+		<if test="inspectDefId != null and inspectDefId != ''">
+			a.inspect_def_id = #{inspectDefId},
+		</if>
+		<if test="inspectScheduleId != null and inspectScheduleId != ''">
+			a.inspect_schedule_id = #{inspectScheduleId},
+		</if>
+		<if test="companyId != null and companyId != ''">
+			a.company_id = #{companyId},
+		</if>
+		<if test="riskPointId != null and riskPointId != ''">
+			a.risk_point_id = #{riskPointId},
+		</if>
+		<if test="checkedCount != null and checkedCount != ''">
+			a.checked_count = #{checkedCount},
+		</if>
+		<if test="groupId != null and groupId != ''">
+			a.group_id = #{groupId},
+		</if>
+		<if test="positionId != null and positionId != ''">
+			a.position_id = #{positionId},
+		</if>
+		<if test="status != null and status != ''">
+			a.status = #{status},
+		</if>
+		<if test="longitude != null and longitude != ''">
+			a.longitude = #{longitude},
+		</if>
+		<if test="latitude != null and latitude != ''">
+			a.latitude = #{latitude},
+		</if>
+		<if test="address != null and address != ''">
+			a.address = #{address},
+		</if>
+		<if test="phoneCode != null and phoneCode != ''">
+			a.phone_code = #{phoneCode},
+		</if>
+		<if test="evaluateDesc != null and evaluateDesc != ''">
+			a.evaluate_desc = #{evaluateDesc},
+		</if>
+		<if test="result != null and result != ''">
+			a.result = #{result},
+		</if>
+		<if test="updatedTime != null">
+			a.updated_time = #{updatedTime},
+		</if>
+		<if test="updatedBy != null and updatedBy != ''">
+			a.updated_by = #{updatedBy}
+		</if>
+		where record_id = #{recordId}
+	</update>
+
+	<update id="deleteById" parameterType="Long">
+		UPDATE scyf_risk_point_check_record_log a SET
+		a.del_flag = 1
+		where a.record_id = #{id}
+	</update>
+
+	<update id="deleteByIds" parameterType="java.util.List">
+		UPDATE scyf_risk_point_check_record_log a SET
+		a.del_flag = 1
+		where a.record_id in
+		<foreach collection="ids" item="id" open="(" close=")"
+			separator="," index="idx">
+			#{id}
+		</foreach>
+	</update>
+	<delete id="truncateRiskPointCheckRecordLog" >
+        truncate table scyf_risk_point_check_record_log
+    </delete>
+</mapper>

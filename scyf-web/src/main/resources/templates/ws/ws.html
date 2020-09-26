@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>websocket实例</title>
+    <script>
+        var url = "ws://192.168.125.220:8091/ws/82/115/abc";
+        var ws = new WebSocket(url);
+        ws.onopen = function (event) {
+            console.log("Connection open ...");
+            ws.send("riskPointCount-back");
+            ws.send("warningRiskPoint-back");
+            ws.send("hiddenCount-back");
+            ws.send("riskPointControlRecord-back");
+            ws.send("hiddenBulletin-back");
+            ws.send("todayCheck-back");
+        }
+        ws.onmessage = function (p1) {
+            console.log(p1.data);
+            if(p1.data.indexOf('riskPointCount') > 0){
+                appendHtml(document.getElementById('container'), '<li>----------------------------riskPointCount----------------------------</li>');
+            }
+
+            if(p1.data.indexOf('warningRiskPoint') > 0){
+                appendHtml(document.getElementById('container'), '<li>----------------------------warningRiskPoint----------------------------</li>');
+            }
+
+            if(p1.data.indexOf('hiddenCount') > 0){
+                appendHtml(document.getElementById('container'), '<li>----------------------------hiddenCount----------------------------</li>');
+            }
+
+            if(p1.data.indexOf('riskPointControlRecord') > 0){
+                appendHtml(document.getElementById('container'), '<li>----------------------------riskPointControlRecord----------------------------</li>');
+            }
+
+            if(p1.data.indexOf('hiddenBulletin') > 0){
+                appendHtml(document.getElementById('container'), '<li>----------------------------hiddenBulletin----------------------------</li>');
+            }
+
+            if(p1.data.indexOf('todayCheck') > 0){
+                appendHtml(document.getElementById('container'), '<li>----------------------------todayCheck----------------------------</li>');
+            }
+            appendHtml(document.getElementById('container'), '<li>' + p1.data + '<br/></li>');
+        }
+
+        function appendHtml(elem, value) {
+            var node = document.createElement("div"),
+                fragment = document.createDocumentFragment(),
+                childs = null,
+                i = 0;
+            node.innerHTML = value;
+            childs = node.childNodes;
+            for (; i < childs.length; i++) {
+                fragment.appendChild(childs[i]);
+            }
+            elem.appendChild(fragment);
+            childs = null;
+            fragment = null;
+            node = null;
+        }
+    </script>
+</head>
+<body>
+
+<div>
+    <ul id="container">
+
+    </ul>
+</div>
+</body>
+</html>

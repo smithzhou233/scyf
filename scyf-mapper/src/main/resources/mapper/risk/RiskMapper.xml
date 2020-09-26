@@ -1,0 +1,690 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.hngf.mapper.risk.RiskMapper">
+    <sql id="RiskColumns">
+		er.risk_id AS "riskId",
+		er.company_id AS "companyId",
+		er.risk_danger_id AS "riskDangerId",
+		er.risk_name AS "riskName",
+		er.risk_code AS "riskCode",
+		er.risk_hram_factor AS "riskHramFactor",
+		er.risk_consequence AS "riskConsequence",
+		er.risk_type_id AS "riskTypeId",
+		er.risk_desc AS "riskDesc",
+		er.risk_level AS "riskLevel",
+		er.risk_score AS "riskScore",
+		coalesce(er.lec_l,'无') AS "lecL",
+        coalesce(er.lec_e,'无') AS "lecE",
+        coalesce(er.lec_c,'无') AS "lecC",
+        coalesce(er.lec_d,'无') AS "lecD",
+        coalesce(er.lc_l,'无') AS "lcL",
+        coalesce(er.lc_c,'无') AS "lcC",
+        coalesce(er.lc_d,'无') AS "lcD",
+        coalesce(er.ls_l,'无') AS "lsL",
+        coalesce(er.ls_s,'无') AS "lsS",
+        coalesce(er.ls_r,'无') AS "lsR",
+        coalesce(er.a1,'无') AS "a1",
+        coalesce(er.a2,'无') AS "a2",
+        coalesce(er.a3,'无') AS "a3",
+        coalesce(er.a4,'无') AS "a4",
+        coalesce(er.a5,'无') AS "a5",
+        coalesce(er.a6,'无') AS "a6",
+        coalesce(er.a7,'无') AS "a7",
+        coalesce(er.a8,'无') AS "a8",
+        coalesce(er.ta,'无') AS "ta",
+        er.type_id AS "typeId",
+        er.risk_type AS "riskType",
+        er.group_name AS "groupName",
+        er.group_user AS "groupUser",
+		er.created_time AS "createdTime",
+		er.created_by AS "createdBy",
+		er.updated_time AS "updatedTime",
+		er.updated_by AS "updatedBy",
+		er.del_flag AS "delFlag"
+	</sql>
+    <update id="deleteByDangerSrcIds">
+		update scyf_risk set del_flag = 1 where find_in_set(risk_danger_id,#{ids})
+	</update>
+
+
+    <select id="findList" resultType="java.util.Map">
+        SELECT
+        <include refid="RiskColumns" />
+        ,
+        group_concat(distinct erc.risk_ctrl_level_id) AS "riskCtrlLevelId",
+        group_concat(distinct erc.risk_ctrl_position_id) AS  "riskCtrlPositionId",
+        IFNULL (group_concat(distinct ercl.risk_ctrl_level_title), "" ) AS  "riskCtrlLevelTitle",
+        IFNULL ( group_concat(distinct p.position_title) , "" )  AS  "positionTitle",
+        eds.risk_danger_type AS "riskDangerType",
+        edsp.risk_danger_name as "parentDangerSrcName",
+        edsn.risk_danger_name as "rootName",
+        group_concat(DISTINCT concat(erm.risk_measure_type_id, '#', erm.risk_measure_content)
+        separator '@#@') as "riskMeasureContent"
+        from scyf_risk er
+        LEFT JOIN scyf_risk_ctrl erc on er.risk_id =erc.risk_id and
+        er.company_id=erc.company_id
+        LEFT JOIN scyf_risk_ctrl_level ercl on
+        erc.risk_ctrl_level_id=ercl.risk_ctrl_level_id and
+        erc.company_id=ercl.company_id
+        LEFT JOIN sys_position p on erc.risk_ctrl_position_id=p.position_id and
+        erc.company_id = p.company_id
+        LEFT JOIN scyf_risk_source eds on er.risk_id=eds.risk_danger_id and
+        er.company_id=eds.company_id and eds.del_flag=0
+        LEFT JOIN scyf_risk_source edsp on
+        eds.parent_risk_danger_id=edsp.risk_danger_id and
+        er.company_id=edsp.company_id and
+        edsp.del_flag=0
+        LEFT JOIN scyf_risk_source edsn on eds.root_node=edsn.risk_danger_id and
+        er.company_id=edsn.company_id and edsn.del_flag=0
+        LEFT JOIN scyf_risk_measure erm on erm.risk_id = er.risk_id and
+        er.company_id = erm.company_id
+        WHERE 1=1
+        and er.del_flag = 0 and erc.del_flag = 0
+        <if test="keyword != null and keyword != ''">
+            and (er.risk_name like "%"#{keyword}"%"
+            or er.risk_code like "%"#{keyword}"%"
+            or er.risk_hram_factor like "%"#{keyword}"%"
+            or er.risk_consequence like "%"#{keyword}"%"
+            or eds.risk_danger_name like "%"#{keyword}"%"
+            or eds.risk_danger_code like "%"#{keyword}"%"
+            or edsp.risk_danger_name like "%"#{keyword}"%"
+            or edsn.risk_danger_name like "%"#{keyword}"%")
+        </if>
+        <if test="companyId != null and companyId!=''">
+            AND er.company_id = #{companyId}
+        </if>
+        <if test="riskDangerType != null and riskDangerType!=''">
+            AND eds.risk_danger_type = #{riskDangerType}
+        </if>
+        <if test="riskLevel != null and riskLevel !=-1 and riskLevel != ''">
+            AND er.risk_level = #{riskLevel}
+        </if>
+        <if test="riskCtrlLevelId != null and riskCtrlLevelId !=-1 and riskCtrlLevelId !=''">
+            AND erc.risk_ctrl_level_id = #{riskCtrlLevelId}
+        </if>
+        <if test="dangerSourceLevel != null and dangerSourceLevel !=-1 and dangerSourceLevel !=''">
+            AND er.risk_level = #{dangerSourceLevel}
+        </if>
+        <if
+                test="riskCtrlPositionId != null and riskCtrlPositionId !=-1 and riskCtrlPositionId!=''">
+            AND FIND_IN_SET(#{riskCtrlPositionId}, erc.risk_ctrl_position_id)
+        </if>
+        <if test="dangerSrcId != null and dangerSrcId != ''">
+            AND eds.root_node = #{dangerSrcId}
+        </if>
+        <if test="vtype != null and vtype != ''and vtype=='nd'">
+            AND eds.root_node = #{vDangerSrcId}
+        </if>
+        <if test="vtype != null and vtype != ''and vtype=='pd'">
+            AND eds.parent_risk_danger_id = #{vDangerSrcId}
+        </if>
+        group by er.risk_id,erm.risk_id
+        order by er.risk_level,er.risk_id desc
+    </select>
+
+    <select id="queryRisk" resultType="java.util.Map">
+        SELECT
+        <include refid="RiskColumns" />
+        ,
+        group_concat(distinct erc.risk_ctrl_level_id) riskCtrlLevelId,
+        group_concat(distinct erc.risk_ctrl_position_id) riskCtrlPositionId,
+        group_concat(distinct ercl.risk_ctrl_level_title) riskCtrlLevelTitle,
+        group_concat(distinct p.position_title) sPositionTitle,
+        eds.risk_danger_type AS "riskDangerType",
+        edsp.risk_danger_name AS "parentDangerSrcName",
+        edsn.risk_danger_name AS "rootName",
+        group_concat(DISTINCT concat(erm.risk_measure_type_id, '#', erm.risk_measure_content)
+        separator '@#@') as
+        "riskMeasureContent"
+        from scyf_risk er
+        LEFT JOIN scyf_risk_ctrl erc on er.risk_id =erc.risk_id and
+        er.company_id=erc.company_id
+        LEFT JOIN scyf_risk_ctrl_level ercl on
+        erc.risk_ctrl_level_id=ercl.risk_ctrl_level_id and
+        erc.company_id=ercl.company_id
+        LEFT JOIN sys_position p on erc.risk_ctrl_position_id=p.position_id and
+        erc.company_id = p.company_id
+        LEFT JOIN scyf_risk_source eds on er.risk_id=eds.risk_danger_id and
+        er.company_id=eds.company_id and eds.del_flag=0
+        LEFT JOIN scyf_risk_source edsp on
+        eds.parent_risk_danger_id=edsp.risk_danger_id and
+        er.company_id=edsp.company_id and
+        edsp.del_flag=0
+        LEFT JOIN scyf_risk_source edsn on eds.root_node=edsn.risk_danger_id and
+        er.company_id=edsn.company_id and edsn.del_flag=0
+        LEFT JOIN scyf_risk_measure erm on erm.risk_id = er.risk_id and
+        er.company_id = erm.company_id
+        WHERE 1=1
+        and er.del_flag = 0
+        <if test="keyword != null and keyword != ''">
+            and (er.risk_name like "%"#{keyword}"%"
+            or er.risk_code like "%"#{keyword}"%"
+            or er.risk_hram_factor like "%"#{keyword}"%"
+            or er.risk_consequence like "%"#{keyword}"%"
+            or eds.risk_danger_name like "%"#{keyword}"%"
+            or eds.risk_danger_code like "%"#{keyword}"%"
+            or edsp.risk_danger_name like "%"#{keyword}"%"
+            or edsn.risk_danger_name like "%"#{keyword}"%")
+        </if>
+        <if test="companyId != null and companyId!=''">
+            AND er.company_id = #{companyId}
+        </if>
+        <if test="riskDangerType != null and riskDangerType!=''">
+            AND eds.risk_danger_type = #{riskDangerType}
+        </if>
+        <if test="riskLevel != null and riskLevel !=-1">
+            AND er.risk_level = #{riskLevel}
+        </if>
+        <if
+                test="riskCtrlLevelId != null and riskCtrlLevelId !=-1 and riskCtrlLevelId !=''">
+            AND erc.risk_ctrl_level_id = #{riskCtrlLevelId}
+        </if>
+        <if
+                test="dangerSourceLevel != null and dangerSourceLevel !=-1 and dangerSourceLevel !=''">
+            AND er.risk_level = #{dangerSourceLevel}
+        </if>
+        <if
+                test="riskCtrlPositionId != null and riskCtrlPositionId !=-1 and riskCtrlPositionId!=''">
+            AND FIND_IN_SET(#{riskCtrlPositionId}, erc.risk_ctrl_position_id)
+        </if>
+        <if test="dangerSrcId != null and dangerSrcId != ''">
+            AND eds.root_node = #{dangerSrcId}
+        </if>
+        <if test="vtype != null and vtype != ''and vtype=='nd'">
+            AND eds.root_node = #{vDangerSrcId}
+        </if>
+        <if test="vtype != null and vtype != ''and vtype=='pd'">
+            AND eds.parent_risk_danger_id = #{vDangerSrcId}
+        </if>
+        group by er.risk_id,erm.risk_id
+        order by er.risk_level,er.risk_id desc
+    </select>
+
+    <!--导出高速A评价方式数据时-->
+    <select id="queryARisk" resultType="java.util.Map">
+        SELECT
+        <include refid="RiskColumns" />
+        ,
+        group_concat(distinct erc.risk_ctrl_level_id) riskCtrlLevelId,
+        group_concat(distinct erc.risk_ctrl_position_id) riskCtrlPositionId,
+        group_concat(distinct ercl.risk_ctrl_level_title) riskCtrlLevelTitle,
+        group_concat(distinct p.position_title) sPositionTitle,
+        eds.risk_danger_type AS "riskDangerType",
+        edsp.risk_danger_name AS "parentDangerSrcName",
+        edsn.risk_danger_name AS "rootName",
+        group_concat( concat(erm.risk_measure_content)) as
+        "riskMeasureContent"
+        from scyf_risk er
+        LEFT JOIN scyf_risk_ctrl erc on er.risk_id =erc.risk_id and
+        er.company_id=erc.company_id
+        LEFT JOIN scyf_risk_ctrl_level ercl on
+        erc.risk_ctrl_level_id=ercl.risk_ctrl_level_id and
+        erc.company_id=ercl.company_id
+        LEFT JOIN sys_position p on erc.risk_ctrl_position_id=p.position_id and
+        erc.company_id = p.company_id
+        LEFT JOIN scyf_risk_source eds on er.risk_id=eds.risk_danger_id and
+        er.company_id=eds.company_id and eds.del_flag=0
+        LEFT JOIN scyf_risk_source edsp on
+        eds.parent_risk_danger_id=edsp.risk_danger_id and
+        er.company_id=edsp.company_id and
+        edsp.del_flag=0
+        LEFT JOIN scyf_risk_source edsn on eds.root_node=edsn.risk_danger_id and
+        er.company_id=edsn.company_id and edsn.del_flag=0
+        LEFT JOIN scyf_risk_measure erm on erm.risk_id = er.risk_id and
+        er.company_id = erm.company_id
+        WHERE 1=1
+        and er.del_flag = 0
+        <if test="keyword != null and keyword != ''">
+            and (er.risk_name like "%"#{keyword}"%"
+            or er.risk_code like "%"#{keyword}"%"
+            or er.risk_hram_factor like "%"#{keyword}"%"
+            or er.risk_consequence like "%"#{keyword}"%"
+            or eds.risk_danger_name like "%"#{keyword}"%"
+            or eds.risk_danger_code like "%"#{keyword}"%"
+            or edsp.risk_danger_name like "%"#{keyword}"%"
+            or edsn.risk_danger_name like "%"#{keyword}"%")
+        </if>
+        <if test="companyId != null and companyId!=''">
+            AND er.company_id = #{companyId}
+        </if>
+        <if test="riskDangerType != null and riskDangerType!=''">
+            AND eds.risk_danger_type = #{riskDangerType}
+        </if>
+        <if test="riskLevel != null and riskLevel !=-1">
+            AND er.risk_level = #{riskLevel}
+        </if>
+        <if
+                test="riskCtrlLevelId != null and riskCtrlLevelId !=-1 and riskCtrlLevelId !=''">
+            AND erc.risk_ctrl_level_id = #{riskCtrlLevelId}
+        </if>
+        <if
+                test="dangerSourceLevel != null and dangerSourceLevel !=-1 and dangerSourceLevel !=''">
+            AND er.risk_level = #{dangerSourceLevel}
+        </if>
+        <if
+                test="riskCtrlPositionId != null and riskCtrlPositionId !=-1 and riskCtrlPositionId!=''">
+            AND FIND_IN_SET(#{riskCtrlPositionId}, erc.risk_ctrl_position_id)
+        </if>
+        <if test="dangerSrcId != null and dangerSrcId != ''">
+            AND eds.root_node = #{dangerSrcId}
+        </if>
+        <if test="vtype != null and vtype != ''and vtype=='nd'">
+            AND eds.root_node = #{vDangerSrcId}
+        </if>
+        <if test="vtype != null and vtype != ''and vtype=='pd'">
+            AND eds.parent_risk_danger_id = #{vDangerSrcId}
+        </if>
+        group by er.risk_id,erm.risk_id
+        order by er.risk_level,er.risk_id desc
+    </select>
+    <select id="findById" resultType="com.hngf.entity.risk.Risk"
+            parameterType="Long">
+		select * from scyf_risk
+		where del_flag = 0 and risk_id = #{id}
+	</select>
+    <!--查看管控层级 -->
+    <select id="selectLevel" resultType="java.util.Map">
+        SELECT
+        risk_ctrl_level_id AS "riskCtrlLevelId",
+        risk_ctrl_level_title AS "riskCtrlLevelTitle",
+        risk_ctrl_level_value AS "riskCtrlLevelValue",
+        risk_ctrl_level_desc AS "riskCtrlLevelDesc",
+        risk_ctrl_level_fixed AS "riskCtrlLevelFixed",
+        risk_ctrl_level_status AS "riskCtrlLevelStatus"
+        FROM scyf_risk_ctrl_level
+        <where>
+            del_flag=0
+            and company_id=#{companyId}
+        </where>
+    </select>
+    <!--查看管控岗位 -->
+    <select id="selectPosition" resultType="java.util.Map">
+        SELECT
+        position_id AS "positionId",
+        position_title AS "positionTitle",
+        position_desc AS "positionDesc",
+        position_order AS "positionOrder",
+        position_fixed AS "positionFixed"
+        FROM sys_position
+        <where>
+            del_flag=0
+            and company_id=#{companyId}
+        </where>
+    </select>
+    <select id="selModel" resultType="java.lang.Integer">
+		SELECT
+		risk_judge_method AS "evaluateIndexModel"
+		FROM sys_info
+		where del_flag=0 and company_id=#{companyId}
+	</select>
+    <select id="selectComEvaluate" resultType="java.util.Map">
+        SELECT
+        evaluate_index_model AS "evaluateIndexModel",
+        evaluate_index_type AS "evaluateIndexType",
+        evaluate_index_content AS "evaluateIndexContent",
+        evaluate_index_score AS "evaluateIndexScore"
+        FROM sys_evaluate_index
+        <where>
+            del_flag=0
+            and company_id=#{companyId}
+            and evaluate_index_model=#{evaluateIndexModel}
+        </where>
+    </select>
+    <select id="selectAEvaluate" resultType="java.util.Map">
+        SELECT
+        evaluate_index_model AS "evaluateIndexModel",
+        evaluate_index_type AS "evaluateIndexType",
+        evaluate_index_content AS "evaluateIndexContent",
+        evaluate_index_remark AS "evaluateIndexRemark"
+        FROM sys_evaluate_index
+        <where>
+            del_flag=0
+            and company_id=#{companyId}
+            and evaluate_index_type=#{evaluateIndexType}
+        </where>
+    </select>
+    <!--查看风险管控层级 -->
+    <select id="riskPositionLevel" resultType="java.util.Map">
+        SELECT
+        risk_ctrl_level_title AS "riskCtrlLevelTitle",
+        risk_ctrl_level_value AS "riskCtrlLevelValue"
+        FROM scyf_risk_ctrl_level
+        <where>
+            del_flag=0
+            and company_id=#{companyId}
+            and risk_ctrl_level_value=#{riskCtrlLevelValue}
+        </where>
+    </select>
+    <select id="getRiskJson" resultType="java.util.Map">
+		select
+		er.risk_id,
+		er.company_id,
+		er.risk_code,
+		er.risk_consequence,
+		er.risk_desc,
+		er.risk_level,
+		er.risk_name,
+		er.risk_hram_factor,
+		er.risk_type_id,
+		ifnull(peds.risk_danger_name,eds.risk_danger_name) danger_src_name,
+		ifnull(peds.risk_danger_id,eds.risk_danger_id) danger_src_id,
+		group_concat(distinct erc.risk_ctrl_level_id) risk_ctrl_level_id,
+		group_concat(distinct erc.risk_ctrl_position_id) risk_ctrl_position_id
+		from scyf_risk er
+		left join scyf_risk_source eds on er.company_id=eds.company_id and
+		er.risk_id=eds.risk_danger_id
+		left join scyf_risk_source peds on eds.company_id=peds.company_id and
+		eds.parent_risk_danger_id=peds.risk_danger_id
+		left join scyf_risk_ctrl erc on erc.risk_id=er.risk_id and
+		erc.company_id=er.company_id
+		WHERE 1=1
+		and er.del_flag = 0
+		AND er.risk_id = #{riskId}
+		group by er.risk_id
+	</select>
+    <select id="getOne" resultType="com.hngf.entity.risk.Risk">
+        SELECT
+        *
+        FROM scyf_risk
+        <where>
+            del_flag=0
+            and company_id=#{companyId}
+            and risk_code=#{riskCode}
+        </where>
+    </select>
+
+    <insert id="add" parameterType="com.hngf.entity.risk.Risk">
+		INSERT INTO scyf_risk (
+		risk_id,
+		company_id,
+		risk_danger_id,
+		risk_name,
+		risk_code,
+		risk_hram_factor,
+		risk_consequence,
+		risk_type_id,
+		risk_desc,
+		risk_level,
+		risk_score,
+		lec_l,
+        lec_e,
+        lec_c,
+        lec_d,
+        lc_l,
+        lc_c,
+        lc_d,
+        ls_l,
+        ls_s,
+        ls_r,
+        a1,
+        a2,
+        a3,
+        a4,
+        a5,
+        a6,
+        a7,
+        a8,
+        ta,
+        risk_type,
+        type_id,
+        group_name,
+        group_user,
+		created_time,
+		created_by,
+		del_flag
+		)VALUES(
+		#{riskId},
+		#{companyId},
+		#{riskDangerId},
+		#{riskName},
+		#{riskCode},
+		#{riskHramFactor},
+		#{riskConsequence},
+		#{riskTypeId},
+		#{riskDesc},
+		#{riskLevel},
+		#{riskScore},
+		#{lecL},
+        #{lecE},
+        #{lecC},
+        #{lecD},
+        #{lcL},
+        #{lcC},
+        #{lcD},
+        #{lsL},
+        #{lsS},
+        #{lsR},
+        #{a1},
+        #{a2},
+        #{a3},
+        #{a4},
+        #{a5},
+        #{a6},
+        #{a7},
+        #{a8},
+        #{ta},
+        #{riskType},
+        #{typeId},
+        #{groupName},
+        #{groupUser},
+		#{createdTime},
+		#{createdBy},
+		0
+		)
+
+	</insert>
+
+    <update id="update" parameterType="com.hngf.entity.risk.Risk">
+		UPDATE scyf_risk SET
+
+		company_id = #{companyId}
+
+		,
+		risk_danger_id = #{riskDangerId}
+
+		,
+		risk_name = #{riskName}
+
+		,
+		risk_code = #{riskCode}
+
+		,
+		risk_hram_factor = #{riskHramFactor}
+
+		,
+		risk_consequence = #{riskConsequence}
+
+		,
+		risk_type_id = #{riskTypeId}
+
+		,
+		risk_desc = #{riskDesc}
+
+		,
+		risk_level = #{riskLevel}
+
+		,
+		risk_score = #{riskScore}
+
+		,
+        <if test="lecL != null and lecL != ''">
+            a.lec_l = #{lecL},
+        </if>
+        <if test="lecE != null and lecE != ''">
+            a.lec_e = #{lecE},
+        </if>
+        <if test="lecC != null and lecC != ''">
+            a.lec_c = #{lecC},
+        </if>
+        <if test="lecD != null and lecD != ''">
+            a.lec_d = #{lecD},
+        </if>
+        <if test="lcL != null and lcL != ''">
+            a.lc_l = #{lcL},
+        </if>
+        <if test="lcC != null and lcC != ''">
+            a.lc_c = #{lcC},
+        </if>
+        <if test="lcD != null and lcD != ''">
+            a.lc_d = #{lcD},
+        </if>
+        <if test="lsL != null and lsL != ''">
+            a.ls_l = #{lsL},
+        </if>
+        <if test="lsS != null and lsS != ''">
+            a.ls_s = #{lsS},
+        </if>
+        <if test="lsR != null and lsR != ''">
+            a.ls_r = #{lsR},
+        </if>
+        <if test="typeId != null and typeId != ''">
+            a.type_id = #{typeId},
+        </if>
+        <if test="groupName != null and groupName != ''">
+            a.group_name = #{groupName},
+        </if>
+        <if test="groupUser != null and groupUser != ''">
+            a.group_user = #{groupUser},
+        </if>
+		updated_time = #{updatedTime}
+
+		,
+		updated_by = #{updatedBy}
+
+
+		where risk_id = #{riskId}
+	</update>
+
+    <update id="deleteById" parameterType="Long">
+		UPDATE scyf_risk SET
+		del_flag = 1
+		where risk_id = #{id}
+	</update>
+
+    <update id="deleteByIds" parameterType="java.util.List">
+        UPDATE scyf_risk SET
+        del_flag = 1
+        where risk_danger_id in
+        <foreach collection="ids" item="id" open="(" close=")"
+                 separator="," index="idx">
+            #{id}
+        </foreach>
+    </update>
+    <update id="remove">
+		UPDATE scyf_risk SET
+		del_flag = 1
+		where risk_id=#{riskId} and company_id=#{companyId}
+	</update>
+
+
+    <!-- 统计集团下所有企业的风险指数和安全指数 -->
+    <select id="findTotalRiskPointAndSecurityPointForGent" parameterType="map" resultType="map">
+        SELECT if(#{orgCount} = 0, 0, round(risk_point / #{orgCount}, 2)) ristPoint
+        ,if(#{orgCount} = 0, 0, round(security_point / #{orgCount}, 2)) securityPoint
+        FROM (
+        SELECT SUM(risk_point) risk_point <!-- 风险指数 -->
+        ,SUM(security_point) security_point <!-- 安全指数 -->
+        FROM (
+        SELECT
+        IFNULL(SUM(
+        CASE WHEN rp.risk_point_level = 1 THEN #{rp1}
+        WHEN rp.risk_point_level = 2 THEN #{rp2}
+        WHEN rp.risk_point_level = 3 THEN #{rp3}
+        ELSE #{rp4}
+        END
+        ), 0) risk_point
+        ,0 security_point
+        FROM scyf_risk_point rp
+        LEFT JOIN sys_company c ON c.company_id = rp.company_id
+        WHERE rp.del_flag = 0
+        AND find_in_set(rp.company_id, #{companyIds})
+        AND c.del_flag = 0
+        UNION ALL
+        SELECT 0 risk_point
+        ,IFNULL(SUM(
+        CASE WHEN hd.hidden_level = 1 THEN #{hd1}
+        WHEN hd.hidden_level = 2 THEN #{hd2}
+        WHEN hd.hidden_level = 3 THEN #{hd3}
+        ELSE #{hd4}
+        END
+        ), 0) security_point
+        FROM scyf_hidden hd
+        LEFT JOIN sys_company c ON c.company_id = hd.company_id
+        WHERE find_in_set(hd.company_id, #{companyIds})
+        ) t
+        ) t1
+    </select>
+
+    <!-- 查询统计风险点总计 -->
+    <select id="findRiskCountForGent" resultType="map">
+        SELECT t.risk_point_level riskLevel
+			   ,IFNULL(ristCount, 0) ristCount
+        FROM (
+            SELECT 1 risk_point_level
+            UNION ALL
+            SELECT 2 risk_point_level
+            UNION ALL
+            SELECT 3 risk_point_level
+            UNION ALL
+            SELECT 4 risk_point_level
+        ) t
+        LEFT JOIN
+        (
+            SELECT count(1) ristCount, r.risk_point_level
+            FROM scyf_risk_point r
+            WHERE IF (r.is_active = 1, (r.end_time > now() OR r.end_time IS NULL), '1 = 1')
+                AND FIND_IN_SET(r.company_id, #{value})
+                AND r.del_flag = 0
+            GROUP BY r.risk_point_level
+        ) t1
+        ON t.risk_point_level = t1.risk_point_level
+    </select>
+
+    <!-- 查询统计预警风险点数 -->
+    <select id="findRiskCountOfOutOfControlForGent" resultType="map">
+        SELECT t1.risk_point_level riskLevel
+			 ,IFNULL(hiddenCount, 0) hiddenCount
+        FROM (
+            SELECT 1 risk_point_level
+            UNION ALL
+            SELECT 2 risk_point_level
+            UNION ALL
+            SELECT 3 risk_point_level
+            UNION ALL
+            SELECT 4 risk_point_level
+        ) t1
+        LEFT JOIN
+        (
+            SELECT COUNT(1) hiddenCount, rp.risk_point_level
+            FROM scyf_risk_point rp
+            WHERE rp.is_out_of_control = 1
+                AND rp.del_flag = 0
+                AND FIND_IN_SET(rp.company_id, #{value})
+            GROUP BY rp.risk_point_level
+        ) t2
+        ON t1.risk_point_level = t2.risk_point_level
+    </select>
+
+    <!-- 查询统计下级企业风险指数 -->
+    <select id="findRiskPointForGent" resultType="map" parameterType="map">
+        SELECT
+           IFNULL(SUM(
+              CASE WHEN rp.risk_point_level = 1 THEN #{rp1}
+                     WHEN rp.risk_point_level = 2 THEN #{rp2}
+                     WHEN rp.risk_point_level = 3 THEN #{rp3}
+                     WHEN rp.risk_point_level = 4 then #{rp4}
+                     ELSE 0
+              END
+           ), 0) levelPoint
+           ,c.company_name AS companyName
+           ,c.company_id as companyId
+        FROM scyf_risk_point rp
+        RIGHT JOIN sys_company c ON c.company_id = rp.company_id AND rp.del_flag = 0
+        WHERE
+         IF( rp.is_active = 1, ( rp.end_time > now( ) OR rp.end_time IS NULL ), '1=1' )  and find_in_set(c.company_id, #{companyIds})
+            AND c.del_flag = 0
+        GROUP BY c.company_id
+    </select>
+
+</mapper>

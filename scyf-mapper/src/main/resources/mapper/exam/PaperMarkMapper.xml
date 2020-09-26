@@ -1,0 +1,183 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.hngf.mapper.exam.PaperMarkMapper">
+
+    <sql id="PaperMarkColumns">
+        a.paper_mark_id,
+        a.paper_id,
+        a.questions_type,
+        a.mark,
+        a.less_mark,
+        a.more_mark,
+        a.group_id,
+        a.company_id,
+        a.created_by,
+        a.created_time,
+        a.updated_by,
+        a.updated_time,
+        a.del_flag
+    </sql>
+
+    <select id="findList" resultType="PaperMark">
+        select
+            <include refid="PaperMarkColumns"/>
+        from
+            scyf_paper_mark a
+        where
+            a.del_flag = 0
+	</select>
+
+    <select id="findById" resultType="PaperMark" parameterType="Long">
+        select
+            a.paper_mark_id as paperMarkId ,
+            a.paper_id as paperId ,
+            a.questions_type as questionsType ,
+            a.mark as mark ,
+            a.less_mark as lessMark ,
+            a.more_mark as moreMark ,
+            a.group_id as groupId ,
+            a.company_id as companyId ,
+            a.created_by as createdBy ,
+            DATE_FORMAT( a.created_time, '%Y-%m-%d %H:%i' ) as createdTimeStr ,
+            a.created_time as createdTime
+        from
+            scyf_paper_mark a
+        where
+            a.paper_mark_id = #{id} and a.del_flag = 0
+        order by a.created_time desc LIMIT  1
+	</select>
+
+    <insert id="add" parameterType="PaperMark" useGeneratedKeys="true" keyProperty="paperMarkId">
+        INSERT INTO scyf_paper_mark (
+            paper_id,
+            questions_type,
+            mark,
+            less_mark,
+            more_mark,
+            group_id,
+            company_id,
+            created_by,
+            created_time,
+            updated_by,
+            updated_time,
+            del_flag)
+        VALUES (
+            #{paperId},
+            #{questionsType},
+            #{mark},
+            #{lessMark},
+            #{moreMark},
+            #{groupId},
+            #{companyId},
+            #{createdBy},
+            #{createdTime},
+            #{updatedBy},
+            #{updatedTime},
+            #{delFlag}
+        )
+    </insert>
+
+    <update id="update" parameterType="PaperMark">
+        UPDATE scyf_paper_mark a
+        <trim prefix="set" suffixOverrides=","  suffix="where a.paper_mark_id = #{paperMarkId}">
+            <if test=" null != paperId ">
+                a.paper_id = #{paperId},
+            </if>
+            <if test=" null != questionsType ">
+                a.questions_type = #{questionsType},
+            </if>
+            <if test=" null != mark ">
+                a.mark = #{mark},
+            </if>
+            <if test=" null != lessMark ">
+                a.less_mark = #{lessMark},
+            </if>
+            <if test=" null != moreMark ">
+                a.more_mark = #{moreMark},
+            </if>
+            <if test=" null != groupId ">
+                a.group_id = #{groupId},
+            </if>
+            <if test=" null != companyId ">
+                a.company_id = #{companyId},
+            </if>
+            <if test=" null != updatedBy ">
+                a.updated_by = #{updatedBy},
+            </if>
+            <if test=" null != updatedTime ">
+                a.updated_time = #{updatedTime},
+            </if>
+        </trim>
+    </update>
+
+    <update id="deleteById" parameterType="Long">
+        UPDATE scyf_paper_mark a SET  a.del_flag = 1, a.updated_by = #{updatedBy}, a.updated_time = now()
+        where a.paper_mark_id = #{id}
+    </update>
+
+    <update id="deleteByIds" parameterType="java.util.List">
+        UPDATE scyf_paper_mark a SET
+            a.del_flag = 1, a.updated_by = #{updatedBy}, a.updated_time = now()
+        where a.paper_mark_id in
+        <foreach collection="ids" item="id" open="(" close=")" separator="," index="idx">
+            #{id}
+        </foreach>
+    </update>
+    <!-- 批量增加 试卷试题关联 -->
+    <insert id="addBatch" parameterType="java.util.List">
+        INSERT INTO scyf_paper_mark (
+            paper_id,
+            questions_type,
+            mark,
+            less_mark,
+            more_mark,
+            group_id,
+            company_id,
+            created_by,
+            created_time,
+            del_flag)
+        VALUES
+        <foreach collection="paperMarkList" item="item" index="index"   separator="," >
+            (#{item.paperId},
+            #{item.questionsType},
+            #{item.mark},
+            #{item.lessMark},
+            #{item.moreMark},
+            #{item.groupId},
+            #{item.companyId},
+            #{item.createdBy},
+            #{item.createdTime},
+            #{item.delFlag})
+        </foreach>
+    </insert>
+    <!-- 批量删除 试卷试题关联 -->
+    <update id="deleteBatchPaperMarkByPaperId" parameterType="Long">
+        UPDATE scyf_paper_mark a SET a.del_flag = 1, a.updated_by = #{updatedBy}, a.updated_time = now()
+        where a.paper_id = #{paperId}
+    </update>
+    <!-- 根据试卷id和试题类型 查找试卷试题类型id -->
+    <select id="findIdByPaperIdAndQuestionsType" resultType="Long" >
+        select paper_mark_id from scyf_paper_mark where paper_id = #{paperId} and questions_type = #{questionsType} and del_flag = 0
+    </select>
+    <!-- 根据试卷id 查找试卷试题类型id -->
+    <select id="getTotalMarkByPaperId" resultType="Integer" parameterType="Long">
+        SELECT sum(pm.mark)
+        FROM scyf_paper_mark pm
+        LEFT JOIN scyf_paper_questions pq  ON pm.paper_mark_id = pq.paper_mark_id AND pq.del_flag = 0
+        WHERE pm.paper_id = #{paperId} AND pm.del_flag =0
+    </select>
+    <!-- 根据试卷id 查找试卷试题类型id -->
+    <select id="findUserPaperQuestionsListByPaperId" resultType="com.hngf.entity.exam.UserPaperMarkQuestions" parameterType="Long">
+        select
+            pm.paper_id as paperId ,
+            pm.questions_type as questionsType,
+            pm.mark as mark,
+            pm.less_mark as lessMark,
+            pm.more_mark as moreMark ,
+            pq.questions_id as questionsId,
+            q.right_answer as rightAnswer
+        from  scyf_paper_mark pm , scyf_paper_questions pq , scyf_questions q
+        where pm.paper_id = #{paperId} and pm.del_flag = 0 and pm.paper_mark_id = pq.paper_mark_id and pq.del_flag=0 and pq.questions_id = q.questions_id
+    </select>
+</mapper>

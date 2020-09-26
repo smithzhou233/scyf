@@ -1,0 +1,126 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.hngf.mapper.danger.InspectTypeMapper">
+
+    <sql id="InspectTypeColumns">
+        a.company_id AS companyId,
+        a.inspect_type AS inspectType,
+        a.inspect_type_name AS inspectTypeName,
+        a.inspect_type_value AS inspectTypeValue,
+        a.inspect_type_desc AS inspectTypeDesc,
+        a.sort_no AS sortNo,
+        a.created_time AS createdTime,
+        a.created_by AS createdBy,
+        a.updated_time AS updatedTime,
+        a.updated_by AS updatedBy,
+        a.del_flag AS delFlag
+    </sql>
+
+    <select id="findList" resultType="com.hngf.entity.danger.InspectType">
+        select
+        <include refid="InspectTypeColumns"/>
+        from
+        scyf_inspect_type a
+        where
+        a.del_flag = 0
+    </select>
+
+    <select id="findById" resultType="com.hngf.entity.danger.InspectType" parameterType="Long">
+        select
+        <include refid="InspectTypeColumns"/>
+        from
+        scyf_inspect_type a
+        where
+        a.del_flag = 0 and a.inspect_type_id = #{id}
+    </select>
+
+    <insert id="add" parameterType="com.hngf.entity.danger.InspectType">
+        INSERT INTO scyf_inspect_type (
+            company_id,
+            inspect_type,
+            inspect_type_name,
+            inspect_type_value,
+            inspect_type_desc,
+            sort_no,
+            created_time,
+            created_by,
+            updated_time,
+            updated_by,
+            del_flag)
+        VALUES (
+            #{companyId},
+            #{inspectType},
+            #{inspectTypeName},
+            #{inspectTypeValue},
+            #{inspectTypeDesc},
+            #{sortNo},
+            #{createdTime},
+            #{createdBy},
+            #{updatedTime},
+            #{updatedBy},
+            #{delFlag}
+        )
+
+    </insert>
+
+    <update id="update" parameterType="com.hngf.entity.danger.InspectType">
+        UPDATE scyf_inspect_type a SET
+        <if test="companyId != null and companyId != ''">
+            a.company_id = #{companyId},
+        </if>
+        <if test="inspectType != null and inspectType != ''">
+            a.inspect_type = #{inspectType},
+        </if>
+        <if test="inspectTypeName != null and inspectTypeName != ''">
+            a.inspect_type_name = #{inspectTypeName},
+        </if>
+        <if test="inspectTypeValue != null and inspectTypeValue != ''">
+            a.inspect_type_value = #{inspectTypeValue},
+        </if>
+        <if test="inspectTypeDesc != null and inspectTypeDesc != ''">
+            a.inspect_type_desc = #{inspectTypeDesc},
+        </if>
+        <if test="sortNo != null and sortNo != ''">
+            a.sort_no = #{sortNo},
+        </if>
+        <if test="createdTime != null and createdTime != ''">
+            a.created_time = #{createdTime},
+        </if>
+        <if test="createdBy != null and createdBy != ''">
+            a.created_by = #{createdBy},
+        </if>
+        <if test="updatedTime != null and updatedTime != ''">
+            a.updated_time = #{updatedTime},
+        </if>
+        <if test="updatedBy != null and updatedBy != ''">
+            a.updated_by = #{updatedBy},
+        </if>
+        <if test="delFlag != null and delFlag != ''">
+            a.del_flag = #{delFlag}
+        </if>
+        where inspect_type_id = #{inspectTypeId}
+    </update>
+
+    <update id="deleteById" parameterType="Long">
+        UPDATE scyf_inspect_type a SET
+            a.del_flag = 1
+        where a.inspect_type_id = #{id}
+    </update>
+
+    <update id="deleteByIds" parameterType="java.util.List">
+        UPDATE scyf_inspect_type a SET
+        a.del_flag = 1
+        where a.inspect_type_id in
+        <foreach collection="ids" item="id" open="(" close=")" separator="," index="idx">
+            #{id}
+        </foreach>
+    </update>
+
+    <update id="deleteBatchByCompanyId" parameterType="java.lang.Long">
+        UPDATE scyf_inspect_type a SET
+        a.del_flag = 1, a.updated_by = #{updatedBy} , a.updated_time = now()
+        WHERE a.company_id = #{companyId}
+    </update>
+
+</mapper>

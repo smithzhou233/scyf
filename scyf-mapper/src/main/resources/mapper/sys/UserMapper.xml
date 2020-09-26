@@ -1,0 +1,626 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.hngf.mapper.sys.UserMapper">
+
+    <select id="findList" resultType="com.hngf.entity.sys.User">
+		SELECT DISTINCT
+			( A.user_id ),
+			A.group_member_id,
+			A.company_id,
+			A.group_id,
+			B.login_name,
+			B.user_name,
+			B.user_mobile,
+			B.user_picture,
+			B.user_status,
+			B.user_idcard,
+			B.user_rank,
+			B.user_work_type,
+			C.group_name,
+			C.group_left,
+			C.group_right,
+			sgmpg.group_member_position_id,
+			sgmpg.group_id grant_group_id,
+			gsgmpg.group_name AS grant_group_name,
+			D.group_member_position_grant_id,
+			D.position_id,
+			D.position_title,
+		    B.jpush_registration_id  registrationId
+		FROM
+			sys_group_member AS A
+			LEFT JOIN sys_user AS B ON ( A.company_id = B.company_id AND A.user_id = B.user_id )
+			LEFT JOIN sys_group AS C ON ( A.company_id = C.company_id AND A.group_id = C.group_id )
+			LEFT JOIN sys_group_member_position_grant AS sgmpg ON ( B.company_id = sgmpg.company_id AND B.user_id = sgmpg.user_id )
+			LEFT JOIN sys_group AS gsgmpg ON ( sgmpg.company_id = gsgmpg.company_id AND sgmpg.grant_group_id = gsgmpg.group_id )
+			LEFT JOIN (
+				SELECT
+					M.company_id,
+					M.user_id,
+					M.group_member_position_id,
+					M.group_id,
+					M.position_id,
+					P.position_title,
+					N.group_member_position_id group_member_position_grant_id,
+					N.grant_group_id,
+					GP.group_name AS grant_group_name
+				FROM
+					sys_group_member_position AS M
+				LEFT JOIN sys_group_member_position_grant AS N ON (
+					M.company_id = N.company_id
+					AND M.user_id = N.user_id
+					AND M.group_id = N.group_id
+					AND M.position_id = N.position_id
+				)
+				LEFT JOIN sys_position AS P ON ( M.company_id = P.company_id AND M.position_id = P.position_id )
+				LEFT JOIN sys_group AS GP ON ( M.company_id = GP.company_id AND N.grant_group_id = GP.group_id )
+				) AS D ON ( A.company_id = D.company_id AND A.user_id = D.user_id AND A.group_id = D.group_id )
+		WHERE
+		1 = 1
+		AND B.del_flag = 0
+		<if test="companyId != null">
+			AND A.company_id = #{companyId, jdbcType=BIGINT}
+		</if>
+		<if test="groupLeft != null and groupRight != null">
+			<![CDATA[
+                AND C.group_left  >= #{groupLeft ,jdbcType=BIGINT}
+                AND C.group_right <= #{groupRight,jdbcType=BIGINT}
+                ]]>
+		</if>
+		<if test="groupId != null and groupId != ''" >
+		<!--	<if test="keyword == null or   keyword == ''">
+				and A.group_id =  #{groupId, jdbcType=BIGINT}    &lt;!&ndash;只查询本部门的人员数据信息&ndash;&gt;
+			</if>-->
+			AND FIND_IN_SET(A.group_id ,fu_getChildrenGroup(#{groupId}))
+		</if>
+		<if test="keyword != null and keyword != ''">
+			and (
+			LOCATE( #{keyword} , B.login_name) &gt; 0
+			or 	LOCATE( #{keyword} , B.user_name) &gt; 0
+			or 	LOCATE( #{keyword} , B.user_mobile) &gt; 0
+			or 	LOCATE( #{keyword} , B.user_email) &gt; 0
+			)
+		</if>
+		GROUP BY A.user_id
+		ORDER BY B.user_id DESC
+	</select>
+
+	<select id="findLoginNameById" resultType="String">
+		select login_name from sys_user where user_id = #{value}
+	</select>
+
+	<select id="findByMap" resultType="User">
+		select
+			u.user_id,
+			u.login_name,
+			u.user_name,
+			u.user_mobile,
+			u.user_email,
+			u.company_id,
+			u.user_status,
+			u.user_type,
+			u.user_last_ip,
+			u.user_picture,
+			u.user_address,
+			u.company_name,
+			u.user_sex,
+			u.user_intro,
+			u.user_order,
+			u.user_rank,
+			u.user_idcard,
+			u.user_work_type,
+			u.chat_session_token,
+			u.jpush_registration_id,
+			u.wx_open_id,
+			u.created_time,
+			u.updated_time,
+			u.created_by,
+			u.updated_by,
+			u.jpush_registration_id  registrationId
+		from sys_user u
+		LEFT JOIN sys_group_member b ON u.user_id = b.user_id
+        LEFT JOIN sys_group c ON b.group_id = c.group_id
+		LEFT JOIN sys_group_member_position mp ON u.user_id = mp.user_id AND mp.group_id = b.group_id
+		LEFT JOIN sys_position pos ON mp.position_id = pos.position_id
+        where u.del_flag = 0
+		<if test="companyId != null">
+			and u.company_id = #{companyId}
+		</if>
+		<if test="keyword != null and keyword != ''">
+			and (
+			u.login_name like "%"#{keyword}"%"
+			or u.user_name like "%"#{keyword}"%"
+			or u.user_mobile like "%"#{keyword}"%"
+			or u.user_email like "%"#{keyword}"%"
+			)
+		</if>
+		<if test="groupId != null">
+			<!--and c.group_id =#{groupId,jdbcType=BIGINT}-->
+			AND FIND_IN_SET(c.group_id ,fu_getChildrenGroup(#{groupId}))
+		</if>
+		<if test="positionId != null">
+			AND pos.position_id = #{positionId}
+		</if>
+		group by u.user_id
+		order by u.user_order
+	</select>
+
+	<select id="findUserAndStatus" resultType="com.hngf.entity.sys.User">
+		SELECT
+			a.user_id   AS "userId",
+			a.login_name AS "loginName",
+			a.user_name AS "userName",
+			a.user_email AS "userEmail",
+			a.user_mobile AS "userMobile",
+			a.user_status AS "userStatus",
+			a.user_order AS "userOrder",
+			c.group_name AS "groupName",
+			group_concat( pos.position_title ) AS positionTitle,
+			rom.role_id AS"roleId",
+			ro.role_name AS "roleName",
+			( CASE WHEN rpwp.risk_point_id IS NOT NULL AND rpwp.risk_point_id != '' THEN 1 ELSE 0 END ) AS ifChecked
+		FROM
+			sys_user a
+			LEFT JOIN sys_group_member b ON a.user_id = b.user_id
+			LEFT JOIN sys_group AS c ON c.group_id = b.group_id
+			LEFT JOIN sys_group_member_position mp ON a.user_id = mp.user_id AND mp.group_id = b.group_id
+			LEFT JOIN sys_position pos ON mp.position_id = pos.position_id
+			LEFT JOIN sys_user_role AS rom ON rom.user_id = a.user_id
+			LEFT JOIN sys_role AS ro ON ro.role_id = rom.role_id
+			LEFT JOIN scyf_risk_point_scene_person rpwp ON rpwp.user_id = a.user_id
+			AND rpwp.risk_point_id = #{riskPointId}
+		<where>
+			1 = 1
+			<if test="keyword != null and keyword != ''">
+				and (a.login_name like "%"#{keyword}"%"
+				or a.user_name like "%"#{keyword}"%"
+				or a.user_email like "%"#{keyword}"%"
+				or pos.position_title like "%"#{keyword}"%"
+				or ro.role_name like "%"#{keyword}"%"
+				or a.user_mobile like "%"#{keyword}"%")
+			</if>
+
+			<if test="companyId != null">
+				and a.company_id = #{companyId}
+			</if>
+			<if test="groupId != null and groupId != '' ">
+				AND FIND_IN_SET(c.group_id ,fu_getChildrenGroup(#{groupId}))
+			</if>
+		</where>
+		group by a.user_id
+		order by a.user_order
+	</select>
+
+
+    <select id="findById" resultType="com.hngf.entity.sys.User"
+            parameterType="Long">
+
+		SELECT
+			u.user_id,
+			u.login_name,
+			u.user_name,
+			u.user_mobile,
+			u.user_email,
+			u.company_id,
+			u.user_status,
+			u.user_type,
+			u.user_last_ip,
+			u.user_picture,
+			u.user_address,
+			u.company_name,
+			u.user_sex,
+			u.user_intro,
+			u.user_order,
+			u.user_rank,
+			u.user_idcard,
+			u.user_work_type,
+			u.chat_session_token,
+
+			u.wx_open_id,
+			u.created_time,
+			u.updated_time,
+			u.created_by,
+			u.updated_by,
+			ur.role_id,
+			gm.group_id,
+			gmp.position_id,
+			sg.group_name,
+			u.jpush_registration_id  registrationId
+		FROM
+			sys_user u
+			LEFT JOIN sys_user_role ur ON ( ur.user_id = u.user_id )
+			LEFT JOIN sys_group_member gm ON ( gm.user_id = u.user_id AND gm.company_id = u.company_id )
+			LEFT JOIN sys_group_member_position gmp ON ( gmp.company_id = u.company_id AND gmp.user_id = u.user_id )
+			LEFT JOIN sys_group sg ON (gm.group_id=sg.group_id)
+		WHERE
+			u.del_flag = 0
+			AND u.user_id = #{value}
+
+		GROUP BY
+			u.user_id
+	</select>
+
+    <select id="findByLoginName" resultType="com.hngf.entity.sys.User"
+            parameterType="String">
+		select a.*,a.jpush_registration_id as registrationId, IFNULL(c.company_group_id,so.org_group_id) as "companyGroupId"  ,IFNULL(c.company_root_id, so.org_root_id) as "companyRootId" ,gmp.position_id,p.position_title,gmp.group_id,sg.group_name,sr.role_id,sr.role_name from sys_user a
+		left join sys_company c on c.company_id = a.company_id and c.del_flag = 0
+		left join sys_group_member_position gmp on gmp.company_id = a.company_id and gmp.user_id = a.user_id and gmp.del_flag = 0
+		left join sys_position p on p.position_id = gmp.position_id and p.company_id = a.company_id  and p.del_flag = 0
+		left JOIN sys_group sg on sg.group_id=gmp.group_id and sg.del_flag = 0
+		LEFT JOIN sys_user_role sur on sur.user_id=a.user_id  and sur.del_flag = 0
+		LEFT JOIN sys_role sr on sr.role_id=sur.role_id and sr.del_flag = 0
+		LEFT JOIN sys_org so on so.org_id = a.company_id and so.del_flag = 0
+
+		where a.del_flag = 0 and a.login_name = #{value}
+	</select>
+
+    <select id="findAllMenu" resultType="Menu">
+		select m.* from sys_user_role ur
+			LEFT JOIN sys_role_menu rm on ur.role_id = rm.role_id
+			LEFT JOIN sys_menu m on rm.menu_id = m.menu_id
+		where ur.user_id = #{userId} and m.del_flag = 0
+		<if test ="menuType!=null and menuType!=''">
+ 			and m.menu_type  in (${menuType})
+		</if>
+		<if test ="parentId!=null and parentId!=''">
+			and m.menu_parent_id  =#{parentId}
+		</if>
+		group by m.menu_id
+		order by m.menu_parent_id,m.sort_no
+	</select>
+    
+    <select id="findAllPerms" resultType="string">
+		select m.menu_permissions from sys_user_role ur
+			LEFT JOIN sys_role_menu rm on ur.role_id = rm.role_id
+			LEFT JOIN sys_menu m on rm.menu_id = m.menu_id
+		where m.del_flag = 0 and rm.del_flag = 0 and ur.user_id = #{userId}
+	</select>
+
+    <select id="findAllMenuId" resultType="long">
+		select distinct rm.menu_id from sys_user_role ur
+			LEFT JOIN sys_role_menu rm on ur.role_id = rm.role_id
+		where rm.del_flag = 0 and ur.user_id = #{userId}
+	</select>
+	<!--查看用户及用户角色-->
+    <select id="findUserAndRole" resultType="java.util.Map">
+		SELECT
+		a.user_id AS "userId",
+		a.login_name AS "loginName",
+		a.user_mobile AS "userMobile",
+		c.role_id AS "roleId",
+		c.role_name AS "roleName"
+		From sys_user a LEFT JOIN sys_user_role b on a.user_id=b.user_id LEFT JOIN sys_role c on b.role_id=c.role_id
+		WHERE a.user_id=#{userId} and a.del_flag=0 and b.del_flag=0 and c.del_flag=0
+	</select>
+
+    <insert id="add" parameterType="com.hngf.entity.sys.User" useGeneratedKeys="true" keyProperty="userId">
+		INSERT INTO sys_user (
+		login_name
+		,
+		user_name
+		,
+		user_mobile
+		,
+		user_email
+		,
+		company_id
+		,
+		user_status
+		,
+		salt
+		,
+		password
+		,
+		remember_token
+		,
+		user_type
+		,
+		user_last_ip
+		,
+		user_localize
+		,
+		user_picture
+		,
+		user_address
+		,
+		company_name
+		,
+		user_sex
+		,
+		user_intro
+		,
+		user_order
+		,
+		wx_open_id
+		,
+		user_rank
+		,
+		user_idcard
+		,
+		user_work_type
+		,
+		chat_session_token
+		,
+		created_time
+		,
+		created_by
+		,
+		del_flag
+		)
+		VALUES (
+		#{loginName}
+		,
+		#{userName}
+		,
+		#{userMobile}
+		,
+		#{userEmail}
+		,
+		#{companyId}
+		,
+		#{userStatus}
+		,
+		#{salt}
+		,
+		#{password}
+		,
+		#{rememberToken}
+		,
+		#{userType}
+		,
+		#{userLastIp}
+		,
+		#{userLocalize}
+		,
+		#{userPicture}
+		,
+		#{userAddress}
+		,
+		#{companyName}
+		,
+		#{userSex}
+		,
+		#{userIntro}
+		,
+		#{userOrder}
+		,
+		#{wxOpenId}
+		,
+		#{userRank}
+		,
+		#{userIdcard}
+		,
+		#{userWorkType}
+		,
+		#{chatSessionToken}
+		,
+		#{createdTime}
+		,
+		#{createdBy}
+		,
+		#{delFlag}
+		)
+
+	</insert>
+
+    <update id="update" parameterType="com.hngf.entity.sys.User">
+		UPDATE sys_user
+		<trim prefix="set" suffixOverrides=",">
+		<if test="loginName != null and loginName != ''">
+			login_name = #{loginName} ,
+		</if>
+		<if test="userName != null and userName != ''">
+			user_name = #{userName} ,
+		</if>
+		<if test="userMobile != null and userMobile != ''">
+			user_mobile = #{userMobile} ,
+		</if>
+		<if test="userEmail != null and userEmail != ''">
+			user_email = #{userEmail} ,
+		</if>
+		<if test="companyId != null and companyId != ''">
+			company_id = #{companyId} ,
+		</if>
+		<if test="userStatus != null and userStatus != ''">
+			user_status = #{userStatus} ,
+		</if>
+		<if test="salt != null and salt != ''">
+			salt = #{salt} ,
+		</if>
+		<if test="password != null and password != ''">
+			password = #{password} ,
+		</if>
+		<if test="rememberToken != null and rememberToken != ''">
+			remember_token = #{rememberToken} ,
+		</if>
+		<if test="userType != null and userType != ''">
+			user_type = #{userType} ,
+		</if>
+		<if test="userLastIp != null and userLastIp != ''">
+			user_last_ip = #{userLastIp} ,
+		</if>
+		<if test="userLocalize != null and userLocalize != ''">
+			user_localize = #{userLocalize} ,
+		</if>
+		<if test="userPicture != null and userPicture != ''">
+			user_picture = #{userPicture} ,
+		</if>
+		<if test="userAddress != null and userAddress != ''">
+			user_address = #{userAddress} ,
+		</if>
+		<if test="companyName != null and companyName != ''">
+			company_name = #{companyName} ,
+		</if>
+		<if test="userSex != null and userSex != ''">
+			user_sex = #{userSex} ,
+		</if>
+		<if test="userIntro != null and userIntro != ''">
+			user_intro = #{userIntro} ,
+		</if>
+		<if test="userOrder != null and userOrder != ''">
+			user_order = #{userOrder} ,
+		</if>
+		<if test="wxOpenId != null and wxOpenId != ''">
+			wx_open_id = #{wxOpenId} ,
+		</if>
+		<if test="userRank != null and userRank != ''">
+			user_rank = #{userRank} ,
+		</if>
+		<if test="userIdcard != null and userIdcard != ''">
+			user_idcard = #{userIdcard} ,
+		</if>
+		<if test="userWorkType != null and userWorkType != ''">
+			user_work_type = #{userWorkType} ,
+		</if>
+		<if test="chatSessionToken != null and chatSessionToken != ''">
+			chat_session_token = #{chatSessionToken} ,
+		</if>
+		<if test="updatedTime != null">
+			updated_time = #{updatedTime},
+		</if>
+		<if test="updatedBy != null and updatedBy != ''">
+			updated_by = #{updatedBy},
+		</if>
+		<if test=" null != registrationId and '' != registrationId ">
+			jpush_registration_id = #{registrationId},
+		</if>
+		</trim>
+		where user_id = #{userId}
+	</update>
+
+	<!--修改用户账号信息-->
+	<update id="updateUser" parameterType="com.hngf.entity.sys.User">
+		UPDATE sys_user
+		<trim suffixOverrides=",">
+			<set>
+		<if test="loginName != null and loginName != ''">
+			login_name = #{loginName} ,
+		</if>
+		<if test="userMobile != null and userMobile != ''">
+			user_mobile = #{userMobile} ,
+		</if>
+		<if test="updatedBy != null and updatedBy != ''">
+			updated_by = #{updatedBy},
+		</if>
+		<if test="updatedTime != null">
+			updated_time = #{updatedTime}
+		</if>
+			</set>
+		</trim>
+		where user_id = #{userId} and del_flag=0
+	</update>
+
+    <update id="resetPassword" parameterType="Map">
+		UPDATE sys_user SET
+		password = #{password},
+		salt = #{salt}
+		where user_id = #{userId}
+	</update>
+
+    <update id="updateStatus" parameterType="Map">
+		UPDATE sys_user SET
+		user_status = #{userStatus}
+		where user_id = #{userId}
+	</update>
+
+    <update id="deleteById" parameterType="Long">
+		UPDATE sys_user SET
+		del_flag = 1
+		where user_id = #{id}
+	</update>
+
+    <update id="deleteByCompanyIds">
+		UPDATE sys_user
+        SET del_flag = 1
+        WHERE FIND_IN_SET(company_id, #{value})
+	</update>
+
+    <update id="deleteByIds" parameterType="java.util.List">
+        UPDATE sys_user SET
+        del_flag = 1
+        where user_id in
+        <foreach collection="ids" item="id" open="(" close=")"
+                 separator="," index="idx">
+            #{id}
+        </foreach>
+    </update>
+
+    <update id="updatePassword">
+        update sys_user  set password = #{newPassword}
+        where user_id in (
+        	select * from (select user_id from sys_user where user_id= #{userId} and password = #{password}) a
+    	)
+    </update>
+	<!--检查账户或用户名是否存在-->
+    <select id="checkUserMessage" resultType="Integer">
+		SELECT
+		count(*)
+		FROM
+		sys_user
+		<where>
+			1=1 AND del_flag = 0
+			<if test="loginName != null and loginName != ''">
+				AND login_name = #{loginName,jdbcType=VARCHAR}
+			</if>
+			<if test="userMobile != null and userMobile != ''">
+				AND user_mobile = #{userMobile ,jdbcType=VARCHAR}
+			</if>
+		</where>
+	</select>
+	<!--检查账户或用户名是否存在-->
+	<select id="checkUserExists" resultType="Integer" parameterType="Map">
+		SELECT
+		count(1)
+		FROM
+		sys_user
+		<where>
+			del_flag = 0
+			<if test="loginName != null and loginName != ''">
+				AND login_name = #{loginName,jdbcType=VARCHAR}
+			</if>
+			<if test="userMobile != null and userMobile != ''">
+				AND user_mobile = #{userMobile ,jdbcType=VARCHAR}
+			</if>
+			<if test="companyId != null">
+				AND company_id = #{companyId, jdbcType=BIGINT}
+			</if>
+			<if test="userId != null">
+				AND user_id != #{userId, jdbcType=BIGINT}
+			</if>
+		</where>
+	</select>
+	<!--修改用户角色-->
+	<update id="updateUserRole">
+		UPDATE sys_user_role SET role_id=#{roleId}
+		WHERE user_id=#{userId} AND del_flag=0
+	</update>
+
+	<select id="findTokenById" resultType="UserTokenDto">
+		select
+		 	a.user_id,
+			a.api_token,
+			a.api_expire_time,
+			a.api_update_time
+		from
+			sys_user a
+		where
+			a.user_id = #{value}
+	</select>
+
+	<update id="updateToken" parameterType="UserTokenDto">
+		UPDATE sys_user a
+		<trim prefix="set" suffixOverrides=",">
+			<if test="apiToken != null and apiToken != ''">
+				a.api_token = #{apiToken},
+			</if>
+			<if test="apiExpireTime != null">
+				a.api_expire_time = #{apiExpireTime},
+			</if>
+			<if test="apiUpdateTime != null">
+				a.api_update_time = #{apiUpdateTime},
+			</if>
+		</trim>
+		where user_id = #{userId}
+	</update>
+
+</mapper>

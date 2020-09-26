@@ -1,0 +1,234 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.hngf.mapper.risk.RiskPointMapMapper">
+
+    <!--删除保存过的风险点位置-->
+    <update id="del">
+        UPDATE scyf_risk_point_map SET del_flag=1 where risk_point_id=#{riskPointId} and company_id=#{companyId}
+    </update>
+
+
+    <select id="findList" resultType="RiskPointMap">
+		select * from
+		scyf_risk_point_map
+		where del_flag = 0
+	</select>
+
+    <select id="findById" resultType="RiskPointMap"
+            parameterType="Long">
+		select * from scyf_risk_point_map
+		where del_flag = 0 and point_map_id = #{id}
+	</select>
+    <!--根据风险点Id 获取该风险点位置-->
+    <select id="getRiskPointId" resultType="com.hngf.entity.risk.RiskPointMap">
+        SELECT
+        *
+        FROM scyf_risk_point_map WHERE  del_flag = 0 and risk_point_id =#{riskPointId}
+    </select>
+    <!--可视化编辑 获取地图上风险点-->
+    <select id="getMapPoints" resultType="java.util.Map">
+        SELECT
+        a.risk_point_id AS "riskPointId",
+        b.risk_point_name AS "riskPointName",
+        b.risk_point_level as riskPointLevel,
+        a.map_name AS "mapName",
+        a.map_data AS "mapData",
+        a.map_type AS "mapType"
+        FROM scyf_risk_point_map a LEFT JOIN scyf_risk_point b on a.risk_point_id=b.risk_point_id
+        <where>
+            a.del_flag=0 and  b.del_flag=0
+            <if test="mapId != null and mapId != ''">
+                and  a.map_id = #{mapId}
+            </if>
+            <if test="companyId != null and companyId != ''">
+                and  a.company_id = #{companyId}
+            </if>
+            <if test="riskPointType != null and riskPointType != ''">
+                and b.risk_point_type = #{riskPointType}
+            </if>
+            <if test="groupId != null and groupId != ''">
+                AND FIND_IN_SET(b.duty_group_id ,fu_getChildrenGroup(#{groupId}))
+            </if>
+            <if test="isGreatDangerSrc != null and isGreatDangerSrc != ''">
+                and b.is_great_danger_src = #{isGreatDangerSrc}
+            </if>
+        </where>
+    </select>
+
+    <!--可视化编辑 获取地图上风险点-->
+    <select id="getRiskPointMap" resultType="Map">
+        SELECT
+        b.map_data AS mapData,
+        a.risk_point_name AS riskPointName,
+        b.map_type AS mapType,
+        a.risk_point_id as riskPointId,
+        b.point_map_id AS pointMapId,
+        b.map_id AS mapId,
+        a.risk_point_img AS riskPointImg,
+        sds.risk_danger_img AS riskDangerImg,
+        a.risk_point_level riskPointLevel,
+        a.is_great_danger_src AS isGreatDangerSrc,
+        IFNULL(a.hdanger_number,0) AS hdangerNumber,
+        a.risk_number AS riskNumber,
+        a.is_ip_camera as isIpCamera,
+        a.is_out_of_control AS isOutOfControl,
+        group_concat( DISTINCT acc.user_name ) AS dutyPersonNames,
+        group_concat( DISTINCT pl.user_id ) AS dutyPersonIds,
+        (
+        SELECT
+        MIN( hidden_level)
+        FROM
+        scyf_hidden ehd
+        WHERE
+        ehd.risk_point_id = a.risk_point_id
+        AND ehd.company_id = company_id
+        AND ehd.status IN ( 2, 3, 5 )
+        ) AS hiddenLevel,
+        sg.group_name as groupName
+        FROM
+        ( scyf_risk_point a, scyf_risk_point_map b, sys_group sg )
+        LEFT JOIN scyf_risk_source sds ON a.danger_src_id = sds.risk_danger_id
+        LEFT JOIN scyf_risk_point_person_liable pl ON ( a.company_id = pl.company_id AND a.risk_point_id = pl.risk_point_id )
+        LEFT JOIN sys_user acc ON (pl.user_id = acc.user_id AND pl.company_id = acc.company_id )
+        where
+        IF(a.is_active=1, (a.end_time> now() OR a.end_time is null ), '1=1' )
+        and a.is_active=1
+        and a.risk_point_id = b.risk_point_id
+        AND a.del_flag = 0
+        and sg.group_id=a.duty_group_id
+        and b.del_flag=0
+
+        <if test="companyId != null and companyId != ''">
+            and  a.company_id = #{companyId}
+        </if>
+        <if test="groupId != null and groupId != ''">
+            AND FIND_IN_SET(a.duty_group_id ,fu_getChildrenGroup(#{groupId}))
+        </if>
+        <if test="mapId != null and mapId != ''">
+            and b.map_id = #{mapId}
+        </if>
+        <if test="riskPointType != null and riskPointType != ''">
+            and a.risk_point_type = #{riskPointType}
+        </if>
+        <if test="riskPointLevel != null and riskPointLevel != ''">
+            and a.risk_point_level = #{riskPointLevel}
+        </if>
+        <if test="riskPointId != null">
+            and a.risk_point_id = #{riskPointId}
+        </if>
+        <if test="isGreatDangerSrc != null and isGreatDangerSrc != ''">
+            and a.is_great_danger_src = #{isGreatDangerSrc}
+        </if>
+
+        GROUP BY b.map_id,a.risk_point_id
+    </select>
+
+    <insert id="add" parameterType="RiskPointMap">
+		INSERT INTO scyf_risk_point_map (
+		map_id
+		, company_id
+		, risk_point_id
+		, risk_point_type
+		, map_name
+		, map_data
+		, map_type
+		, create_time
+		, create_by
+		, del_flag
+		)
+		VALUES (
+		#{mapId}
+		, #{companyId}
+		, #{riskPointId}
+		, #{riskPointType}
+		, #{mapName}
+		, #{mapData}
+		, #{mapType}
+		, #{createTime}
+		, #{createBy}
+		, 0
+		)
+
+	</insert>
+
+    <insert id="addForeach" parameterType="List">
+		INSERT INTO scyf_risk_point_map (
+		map_id
+		, company_id
+		, risk_point_id
+		, risk_point_type
+		, map_name
+		, map_data
+		, map_type
+		, create_time
+		, create_by
+		, del_flag
+		)
+		VALUES
+        <foreach collection="list" item="item" index="index" separator=",">
+            (
+            #{item.mapId},
+            #{item.companyId},
+            #{item.riskPointId},
+            #{item.riskPointType},
+            #{item.mapName},
+            #{item.mapData},
+            #{item.mapType},
+            #{item.createTime},
+            #{item.createBy},
+            0
+            )
+        </foreach>
+
+	</insert>
+
+    <update id="update" parameterType="RiskPointMap">
+        UPDATE scyf_risk_point_map SET
+        <if test="mapId != null and mapId != ''">
+            map_id = #{mapId} ,
+        </if>
+        <if test="companyId != null and companyId != ''">
+            company_id = #{companyId} ,
+        </if>
+        <if test="riskPointId != null and riskPointId != ''">
+            risk_point_id = #{riskPointId} ,
+        </if>
+        <if test="riskPointType != null and riskPointType != ''">
+            risk_point_type = #{riskPointType} ,
+        </if>
+        <if test="mapName != null and mapName != ''">
+            map_name = #{mapName} ,
+        </if>
+        <if test="mapData != null and mapData != ''">
+            map_data = #{mapData} ,
+        </if>
+        <if test="mapType != null and mapType != ''">
+            map_type = #{mapType} ,
+        </if>
+        <if test="updatedTime != null">
+            updated_time = #{updatedTime} ,
+        </if>
+        <if test="updatedBy != null">
+            updated_by = #{updatedBy}
+        </if>
+        where point_map_id = #{pointMapId}
+    </update>
+
+    <update id="deleteById" parameterType="Long">
+		UPDATE scyf_risk_point_map SET
+		del_flag = 1
+		where point_map_id = #{id}
+	</update>
+
+    <update id="deleteByIds" parameterType="java.util.List">
+        UPDATE scyf_risk_point_map SET
+        del_flag = 1
+        where point_map_id in
+        <foreach collection="ids" item="id" open="(" close=")"
+                 separator="," index="idx">
+            #{id}
+        </foreach>
+    </update>
+
+</mapper>

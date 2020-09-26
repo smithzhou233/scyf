@@ -1,0 +1,216 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.hngf.mapper.score.ScoreModelMapper">
+   <sql id="Base_Column_List">
+                score_model_id,
+				company_id,
+				score_item_name,
+				score_item_desc,
+				score_parent_id,
+				score_model_type,
+				score_model_status,
+				start_time_str,
+				start_time,
+				end_time,
+				init_score,
+				created_time,
+				created_by,
+				updated_time,
+				updated_by,
+				del_flag
+   </sql>
+
+    <select id="findList" resultType="com.hngf.entity.score.ScoreModel">
+		select * from scyf_score_model
+        where del_flag = 0
+	</select>
+    <!--通过企业id查询绩效考核配置表-->
+    <select id="getModelSetting" resultType="ScoreModel">
+        select
+        <include refid="Base_Column_List"/>
+        from scyf_score_model
+        where del_flag = 0
+        and score_parent_id = 0
+        <if test="companyId != null">
+            and company_id = #{companyId}
+        </if>
+        <if test="scoreModelStatus != null">
+            and score_model_status = #{scoreModelStatus}
+        </if>
+        <if test="scoreModelType != null">
+            and score_model_type = #{scoreModelType}
+        </if>
+    </select>
+    <!--查询当前企业下面绩效考核配置的所有信息-->
+    <select id="getModelSettingList" resultType="ScoreModel" parameterType="java.util.Map">
+            select
+            <include refid="Base_Column_List"/>
+            from scyf_score_model
+            <where>
+                del_flag = 0
+                <if test="companyId != null">
+                    and company_id=#{companyId}
+                </if>
+                <if test="scoreParentId != null">
+                    and score_parent_id=#{scoreParentId}
+                </if>
+                <if test="scoreModelStatus != null">
+                    and score_model_status=#{scoreModelStatus}
+                </if>
+                <if test="year != null and year != ''">
+                    and  ( DATE_FORMAT( start_time, '%Y' ) ) = #{year}
+                </if>
+            </where>
+            order by start_time
+    </select>
+    <!--通过企业id  父级企业id 年份  查询初始化分数-->
+    <select id="getThisYearinitScore" resultType="ScoreModel">
+        select
+        <include refid="Base_Column_List"/>
+        from scyf_score_model
+        where company_id = #{companyId}
+        <if test="scoreParentId != null and scoreParentId != ''">
+            and score_parent_id = #{scoreParentId}
+        </if>
+        <if test="year != null and year != ''">
+            and ( DATE_FORMAT( created_time, '%Y' ) ) = #{year}
+        </if>
+        group by score_parent_id
+        limit 1
+    </select>
+    <!--删除当前企业当前年份下级考核数据-->
+    <delete id="deleteByParentId">
+        delete from scyf_score_model
+        where score_parent_id = #{scoreParentId}
+        <if test="year != null and year != ''">
+            and ( DATE_FORMAT( start_time, '%Y' ) ) = #{year}
+        </if>
+    </delete>
+    <select id="findById" resultType="com.hngf.entity.score.ScoreModel" parameterType="Long">
+		select * from scyf_score_model
+        where del_flag = 0 and score_model_id = #{id}
+	</select>
+    <select id="queryByModelSettingPage" resultType="com.hngf.entity.score.ScoreModel">
+       select
+        *
+        from scyf_score_model
+        where company_id = #{companyId}
+        and score_parent_id = 0
+        order by score_model_type
+    </select>
+
+    <insert id="add" parameterType="com.hngf.entity.score.ScoreModel">
+        INSERT INTO scyf_score_model (
+                                                                company_id
+        ,                                score_item_name
+        ,                                score_item_desc
+        ,                                score_parent_id
+        ,                                score_model_type
+        ,                                score_model_status
+        ,                                start_time_str
+        ,                                start_time
+        ,                                end_time
+        ,                                init_score
+        ,                                created_time
+        ,                                created_by
+        ,                                updated_time
+        ,                                updated_by
+        ,                                del_flag
+                                )
+        VALUES (
+                                                            #{companyId}
+        ,                                  #{scoreItemName}
+        ,                                  #{scoreItemDesc}
+        ,                                  #{scoreParentId}
+        ,                                  #{scoreModelType}
+        ,                                  #{scoreModelStatus}
+        ,                                  #{startTimeStr}
+        ,                                  #{startTime}
+        ,                                  #{endTime}
+        ,                                  #{initScore}
+        ,                                  #{createdTime}
+        ,                                  #{createdBy}
+        ,                                  #{updatedTime}
+        ,                                  #{updatedBy}
+        ,                                  #{delFlag}
+                                  )
+
+    </insert>
+
+    <update id="update" parameterType="com.hngf.entity.score.ScoreModel">
+                  UPDATE scyf_score_model
+                  <trim suffixOverrides=",">
+                      <set>
+                        <if test="companyId != null">
+                        company_id = #{companyId} ,
+                        </if>
+                        <if test="scoreItemName != null and scoreItemName != ''">
+                        score_item_name = #{scoreItemName} ,
+                        </if>
+                        <if test="scoreItemDesc != null and scoreItemDesc != ''">
+                        score_item_desc = #{scoreItemDesc} ,
+                        </if>
+                        <if test="scoreParentId != null and scoreParentId != ''">
+                        score_parent_id = #{scoreParentId} ,
+                        </if>
+                        <if test="scoreModelType != null">
+                        score_model_type = #{scoreModelType} ,
+                        </if>
+                        <if test="scoreModelStatus != null">
+                        score_model_status = #{scoreModelStatus} ,
+                        </if>
+                        <if test="startTimeStr != null and startTimeStr != ''">
+                        start_time_str = #{startTimeStr} ,
+                        </if>
+                        <if test="startTime != null">
+                        start_time = #{startTime} ,
+                        </if>
+                        <if test="endTime != null">
+                        end_time = #{endTime} ,
+                        </if>
+                        <if test="initScore != null">
+                        init_score = #{initScore} ,
+                        </if>
+                        <if test="createdTime != null">
+                        created_time = #{createdTime} ,
+                        </if>
+                        <if test="createdBy != null and createdBy != ''">
+                        created_by = #{createdBy} ,
+                        </if>
+                        <if test="updatedTime != null">
+                        updated_time = #{updatedTime} ,
+                        </if>
+                        <if test="updatedBy != null and updatedBy != ''">
+                        updated_by = #{updatedBy} ,
+                        </if>
+                        <if test="delFlag != null and delFlag != ''">
+                        del_flag = #{delFlag}
+                        </if>
+                      </set>
+                  </trim>
+                            where score_model_id = #{scoreModelId}
+    </update>
+
+    <update id="deleteById" parameterType="Long">
+        UPDATE scyf_score_model SET
+        del_flag = 1
+        where score_model_id = #{id}
+    </update>
+
+    <update id="deleteByIds" parameterType="java.util.List">
+        UPDATE scyf_score_model SET
+        del_flag = 1
+        where score_model_id in
+        <foreach collection="ids" item="id" open="(" close=")" separator="," index="idx">
+            #{id}
+        </foreach>
+    </update>
+
+    <update id="deleteBatchByCompanyId" parameterType="java.lang.Long">
+        UPDATE scyf_score_model SET
+        del_flag = 1 , updated_by = #{updatedBy} ,updated_time = now()
+        WHERE company_id = #{companyId}
+    </update>
+
+</mapper>

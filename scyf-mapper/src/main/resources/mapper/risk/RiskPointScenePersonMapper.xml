@@ -1,0 +1,136 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper
+        namespace="com.hngf.mapper.risk.RiskPointScenePersonMapper">
+
+
+    <select id="findList" resultType="RiskPointScenePerson">
+		select * from
+		scyf_risk_point_scene_person
+		where del_flag = 0
+	</select>
+
+    <select id="findByMap" resultType="RiskPointScenePerson">
+		SELECT
+            rpwp.status    AS "status",
+            rpwp.user_id AS "userId",
+            rpwp.risk_point_id AS "riskPointId",
+            rpwp.company_id AS "companyId",
+            a.user_name AS "userName",
+            a.user_picture AS "userPicture",
+            c.group_name AS "groupName"
+        FROM
+            scyf_risk_point_scene_person rpwp
+            LEFT JOIN sys_user a ON rpwp.user_id = a.user_id
+            LEFT JOIN sys_group_member b ON a.user_id = b.user_id
+            LEFT JOIN sys_group AS c ON c.group_id = b.group_id
+        WHERE rpwp.del_flag = 0
+        <if test="companyId != null">
+            and rpwp.company_id = #{companyId}
+        </if>
+        <if test="riskPointId != null">
+            and rpwp.risk_point_id = #{riskPointId}
+        </if>
+        <if test="status != null">
+            and rpwp.status = #{status}
+        </if>
+	</select>
+
+    <select id="findById" resultType="RiskPointScenePerson"
+            parameterType="Long">
+		select * from scyf_risk_point_scene_person
+		where del_flag = 0 and risk_point_id = #{id}
+	</select>
+
+    <select id="findByAccountAndRiskpointId" resultType="RiskPointScenePerson">
+		select * from scyf_risk_point_scene_person
+		where del_flag = 0
+		and risk_point_id = #{riskPointId}
+		and user_id = #{userId}
+        <if test="companyId != null">
+            and rpwp.company_id = #{companyId}
+        </if>
+	</select>
+
+    <insert id="add" parameterType="RiskPointScenePerson">
+		INSERT INTO scyf_risk_point_scene_person (
+		risk_point_id
+		, company_id
+		, user_id
+		, status
+		, del_flag
+		)
+		VALUES (
+		#{riskPointId}
+		, #{companyId}
+		, #{userId}
+		, #{status}
+		, 0
+		)
+
+	</insert>
+
+    <insert id="addForeach" parameterType="List" useGeneratedKeys="false">
+		INSERT INTO scyf_risk_point_scene_person (
+            risk_point_id
+            , company_id
+            , user_id
+            , status
+            , del_flag
+		)
+		VALUES
+
+        <foreach collection="list" item="item" index="index" separator=",">
+            (
+                #{item.riskPointId},
+                #{item.companyId},
+                #{item.userId},
+                #{item.status},
+                0
+            )
+        </foreach>
+	</insert>
+
+    <update id="update" parameterType="RiskPointScenePerson">
+        UPDATE scyf_risk_point_scene_person SET
+            status = #{status}
+        where
+        risk_point_id = #{riskPointId}
+        <if test="userId != null ">
+            and user_id = #{userId}
+        </if>
+        <if test="companyId != null ">
+            and company_id = #{companyId}
+        </if>
+    </update>
+
+    <update id="deleteById" parameterType="Long">
+		UPDATE scyf_risk_point_scene_person SET
+		del_flag = 1
+		where risk_point_id = #{id}
+	</update>
+
+    <update id="deleteByIds" parameterType="java.util.List">
+        UPDATE scyf_risk_point_scene_person SET
+        del_flag = 1
+        where risk_point_id in
+        <foreach collection="ids" item="id" open="(" close=")"
+                 separator="," index="idx">
+            #{id}
+        </foreach>
+    </update>
+
+    <update id="deleteByMap" parameterType="Map">
+        delete from scyf_risk_point_scene_person
+        where
+         risk_point_id = #{riskPointId}
+        <if test="companyId != null and companyId != ''">
+            and company_id = #{companyId}
+        </if>
+        <if test="userId != null and userId != ''">
+            and user_id = #{userId}
+        </if>
+    </update>
+
+</mapper>

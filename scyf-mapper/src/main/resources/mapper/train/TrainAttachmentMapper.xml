@@ -1,0 +1,216 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.hngf.mapper.train.TrainAttachmentMapper">
+
+    <sql id="TrainAttachmentColumns">
+        a.train_key_id,
+        a.train_attachment_name,
+        a.attachment_type,
+        a.train_extend_name,
+        a.train_save_path,
+        a.train_thumbnail_url,
+        a.file_size,
+        a.mime_type,
+        a.image_width,
+        a.image_height,
+        a.created_time,
+        a.updated_time,
+        a.created_by,
+        a.updated_by,
+        a.del_flag
+    </sql>
+
+    <select id="findList" resultType="TrainAttachment">
+        select
+            <include refid="TrainAttachmentColumns"/>
+        from
+            scyf_train_attachment a
+        where
+            a.del_flag = 0
+	</select>
+
+    <select id="findById" resultType="TrainAttachment" parameterType="Long">
+        select
+            a.train_attachment_id as trainAttachmentId ,
+            a.train_key_id as trainKeyId ,
+            a.train_attachment_name as trainAttachmentName ,
+            a.attachment_type as attachmentType ,
+            a.train_extend_name as trainExtendName ,
+            a.train_save_path as trainSavePath ,
+            a.train_thumbnail_url as trainThumbnailUrl ,
+            a.file_size as fileSize ,
+            a.mime_type as mimeType ,
+            a.image_width as imageWidth ,
+            a.image_height as imageHeight ,
+            DATE_FORMAT( a.created_time, '%Y-%m-%d %H:%i' ) as createdTimeStr ,
+            a.created_time as createdTime ,
+            DATE_FORMAT( a.updated_time, '%Y-%m-%d %H:%i' ) as updatedTimeStr ,
+            a.updated_time as updatedTime ,
+            a.created_by as createdBy ,
+            a.updated_by as updatedBy ,
+            a.del_flag as delFlag
+        from
+            scyf_train_attachment a
+        where
+            a.train_attachment_id = #{id} and a.del_flag = 0
+        order by created_time desc LIMIT  1
+	</select>
+
+    <insert id="add" parameterType="TrainAttachment" useGeneratedKeys="true" keyProperty="trainAttachmentId">
+        INSERT INTO scyf_train_attachment (
+            train_key_id,
+            train_attachment_name,
+            attachment_type,
+            train_extend_name,
+            train_save_path,
+            train_thumbnail_url,
+            file_size,
+            mime_type,
+            image_width,
+            image_height,
+            created_time,
+            updated_time,
+            created_by,
+            updated_by,
+            del_flag)
+        VALUES (
+            #{trainKeyId},
+            #{trainAttachmentName},
+            #{attachmentType},
+            #{trainExtendName},
+            #{trainSavePath},
+            #{trainThumbnailUrl},
+            #{fileSize},
+            #{mimeType},
+            #{imageWidth},
+            #{imageHeight},
+            #{createdTime},
+            #{updatedTime},
+            #{createdBy},
+            #{updatedBy},
+            #{delFlag}
+        )
+    </insert>
+
+    <update id="update" parameterType="TrainAttachment">
+        UPDATE scyf_train_attachment a
+        <trim prefix="set" suffixOverrides=","  suffix="where train_attachment_id = #{trainAttachmentId}">
+            <if test=" null != trainKeyId ">
+                a.train_key_id = #{trainKeyId},
+            </if>
+            <if test=" null != trainAttachmentName ">
+                a.train_attachment_name = #{trainAttachmentName},
+            </if>
+            <if test=" null != attachmentType ">
+                a.attachment_type = #{attachmentType},
+            </if>
+            <if test=" null != trainExtendName ">
+                a.train_extend_name = #{trainExtendName},
+            </if>
+            <if test=" null != trainSavePath ">
+                a.train_save_path = #{trainSavePath},
+            </if>
+            <if test=" null != trainThumbnailUrl ">
+                a.train_thumbnail_url = #{trainThumbnailUrl},
+            </if>
+            <if test=" null != fileSize ">
+                a.file_size = #{fileSize},
+            </if>
+            <if test=" null != mimeType ">
+                a.mime_type = #{mimeType},
+            </if>
+            <if test=" null != imageWidth ">
+                a.image_width = #{imageWidth},
+            </if>
+            <if test=" null != imageHeight ">
+                a.image_height = #{imageHeight},
+            </if>
+            <if test=" null != createdTime ">
+                a.created_time = #{createdTime},
+            </if>
+            <if test=" null != updatedTime ">
+                a.updated_time = #{updatedTime},
+            </if>
+            <if test=" null != createdBy ">
+                a.created_by = #{createdBy},
+            </if>
+            <if test=" null != updatedBy ">
+                a.updated_by = #{updatedBy},
+            </if>
+            <if test=" null != delFlag ">
+                a.del_flag = #{delFlag},
+            </if>
+        </trim>
+    </update>
+
+    <update id="deleteById" parameterType="Long">
+        UPDATE scyf_train_attachment a SET
+            a.del_flag = 1, a.updated_by = #{updatedBy}, a.updated_time = now()
+        where a.train_attachment_id = #{id}
+    </update>
+
+    <update id="deleteByIds" parameterType="java.util.List">
+        UPDATE scyf_train_attachment a SET
+            a.del_flag = 1, a.updated_by = #{updatedBy}, a.updated_time = now()
+        where a.train_attachment_id in
+        <foreach collection="ids" item="id" open="(" close=")" separator="," index="idx">
+            #{id}
+        </foreach>
+    </update>
+
+    <!--新增培训内容附件-->
+    <insert id="addBatch" parameterType="List">
+         INSERT INTO scyf_train_attachment (
+                train_key_id,
+                attachment_type,
+                train_attachment_name,
+                train_extend_name,
+                train_save_path,
+                file_size,
+                created_by,
+                created_time,
+                updated_by,
+                updated_time,
+                del_flag
+        )VALUES
+        <foreach collection="trainAttachmentList" item="item" index="index"   separator="," >
+            (
+                #{item.trainKeyId},
+                #{item.attachmentType},
+                #{item.trainAttachmentName},
+                #{item.trainExtendName},
+                #{item.trainSavePath},
+                #{item.fileSize},
+                #{item.createdBy},
+                #{item.createdTime},
+                #{item.updatedBy},
+                #{item.updatedTime},
+                0
+            )
+        </foreach>
+    </insert>
+
+    <update id="removeByTrainKeyId" >
+        UPDATE scyf_train_attachment a SET
+            a.del_flag = 1, a.updated_by = #{updatedBy}, a.updated_time = now()
+        where a.train_key_id = #{trainKeyId} and a.attachment_type = #{attachmentType}
+    </update>
+
+    <select id="findListByTrainKeyId" parameterType="Long" resultType="com.hngf.entity.train.TrainAttachment">
+        select
+        a.train_key_id,
+        a.train_attachment_name,
+        a.attachment_type,
+        a.train_extend_name,
+        a.train_save_path,
+        a.train_thumbnail_url,
+        a.file_size,
+        a.mime_type,
+        a.image_width,
+        a.image_height
+        from scyf_train_attachment a
+        where a.train_key_id = #{trainKeyId} and a.del_flag = 0
+    </select>
+
+</mapper>

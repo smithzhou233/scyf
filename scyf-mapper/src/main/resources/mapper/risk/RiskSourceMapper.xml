@@ -1,0 +1,858 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.hngf.mapper.risk.RiskSourceMapper">
+
+    <!--查询 分级管控检查项-->
+    <resultMap id="riskInspectItemMap" type="RiskInspectItemDto">
+        <id column="check_item_def_id" property="checkItemDefId" />
+        <result column="check_def_id" property="checkDefId" />
+        <result column="check_item_def_name" property="checkItemDefName" />
+        <result column="riskLevel" property="riskLevel" />
+        <result column="check_item_def_desc" property="checkItemDefDesc" />
+        <result column="check_item_def_method" property="checkItemDefMethod" />
+        <result column="check_item_def_rule" property="checkItemDefRule" />
+        <result column="punish_item_def_rule" property="punishItemDefRule" />
+        <collection property="inspectItemes"  ofType="InspectItemContentDto">
+            <id column="c_check_item_def_id" property="checkItemDefId" />
+            <result column="c_check_def_id" property="checkDefId" />
+            <result column="c_check_item_def_name" property="checkItemDefName" />
+            <result column="c_check_item_def_desc" property="checkItemDefDesc" />
+            <result column="c_check_item_def_method" property="checkItemDefMethod" />
+            <result column="c_check_item_def_rule" property="checkItemDefRule" />
+            <result column="c_punish_item_def_rule" property="punishItemDefRule" />
+            <result column="c_checkResult" property="checkResult" />
+            <result column="c_checkRecordLogId" property="checkRecordLogId" />
+            <result column="c_checkRecordNo" property="checkRecordNo" />
+        </collection>
+    </resultMap>
+
+    <sql id="RiskSourceColumns">
+        eds.risk_danger_id AS  "riskDangerId",
+        eds.company_id  AS  "companyId",
+        eds.parent_risk_danger_id AS "parentRiskDangerId",
+        eds.risk_danger_type AS "riskDangerType",
+        eds.risk_danger_name AS "riskDangerName",
+        eds.risk_danger_level AS "riskDangerLevel",
+        eds.risk_danger_code AS "riskDangerCode",
+        eds.risk_danger_img AS "riskDangerImg",
+        eds.risk_danger_status AS "riskDangerStatus",
+        eds.industry_id AS "industryId",
+        eds.is_fixed AS "isFixed",
+        eds.is_leaf AS "isLeaf",
+        eds.node_left AS "nodeLeft",
+        eds.node_right AS "nodeRight",
+        eds.node_level AS "nodeLevel",
+        eds.root_node AS "rootNode",
+        eds.created_time AS "createdTime",
+        eds.created_by AS "createdBy",
+        eds.updated_time AS"updatedTime",
+        eds.updated_by AS "updatedBy",
+        eds.del_flag AS "delFlag"
+        </sql>
+
+    <select id="findList" resultType="RiskSourceDto">
+        SELECT
+        <include refid="RiskSourceColumns" />,
+        eds.risk_danger_name AS "label",
+        (SELECT COUNT(*) FROM scyf_risk_source e WHERE e.root_node = eds.risk_danger_id and e.node_level=3 and
+        e.del_flag=0 AND e.company_id=#{companyId}) as "riskCount",
+        (SELECT COUNT(*) FROM scyf_risk_source e1 where e1.parent_risk_danger_id = eds.risk_danger_id and e1.node_level=3
+        and e1.del_flag=0 AND e1.company_id=#{companyId}) as "riskCountParent",
+        (select count(*) from scyf_risk_point_danger_source erpds where erpds.risk_danger_id = eds.risk_danger_id AND
+        erpds.company_id=#{companyId}) as "useCount"
+        FROM
+        scyf_risk_source eds
+        LEFT JOIN scyf_risk_source edsa on eds.company_id=edsa.company_id and edsa.risk_danger_id=eds.parent_risk_danger_id
+        WHERE
+        <![CDATA[
+            eds.node_level <= 2
+        ]]>
+        and eds.del_flag=0
+        and eds.company_id=#{companyId}
+        and (edsa.risk_danger_id is not null OR eds.parent_risk_danger_id=-1)
+        <if test="keyword != null and keyword != ''">
+            and (eds.risk_danger_name like "%"#{keyword}"%")
+        </if>
+        <if test="riskDangerType != null and riskDangerType != '' and riskDangerType != 'null' ">
+            and eds.risk_danger_type = #{riskDangerType}
+        </if>
+        <if test="riskDangerLevel != null and riskDangerLevel != '' and riskDangerLevel != '-1'">
+            and eds.risk_danger_level = #{riskDangerLevel}
+        </if>
+        <if test="nodeLevel != null and nodeLevel != ''">
+            and eds.node_level = #{nodeLevel}
+        </if>
+        GROUP BY eds.risk_danger_id
+        order by eds.risk_danger_level,eds.risk_danger_id asc,eds.root_node asc
+	</select>
+
+    <!--查询 分级管控检查项-->
+    <!--checkResult：0未检查；1检查通过；2检查不通过；3存在隐患；4不涉及；-->
+    <select id="findControlInspectItemList" resultMap="riskInspectItemMap" parameterType="Map">
+        SELECT
+        erk.risk_id AS check_item_def_id,
+        #{inspectDefId} AS check_def_id,
+        erk.risk_name AS check_item_def_name,
+        erk.risk_level AS riskLevel,
+        erk.risk_hram_factor AS check_item_def_desc,
+        erm.risk_measure_id AS c_check_item_def_id,
+        #{inspectDefId} AS c_check_def_id,
+        erm.risk_measure_content AS c_check_item_def_name,
+        erm.risk_measure_desc AS c_check_item_def_desc,
+        ( CASE
+        (select cast(rcrl.inspect_result as SIGNED INTEGER)
+        from scyf_risk_inspect_record_log rcrl
+        where rcrl.risk_measure_id = erm.risk_measure_id
+        <!--<if test="itemDetailId != null and itemDetailId !=  ''">-->
+        <!--and rcrl.item_detail_id = #{itemDetailId}-->
+        <!--</if>-->
+        <if test="inspectDefId != null">
+            and rcrl.schdule_def_id = #{inspectDefId}
+        </if>
+        <!--<if test="checkRecordNo != null">-->
+        <!--and rcrl.check_record_no = #{checkRecordNo}-->
+        <!--</if>-->
+        <if test="scheduleId != null">
+            and rcrl.inspect_schedule_id = #{scheduleId}
+        </if>
+        <if test="riskPointId != null">
+            and rcrl.risk_point_id = #{riskPointId}
+        </if>
+        <if test="checkNumber != null">
+            and rcrl.inspect_number = #{checkNumber}
+        </if>
+        <if test="userId != null">
+            and rcrl.created_by = #{userId}
+        </if>
+        group by rcrl.inspect_record_id
+        order by rcrl.created_time desc
+        limit 1
+        )
+        WHEN 1 THEN 1 WHEN 2 THEN 2 WHEN 3 THEN 3 WHEN 4 THEN 4 ELSE 0 END ) AS c_checkResult,
+        (select rcrl.inspect_record_no
+        from scyf_risk_inspect_record_log rcrl
+        where rcrl.risk_measure_id = erm.risk_measure_id
+        <!--<if test="itemDetailId != null">-->
+        <!--and rcrl.item_detail_id = #{itemDetailId}-->
+        <!--</if>-->
+        <if test="inspectDefId != null">
+            and rcrl.schdule_def_id = #{inspectDefId}
+        </if>
+        <!--<if test="checkRecordNo != null">-->
+        <!--and rcrl.check_record_no = #{checkRecordNo}-->
+        <!--</if>-->
+        <if test="scheduleId != null">
+            and rcrl.inspect_schedule_id = #{scheduleId}
+        </if>
+        <if test="riskPointId != null">
+            and rcrl.risk_point_id = #{riskPointId}
+        </if>
+        <if test="checkNumber != null">
+            and rcrl.inspect_number = #{checkNumber}
+        </if>
+        <if test="userId != null">
+            and rcrl.created_by = #{userId}
+        </if>
+        group by rcrl.inspect_record_id
+        order by rcrl.created_time desc
+        limit 1
+        ) as c_checkRecordNo,
+        ifnull((select rcrl.inspect_record_id
+        from scyf_risk_inspect_record_log rcrl
+        where rcrl.risk_measure_id = erm.risk_measure_id
+        <!--<if test="itemDetailId != null">-->
+        <!--and rcrl.item_detail_id = #{itemDetailId}-->
+        <!--</if>-->
+        <if test="inspectDefId != null">
+            and rcrl.schdule_def_id = #{inspectDefId}
+        </if>
+        <!--<if test="checkRecordNo != null">-->
+        <!--and rcrl.check_record_no = #{checkRecordNo}-->
+        <!--</if>-->
+        <if test="scheduleId != null">
+            and rcrl.inspect_schedule_id = #{scheduleId}
+        </if>
+        <if test="riskPointId != null">
+            and rcrl.risk_point_id = #{riskPointId}
+        </if>
+        <if test="checkNumber != null">
+            and rcrl.inspect_number = #{checkNumber}
+        </if>
+        <if test="userId != null">
+            and rcrl.created_by = #{userId}
+        </if>
+        group by rcrl.inspect_record_id
+        order by rcrl.created_time desc
+        limit 1
+        ), 0)as c_checkRecordLogId
+        FROM
+        scyf_risk_source eds
+        LEFT JOIN scyf_risk erk on (erk.risk_danger_id = eds.risk_danger_id)
+        LEFT JOIN scyf_risk_measure erm on (erk.risk_id = erm.risk_id)
+        WHERE
+        eds.del_flag = 0
+        and erm.del_flag = 0
+        and erk.del_flag = 0
+        and eds.company_id = #{companyId}
+        and erk.company_id = #{companyId}
+        <if test="dangerId != null">
+            and (eds.risk_danger_id = #{dangerId} or eds.parent_risk_danger_id = #{dangerId})
+        </if>
+        <if test="ctlLevel == 3 ">
+            and erk.risk_level in(1,2,3)
+        </if>
+        <if test="ctlLevel == 2 ">
+            and erk.risk_level in(1,2)
+        </if>
+        <if test="ctlLevel == 1 ">
+            and erk.risk_level = 1
+        </if>
+        and erm.company_id = #{companyId}
+        group by erm.risk_measure_id
+        order by erk.risk_level,erm.risk_measure_id
+    </select>
+
+    <!-- 查询 非分级管控检查项-->
+    <!--checkResult：0未检查；1检查通过；2检查不通过；3存在隐患；4不涉及-->
+    <select id="findUnControlInspectItemList" resultMap="riskInspectItemMap" parameterType="Map">
+        select
+        bcid.inspect_item_def_id as check_item_def_id,
+        bcid.inspect_def_id as check_def_id,
+        bcid.inspect_item_def_name as check_item_def_name,
+        0 AS riskLevel,
+        bcid.inspect_item_def_desc as check_item_def_desc,
+        bcid.inspect_item_def_method as check_item_def_method,
+        bcid.inspect_item_def_rule as check_item_def_rule,
+        bcid.penalize_item_def_rule as punish_item_def_rule,
+        c_bcid.inspect_item_def_id as c_check_item_def_id,
+        c_bcid.inspect_def_id as c_check_def_id,
+        c_bcid.inspect_item_def_name as c_check_item_def_name,
+        c_bcid.inspect_item_def_desc as c_check_item_def_desc,
+        c_bcid.inspect_item_def_method as c_check_item_def_method,
+        c_bcid.inspect_item_def_rule as c_check_item_def_rule,
+        c_bcid.penalize_item_def_rule as c_punish_item_def_rule,
+        ( CASE
+        (select rcrl.inspect_result
+        from scyf_risk_inspect_record_log rcrl
+        where rcrl.risk_measure_id = c_bcid.inspect_item_def_id
+        and rcrl.company_id = #{companyId}
+        <if test="inspectDefId != null and inspectDefId != '' and inspectDefId != 0 ">
+            and rcrl.schdule_def_id = #{inspectDefId}
+        </if>
+        <if test="scheduleId != null and scheduleId != '' and scheduleId != 0">
+            and rcrl.inspect_schedule_id = #{scheduleId}
+        </if>
+        <if test="riskPointId != null and riskPointId != '' and riskPointId != 0">
+            and rcrl.risk_point_id = #{riskPointId}
+        </if>
+        <if test="checkNumber != null and checkNumber != ''">
+            and rcrl.inspect_number = #{checkNumber}
+        </if>
+        <if test="userId != null and userId != ''">
+            and rcrl.created_by = #{userId}
+        </if>
+        group by rcrl.inspect_record_id
+        order by rcrl.created_time desc
+        limit 1
+        )
+        WHEN 1 THEN 1 WHEN 2 THEN 2 WHEN 3 THEN 3 WHEN 4 THEN 4 ELSE 0 END ) AS c_checkResult,
+        (select rcrl.inspect_record_no
+        from scyf_risk_inspect_record_log rcrl
+        where rcrl.risk_measure_id = c_bcid.inspect_item_def_id
+        and rcrl.company_id = #{companyId}
+        <if test="inspectDefId != null and inspectDefId != '' and inspectDefId != 0">
+            and rcrl.schdule_def_id = #{inspectDefId}
+        </if>
+        <if test="scheduleId != null and scheduleId != '' and scheduleId != 0">
+            and rcrl.inspect_schedule_id = #{scheduleId}
+        </if>
+        <if test="riskPointId != null and riskPointId != '' and riskPointId != ''">
+            and rcrl.risk_point_id = #{riskPointId}
+        </if>
+        <if test="checkNumber != null and checkNumber != ''">
+            and rcrl.inspect_number = #{checkNumber}
+        </if>
+        <if test="userId != null and userId != ''">
+            and rcrl.created_by = #{userId}
+        </if>
+        group by rcrl.inspect_record_id
+        order by rcrl.created_time desc
+        limit 1
+        ) as c_checkRecordNo,
+
+        (select rcrl.inspect_record_id
+        from scyf_risk_inspect_record_log rcrl
+        where rcrl.risk_measure_id = c_bcid.inspect_item_def_id
+        and rcrl.company_id = #{companyId}
+        <if test="inspectDefId != null and inspectDefId != '' and inspectDefId != ''">
+            and rcrl.schdule_def_id = #{inspectDefId}
+        </if>
+        <if test="scheduleId != null and scheduleId != '' and scheduleId != 0">
+            and rcrl.inspect_schedule_id = #{scheduleId}
+        </if>
+        <if test="riskPointId != null and riskPointId != '' and riskPointId != 0">
+            and rcrl.risk_point_id = #{riskPointId}
+        </if>
+        <if test="checkNumber != null and checkNumber != ''">
+            and rcrl.inspect_number = #{checkNumber}
+        </if>
+        <if test="userId != null and userId != ''">
+            and rcrl.created_by = #{userId}
+        </if>
+        group by rcrl.inspect_record_id
+        order by rcrl.created_time desc
+        limit 1
+        ) as c_checkRecordLogId
+
+        from scyf_inspect_item_def bcid
+        left join scyf_inspect_item_def c_bcid on (bcid.inspect_item_def_id = c_bcid.parent_id and c_bcid.company_id = #{companyId})
+        where
+        bcid.del_flag=0
+        and c_bcid.del_flag=0
+        <if test="inspectDefId != null and inspectDefId != '' and inspectDefId != 0 ">
+            and bcid.inspect_def_id = #{inspectDefId}
+        </if>
+        <if test="companyId != null and companyId != ''">
+            and bcid.company_id = #{companyId}
+        </if>
+        order by bcid.inspect_item_def_id
+    </select>
+
+    <!--作业活动比较图统计图柱形图 地矿专用-->
+    <select id="queryRiskLevel" resultType="java.util.Map">
+        SELECT
+        risk_danger_name as "riskDangerName",
+        risk_danger_level as "riskDangerLevel",
+        CAST( IF(risk_danger_level=1,FLOOR(320 + RAND() * (1000-320 + 1)),
+        IF(risk_danger_level=2,FLOOR(160 + RAND() * (320-160 + 1)),
+        IF(risk_danger_level=3,FLOOR(70 + RAND() * (160-70 + 1)),
+        IF(risk_danger_level=4,FLOOR(1 + RAND() * (70 )),'')))) as  UNSIGNED) as "numbers"
+        from
+        scyf_risk_source
+        <where>del_flag=0
+            and
+            node_level=1
+            <if test="riskDangerType != null">
+                    and risk_danger_type= #{riskDangerType}
+                </if>
+                <if test="companyId != null">
+                    and company_id = #{companyId}
+                </if>
+            </where>
+        ORDER BY risk_danger_level asc , numbers desc
+    </select>
+
+    <!-- 除了地矿的其它企业的作业活动分析图 柱形图 -->
+    <select id="queryRiskLevelAnalyze" resultType="java.util.Map">
+        SELECT
+        eds.risk_danger_name as "riskDangerName",
+        eds.risk_danger_level as "riskDangerLevel",
+        er.type_id as "typeId",
+        CAST( CASE type_id
+        WHEN 0 THEN
+        sum(er.lec_d)
+        WHEN 1 THEN
+        sum(er.lc_d)
+        else
+        sum(er.ls_r)
+        end as  UNSIGNED)
+        as  numbers
+        from scyf_risk er
+        LEFT JOIN scyf_risk_source eds on er.risk_id=eds.risk_danger_id and
+        er.company_id=eds.company_id and eds.del_flag=0
+        LEFT JOIN scyf_risk_source edsn on eds.root_node=edsn.risk_danger_id and
+        er.company_id=edsn.company_id and edsn.del_flag=0
+        WHERE  er.del_flag = 0
+        AND er.company_id =#{companyId}
+        AND eds.risk_danger_type =#{riskDangerType}
+        group by eds.parent_risk_danger_id
+        order by eds.risk_danger_level asc , numbers desc
+    </select>
+
+    <select id="findById" resultType="com.hngf.entity.risk.RiskSource" parameterType="Long">
+		select * from scyf_risk_source
+        where del_flag = 0 and risk_danger_id = #{id}
+	</select>
+    <select id="list" resultType="com.hngf.entity.risk.RiskSource">
+        SELECT
+        a.*
+        FROM  scyf_risk_source a
+        <where>
+                a.del_flag=0
+            and a.parent_risk_danger_id=#{parentDangerSrcId}
+            and a.node_level=#{nodeLevel}
+        </where>
+    </select>
+    <select id="sel" resultType="com.hngf.entity.risk.RiskSource">
+        SELECT
+        a.*
+        FROM  scyf_risk_source a
+        <where>
+        a.del_flag=0
+        and a.parent_risk_danger_id=#{parentDangerSrcId}
+        and a.node_level=#{nodeLevel}
+        </where>
+    </select>
+    <!--根据cid 和风险编码 查询 符合的风险表信息-->
+    <select id="selectRisks" resultType="com.hngf.entity.risk.Risk">
+        SELECT
+        *
+        FROM  scyf_risk
+        <where>
+            del_flag=0
+            <if test="cId != null and cId != ''">
+                and company_id=#{cId}
+            </if>
+            <if test="riskCode != null and riskCode != ''">
+                and risk_code=#{riskCode}
+            </if>
+        </where>
+    </select>
+    <select id="count" resultType="com.hngf.entity.risk.RiskSource">
+        SELECT
+        *
+        FROM scyf_risk_source
+        <where>
+            del_flag=0
+            and parent_risk_danger_id=#{parentRiskDangerId}
+        </where>
+    </select>
+    <select id="selLV" resultType="java.lang.Integer">
+        SELECT
+        ifnull(min(risk_danger_level),-1)  as "lv"
+        FROM scyf_risk_source
+        <where>
+            del_flag=0
+            and parent_risk_danger_id=#{parentRiskDangerId}
+        </where>
+    </select>
+    <select id="selLV1" resultType="java.lang.Integer">
+        SELECT
+        ifnull(min(risk_danger_level),-1)  as "lv"
+        FROM scyf_risk_source
+        <where>
+            del_flag=0
+            and parent_risk_danger_id=#{parentRiskDangerId}
+            and risk_danger_id != #{riskDangerId}
+        </where>
+    </select>
+    <select id="selLV2" resultType="java.lang.Integer">
+        SELECT
+        ifnull(min(risk_danger_level),-1)  as "lv"
+        FROM scyf_risk_source
+        <where>
+            del_flag=0
+            and root_node=#{rootNode}
+        </where>
+    </select>
+    <select id="selLV3" resultType="java.lang.Integer">
+        SELECT
+        ifnull(min(risk_danger_level),-1)  as "lv"
+        FROM scyf_risk_source
+        <where>
+            del_flag=0
+            and root_node=#{rootNode}
+            and risk_danger_id != #{riskDangerId}
+        </where>
+    </select>
+    <select id="sourceList" resultType="com.hngf.entity.risk.RiskSource">
+        SELECT
+        *
+        FROM scyf_risk_source
+        <where>
+            del_flag=0
+            and parent_risk_danger_id=#{parentRiskDangerId}
+            and company_id=#{companyId}
+        </where>
+    </select>
+
+    <select id="sourceLists" resultType="com.hngf.entity.risk.RiskSource">
+        SELECT
+        *
+        FROM scyf_risk_source
+        <where>
+            del_flag=0
+            and parent_risk_danger_id=#{parentRiskDangerId}
+            and company_id=#{companyId}
+            and risk_danger_id !=#{riskDangerId}
+        </where>
+    </select>
+
+    <select id="findByMap" resultType="RiskSource">
+        SELECT
+        *
+        FROM scyf_risk_source
+        <where>
+            del_flag=0
+            <if test="companyId != null and companyId != ''">
+                and company_id=#{companyId}
+            </if>
+            <if test="riskDangerType != null and riskDangerType != ''">
+                and risk_danger_type = #{riskDangerType}
+            </if>
+            <if test="riskDangerId != null and riskDangerId != ''">
+                and risk_danger_id = #{riskDangerId}
+            </if>
+            <if test="parentRiskDangerIdList != null and parentRiskDangerIdList != ''">
+                and parent_risk_danger_id in
+                <foreach collection="parentRiskDangerIdList" item="id" open="(" close=")"
+                         separator="," index="idx">
+                    #{id}
+                </foreach>
+            </if>
+
+        </where>
+    </select>
+    <!--根据企业id 危险源类型 危险源名称 危险状态 节点层级 获取危险源对象-->
+    <select id="getRiskSource" resultType="com.hngf.entity.risk.RiskSource">
+            SELECT
+            *
+            FROM
+            scyf_risk_source
+            <where>
+                del_flag=0
+                and risk_danger_status=0
+                and node_level=#{nodeLevel}
+                and company_id=#{companyId}
+                and risk_danger_type=#{riskDangerType}
+                and risk_danger_name=#{dangerName}
+            </where>
+    </select>
+    <select id="getDangerSrcId" resultType="com.hngf.entity.risk.RiskSource">
+        SELECT
+        a.risk_danger_id AS "riskDangerId"
+        FROM scyf_risk_source a
+        <where>
+            a.del_flag=0
+            <if test="companyId != null and companyId != ''">
+                and a.company_id=#{companyId}
+            </if>
+            <if test="riskDangerId != null and riskDangerId != ''">
+                and a.root_node=#{riskDangerId}
+            </if>
+        </where>
+    </select>
+    <select id="selectDangerSrcId" resultType="com.hngf.entity.risk.RiskSource">
+        SELECT
+        a.risk_danger_id AS "riskDangerId"
+        FROM scyf_risk_source a
+        <where>
+            a.del_flag=0
+            <if test="companyId != null and companyId != ''">
+                and a.company_id=#{companyId}
+            </if>
+            <if test="riskDangerId != null and riskDangerId != ''">
+                and a.risk_danger_id=#{riskDangerId} or a.parent_risk_danger_id=#{riskDangerId}
+            </if>
+        </where>
+    </select>
+
+    <select id="findControlInspectItemCount" parameterType="map" resultType="int">
+        SELECT
+            count( erm.risk_measure_id )
+        FROM
+            scyf_risk_source eds
+            LEFT JOIN scyf_risk erk ON ( erk.risk_danger_id = eds.risk_danger_id )
+            LEFT JOIN scyf_risk_measure erm ON ( erk.risk_id = erm.risk_id )
+        WHERE
+            eds.del_flag = 0
+            AND erm.del_flag = 0
+            AND erk.del_flag = 0
+            AND eds.company_id = #{companyId}
+            AND erk.company_id = #{companyId}
+            and erm.company_id = #{companyId}
+        <if test="dangerSourceId != null">
+            and (eds.risk_danger_id = #{dangerSourceId} or eds.parent_risk_danger_id = #{dangerSourceId})
+        </if>
+        <if test="ctlLevel == 3 ">
+            and erk.risk_level in(1,2,3)
+        </if>
+        <if test="ctlLevel == 2 ">
+            and erk.risk_level in(1,2)
+        </if>
+        <if test="ctlLevel == 1 ">
+            and erk.risk_level = 1
+        </if>
+    </select>
+
+    <insert id="add" parameterType="com.hngf.entity.risk.RiskSource">
+        INSERT INTO scyf_risk_source (                                             risk_danger_id
+                                            ,
+                                                                                   company_id
+                                            ,
+                                                                                    parent_risk_danger_id
+                                            ,
+                                                                                    risk_danger_type
+                                            ,
+                                                                                    risk_danger_name
+                                            ,
+                                                                                    risk_danger_level
+                                            ,
+                                                                                    risk_danger_code
+                                            ,
+                                                                                    risk_danger_img
+                                            ,
+                                                                                    risk_danger_status
+                                            ,
+                                                                                    industry_id
+                                            ,
+                                                                                    is_fixed
+                                            ,
+                                                                                    is_leaf
+                                            ,
+                                                                                    node_left
+                                            ,
+                                                                                    node_right
+                                            ,
+                                                                                    node_level
+                                            ,
+                                                                                    root_node
+                                            ,
+                                                                                    created_time
+                                            ,
+                                                                                    created_by
+                                            ,
+                                                                                    updated_time
+                                            ,
+                                                                                    updated_by
+                                            ,
+                                                                                    del_flag
+                                                        )
+        VALUES (                                                                    #{riskDangerId}
+                                            ,
+                                                                                    #{companyId}
+
+                                            ,
+                                                                                    #{parentRiskDangerId}
+
+                                            ,
+                                                                                    #{riskDangerType}
+
+                                            ,
+                                                                                    #{riskDangerName}
+
+                                            ,
+                                                                                    #{riskDangerLevel}
+
+                                            ,
+                                                                                    #{riskDangerCode}
+
+                                            ,
+                                                                                    #{riskDangerImg}
+
+                                            ,
+                                                                                    #{riskDangerStatus}
+
+                                            ,
+                                                                                    #{industryId}
+
+                                            ,
+                                                                                    #{isFixed}
+
+                                            ,
+                                                                                    #{isLeaf}
+
+                                            ,
+                                                                                    #{nodeLeft}
+
+                                            ,
+                                                                                    #{nodeRight}
+
+                                            ,
+                                                                                    #{nodeLevel}
+
+                                            ,
+                                                                                    #{rootNode}
+
+                                            ,
+                                                                                    #{createdTime}
+
+                                            ,
+                                                                                    #{createdBy}
+
+                                            ,
+                                                                                    #{updatedTime}
+
+                                            ,
+                                                                                    #{updatedBy}
+
+                                            ,
+                                                                                    #{delFlag}
+
+                                                        )
+
+    </insert>
+    <!-- 批量新增危险源-->
+    <insert id="saveBatch">
+            INSERT INTO scyf_risk_source
+            (
+            risk_danger_id,
+            risk_danger_name,
+            company_id,
+            risk_danger_code,
+            parent_risk_danger_id,
+            risk_danger_level,
+            root_node,
+            node_level,
+            is_leaf,
+            risk_danger_type,
+            del_flag
+            )
+            VALUES
+        <foreach collection="list" item="item" index="index" separator=",">
+            (
+            #{item.riskDangerId},
+            #{item.riskDangerName},
+            #{item.companyId},
+            #{item.riskDangerCode},
+            #{item.parentRiskDangerId},
+            #{item.riskDangerLevel},
+            #{item.rootNode},
+            #{item.nodeLevel},
+            #{item.isLeaf},
+            #{item.riskDangerType},
+            #{item.delFlag}
+            )
+        </foreach>
+    </insert>
+
+    <update id="update" parameterType="com.hngf.entity.risk.RiskSource">
+        UPDATE scyf_risk_source
+        <trim suffixOverrides=",">
+        <set>
+            <if test="companyId != null and companyId != ''">
+                company_id = #{companyId} ,
+            </if>
+
+            <if test="parentRiskDangerId != null and parentRiskDangerId != ''">
+                parent_risk_danger_id = #{parentRiskDangerId} ,
+            </if>
+
+            <if test="riskDangerType != null and riskDangerType != ''">
+                risk_danger_type = #{riskDangerType} ,
+            </if>
+
+            <if test="riskDangerName != null and riskDangerName != ''">
+                risk_danger_name = #{riskDangerName} ,
+            </if>
+
+            <if test="riskDangerLevel != null and riskDangerLevel != ''">
+                risk_danger_level = #{riskDangerLevel} ,
+            </if>
+
+            <if test="riskDangerCode != null and riskDangerCode != ''">
+                risk_danger_code = #{riskDangerCode} ,
+            </if>
+
+            <if test="riskDangerImg != null and riskDangerImg != ''">
+                risk_danger_img = #{riskDangerImg} ,
+            </if>
+
+            <if test="riskDangerStatus != null and riskDangerStatus != ''">
+                risk_danger_status = #{riskDangerStatus} ,
+            </if>
+
+            <if test="industryId != null and industryId != ''">
+                industry_id = #{industryId} ,
+            </if>
+
+            <if test="isFixed != null">
+                is_fixed = #{isFixed} ,
+            </if>
+
+            <if test="isLeaf != null">
+                is_leaf = #{isLeaf} ,
+            </if>
+
+            <if test="nodeLeft != null and nodeLeft != ''">
+                node_left = #{nodeLeft} ,
+            </if>
+
+            <if test="nodeRight != null and nodeRight != ''">
+                node_right = #{nodeRight} ,
+            </if>
+
+            <if test="nodeLevel != null and nodeLevel != ''">
+                node_level = #{nodeLevel} ,
+            </if>
+
+            <if test="rootNode != null and rootNode != ''">
+                root_node = #{rootNode} ,
+            </if>
+
+            <if test="createdTime != null">
+                created_time = #{createdTime} ,
+            </if>
+
+            <if test="createdBy != null and createdBy != ''">
+                created_by = #{createdBy} ,
+            </if>
+
+            <if test="updatedTime != null">
+                updated_time = #{updatedTime} ,
+            </if>
+
+            <if test="updatedBy != null and updatedBy != ''">
+                updated_by = #{updatedBy} ,
+            </if>
+
+            <if test="delFlag != null and delFlag != ''">
+                del_flag = #{delFlag}
+            </if>
+        </set>
+        </trim>
+        where risk_danger_id = #{riskDangerId}
+    </update>
+
+    <update id="deleteById" parameterType="Long">
+        UPDATE scyf_risk_source SET
+        del_flag = 1
+        where risk_danger_id = #{id}
+    </update>
+
+    <update id="deleteByIds" parameterType="java.util.List">
+        UPDATE scyf_risk_source SET
+        del_flag = 1
+        where risk_danger_id in
+        <foreach collection="ids" item="id" open="(" close=")" separator="," index="idx">
+            #{id}
+        </foreach>
+    </update>
+    <update id="remove">
+        UPDATE scyf_risk_source
+        SET del_flag=1
+        <where>
+            risk_danger_id=#{riskDangerId}
+        </where>
+    </update>
+    <update id="removeRiskSource">
+        UPDATE scyf_risk_source
+        SET del_flag=1
+        <where>
+                risk_danger_id=#{riskDangerId}
+            and company_id=#{companyId}
+        </where>
+    </update>
+
+    <!--<select id="">
+        SELECT
+        eds.*,
+        (SELECT COUNT(*) FROM scyf_risk_source e WHERE e.root_node = eds.risk_danger_id and e.node_level=3 and
+        e.del_flag=0 AND e.company_id =#{companyId} ) as risk_count,
+        (SELECT COUNT(*) FROM scyf_risk_source e1 where e1.risk_danger_id = eds.risk_danger_id and e1.node_level=3
+        and e1.del_flag=0 AND e1.company_id =#{companyId}) as risk_count_parent,
+        (select count(*) from scyf_risk_point_danger_source erpds where erpds.risk_danger_id = eds.risk_danger_id AND
+        erpds.company_id =#{companyId}) as "useCount"
+        FROM
+        scyf_risk_source eds
+        LEFT JOIN scyf_risk_source edsa on eds.company_id=edsa.company_id and edsa.risk_danger_id=eds.parent_risk_danger_id
+        WHERE
+
+        eds.node_level <= 2
+
+        and eds.del_flag=0
+        and eds.company_id=#{companyId}
+        and (edsa.risk_danger_id is not null OR eds.parent_risk_danger_id=-1)
+    </select>-->
+</mapper>

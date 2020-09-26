@@ -1,0 +1,150 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.hngf.mapper.sys.DictItemMapper">
+
+
+    <select id="findList" resultType="com.hngf.entity.sys.DictItem">
+		select * from sys_dict_item
+        where del_flag = 0
+	</select>
+
+    <select id="findById" resultType="com.hngf.entity.sys.DictItem" parameterType="String">
+		select * from sys_dict_item
+        where del_flag = 0 and item_id = #{id}
+	</select>
+
+    <insert id="add" parameterType="com.hngf.entity.sys.DictItem">
+        INSERT INTO sys_dict_item (
+                                                                        item_id,
+                                                                                    item_name
+                                            ,
+                                                                                    item_value
+                                            ,
+                                                                                    item_image
+                                            ,
+                                                                                    dict_id
+                                            ,
+                                                                                    type_id
+                                            ,
+                                                                                    owner_id
+                                            ,
+                                                                                    sort_no
+                                            ,
+                                                                                    parent_id
+                                            ,
+                                                                                    created_time
+                                            ,
+                                                                                    created_by
+                                            ,
+                                                                                    updated_time
+                                            ,
+                                                                                    updated_by
+                                            ,
+                                                                                    del_flag
+                                                        )
+        VALUES (
+                                                                        #{itemId},
+                                                                                    #{itemName}
+
+                                            ,
+                                                                                    #{itemValue}
+
+                                            ,
+                                                                                    #{itemImage}
+
+                                            ,
+                                                                                    #{dictId}
+
+                                            ,
+                                                                                    #{typeId}
+
+                                            ,
+                                                                                    #{ownerId}
+
+                                            ,
+                                                                                    #{sortNo}
+
+                                            ,
+                                                                                    #{parentId}
+
+                                            ,
+                                                                                    #{createdTime}
+
+                                            ,
+                                                                                    #{createdBy}
+
+                                            ,
+                                                                                    #{updatedTime}
+
+                                            ,
+                                                                                    #{updatedBy}
+
+                                            ,
+                                                                                    #{delFlag}
+
+                                                        )
+
+    </insert>
+
+    <update id="update" parameterType="com.hngf.entity.sys.DictItem">
+        UPDATE sys_dict_item SET
+
+                                                        item_name = #{itemName}
+
+                                    ,
+                                                                item_value = #{itemValue}
+
+                                    ,
+                                                                item_image = #{itemImage}
+
+                                    ,
+                                                                dict_id = #{dictId}
+
+                                    ,
+                                                                type_id = #{typeId}
+
+                                    ,
+                                                                owner_id = #{ownerId}
+
+                                    ,
+                                                                sort_no = #{sortNo}
+
+                                    ,
+                                                                parent_id = #{parentId}
+
+                                    ,
+                                                                created_time = #{createdTime}
+
+                                    ,
+                                                                created_by = #{createdBy}
+
+                                    ,
+                                                                updated_time = #{updatedTime}
+
+                                    ,
+                                                                updated_by = #{updatedBy}
+
+                                    ,
+                                                                del_flag = #{delFlag}
+
+                                    
+        where item_id = #{itemId}
+    </update>
+
+    <update id="deleteById" parameterType="String">
+        UPDATE sys_dict_item SET
+        del_flag = 1
+        where item_id = #{id}
+    </update>
+
+    <update id="deleteByIds" parameterType="java.util.List">
+        UPDATE sys_dict_item SET
+        del_flag = 1
+        where item_id in
+        <foreach collection="ids" item="id" open="(" close=")" separator="," index="idx">
+            #{id}
+        </foreach>
+    </update>
+
+</mapper>

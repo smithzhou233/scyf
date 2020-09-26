@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.hngf.mapper.risk.RiskPointPersonLiableMapper">
+
+    <insert id="add" parameterType="RiskPointPersonLiable">
+        INSERT INTO scyf_risk_point_person_liable (
+            risk_point_id,
+            company_id,
+            user_id)
+        VALUES (
+            #{riskPointId},
+            #{companyId},
+            #{userId}
+        )
+
+    </insert>
+
+    <insert id="addForeach" parameterType="List" useGeneratedKeys="false">
+        INSERT INTO scyf_risk_point_person_liable (
+            risk_point_id,
+            company_id,
+            user_id)
+        VALUES
+        <foreach collection="list" item="item" index="index" separator=",">
+            (
+            #{item.riskPointId},
+            #{item.companyId},
+            #{item.userId}
+            )
+        </foreach>
+
+    </insert>
+
+
+    <update id="deleteByRiskPoint">
+        DELETE FROM scyf_risk_point_person_liable
+        WHERE risk_point_id = #{riskPointId}
+        and company_id = #{companyId}
+    </update>
+
+</mapper>

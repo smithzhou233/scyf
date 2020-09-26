@@ -1,0 +1,157 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.hngf.mapper.sys.MenuMapper">
+
+
+    <select id="findList" resultType="com.hngf.entity.sys.Menu">
+		select * from sys_menu
+		where del_flag = 0
+		<if test="keyword != null and keyword != ''">
+			and (
+				menu_text like "%"#{keyword}"%"
+				or menu_desc like "%"#{keyword}"%"
+			)
+		</if>
+		<if test ="menuType!=null and menuType!=''">
+			and  menu_type   in (${menuType})
+		</if>
+
+	</select>
+	
+	<select id="findAll" resultType="Menu">
+		select * from sys_menu where del_flag = 0
+		order by menu_parent_id,sort_no
+	</select>
+
+    <select id="findById" resultType="com.hngf.entity.sys.Menu"
+            parameterType="Long">
+		select * from sys_menu
+		where del_flag = 0 and menu_id = #{id}
+	</select>
+
+    <select id="findByParentId" resultType="com.hngf.entity.sys.Menu" parameterType="Long">
+		select * from sys_menu
+		where del_flag = 0 and menu_parent_id = #{value}
+	</select>
+
+    <insert id="add" parameterType="com.hngf.entity.sys.Menu">
+		INSERT INTO sys_menu (
+		menu_parent_id
+		,
+		menu_parent_ids
+		,
+		menu_text
+		,
+		menu_url
+		,
+		menu_css
+		,
+		menu_desc
+		,
+		menu_permissions
+		,
+		sort_no
+		,
+		menu_type
+		,
+		account_type
+		,
+		is_show
+		,
+		created_time
+		,
+		created_by
+		,
+		del_flag
+		)
+		VALUES (
+		#{menuParentId}
+		,
+		#{menuParentIds}
+		,
+		#{menuText}
+		,
+		#{menuUrl}
+		,
+		#{menuCss}
+		,
+		#{menuDesc}
+		,
+		#{menuPermissions}
+		,
+		#{sortNo}
+		,
+		#{menuType}
+		,
+		#{accountType}
+		,
+		#{isShow}
+		,
+		#{createdTime}
+		,
+		#{createdBy}
+		,
+		#{delFlag}
+		)
+
+	</insert>
+
+    <update id="update" parameterType="com.hngf.entity.sys.Menu">
+		UPDATE sys_menu
+		<trim suffixOverrides=",">
+		<set>
+		<if test="menuParentId != null and menuParentId != ''">
+			menu_parent_id = #{menuParentId} ,        </if>
+		<if test="menuParentIds != null and menuParentIds != ''">
+			menu_parent_ids = #{menuParentIds} ,        </if>
+		<if test="menuText != null ">
+			menu_text = #{menuText} ,        </if>
+		<if test="menuUrl != null ">
+			menu_url = #{menuUrl} ,        </if>
+		<if test="menuCss != null ">
+			menu_css = #{menuCss} ,        </if>
+		<if test="menuPermissions != null ">
+			menu_permissions = #{menuPermissions} ,        </if>
+		<if test="menuDesc != null ">
+			menu_desc = #{menuDesc} ,        </if>
+		<if test="sortNo != null and sortNo != ''">
+			sort_no = #{sortNo} ,        </if>
+		<if test="menuType != null and menuType != ''">
+			menu_type = #{menuType} ,        </if>
+		<if test="accountType != null and accountType != ''">
+			account_type = #{accountType} ,        </if>
+		<if test="isShow != null and isShow != ''">
+			is_show = #{isShow} ,        </if>
+		<if test="createdTime != null">
+			created_time = #{createdTime} ,        </if>
+		<if test="createdBy != null and createdBy != ''">
+			created_by = #{createdBy} ,        </if>
+		<if test="updatedTime != null">
+			updated_time = #{updatedTime} ,        </if>
+		<if test="updatedBy != null and updatedBy != ''">
+			updated_by = #{updatedBy} ,        </if>
+		<if test="delFlag != null and delFlag != ''">
+			del_flag = #{delFlag},         </if>
+		</set>
+		</trim>
+		where menu_id = #{menuId}
+	</update>
+
+    <update id="deleteById" parameterType="Long">
+		UPDATE sys_menu SET
+		del_flag = 1
+		where menu_id = #{id}
+	</update>
+
+    <update id="deleteByIds" parameterType="java.util.List">
+        UPDATE sys_menu SET
+        del_flag = 1
+        where menu_id in
+        <foreach collection="ids" item="id" open="(" close=")"
+                 separator="," index="idx">
+            #{id}
+        </foreach>
+    </update>
+
+</mapper>

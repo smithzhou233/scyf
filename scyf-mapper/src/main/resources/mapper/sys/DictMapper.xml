@@ -1,0 +1,175 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.hngf.mapper.sys.DictMapper">
+
+    <sql id="DictColumns">
+		a.dict_id,
+		a.dict_name,
+		a.dict_desc,
+		a.dict_code,
+		a.dict_type,
+		a.type_id,
+		a.owner_id,
+		a.industry_code,
+		a.created_time,
+		a.updated_time,
+		a.created_by,
+		a.updated_by
+	</sql>
+
+    <select id="findList" resultType="Dict">
+        select
+        <include refid="DictColumns" />
+        from
+        sys_dict a
+        <where>
+            a.del_flag = 0
+            <if test="keyword != null and keyword != ''">
+                and (a.dict_name like "%"#{keyword}"%" or a.dict_desc like "%"#{keyword}"%" or a.dict_type like "%"#{keyword}"%")
+            </if>
+        </where>
+    </select>
+
+    <select id="findByMap" resultType="Dict">
+        select
+        a.dict_id,
+        a.dict_name,
+		a.dict_desc,
+		a.dict_code
+        from
+        sys_dict a
+        where
+        a.del_flag = 0
+        <if test="dictCode != null and dictCode != ''">
+            and a.dict_code = #{dictCode}
+        </if>
+        <if test="dictType != null and dictType != ''">
+            and a.dict_type = #{dictType}
+        </if>
+        <if test="dictName != null and dictName != ''">
+            and a.dict_name = #{dictName}
+        </if>
+        <if test="industryCode != null and industryCode != ''">
+            and a.industry_code = #{industryCode}
+        </if>
+        <if test="typeId != null">
+            and a.type_id = #{typeId}
+        </if>
+        <if test="ownerId != null and ownerId != ''">
+            and a.owner_id = #{ownerId}
+        </if>
+        order by a.dict_code
+    </select>
+
+    <select id="findById" resultType="Dict" parameterType="Long">
+        select
+        <include refid="DictColumns" />
+        from
+        sys_dict a
+        where
+        a.del_flag = 0 and a.dict_id = #{id}
+    </select>
+
+    <insert id="add" parameterType="Dict">
+		INSERT INTO sys_dict (
+		dict_name,
+		dict_desc,
+		dict_code,
+		dict_type,
+		type_id,
+		owner_id,
+		industry_code,
+		created_by,
+		created_time,
+		del_flag)
+		VALUES (
+		#{dictName},
+		#{dictDesc},
+		#{dictCode},
+		#{dictType},
+		0,
+		#{ownerId},
+		'0',
+		#{createdBy},
+		#{createdTime},
+		0
+		)
+
+	</insert>
+
+    <update id="update" parameterType="Dict">
+        UPDATE sys_dict a SET
+        <if test="dictName != null and dictName != ''">
+            a.dict_name = #{dictName},
+        </if>
+        <if test="dictDesc != null and dictDesc != ''">
+            a.dict_desc = #{dictDesc},
+        </if>
+        <if test="dictCode != null and dictCode != ''">
+            a.dict_code = #{dictCode},
+        </if>
+        <if test="dictType != null and dictType != ''">
+            a.dict_type = #{dictType},
+        </if>
+        <if test="typeId != null">
+            a.type_id = #{typeId},
+        </if>
+        <if test="ownerId != null and ownerId != ''">
+            a.owner_id = #{ownerId},
+        </if>
+        <if test="industryCode != null and industryCode != ''">
+            a.industry_code = #{industryCode},
+        </if>
+        <if test="updatedTime != null">
+            a.updated_time = #{updatedTime},
+        </if>
+        <if test="updatedBy != null">
+            a.updated_by = #{updatedBy}
+        </if>
+        where dict_id = #{dictId}
+    </update>
+
+    <update id="deleteById" parameterType="Long">
+		UPDATE sys_dict a SET
+		a.del_flag = 1
+		where a.dict_id = #{id}
+	</update>
+
+    <update id="deleteByIds" parameterType="java.util.List">
+        UPDATE sys_dict a SET
+        a.del_flag = 1
+        where a.dict_id in
+        <foreach collection="ids" item="id" open="(" close=")"
+                 separator="," index="idx">
+            #{id}
+        </foreach>
+    </update>
+
+    <!--查看自增id-->
+    <select id="getTabId" resultType="java.lang.Long">
+        SELECT
+        table_id AS "Id"
+        FROM  sys_uid_sequence
+        WHERE table_name=#{tabName}
+    </select>
+    <!-- 修改id-->
+    <update id="setTabId">
+        UPDATE sys_uid_sequence SET table_id=#{newTabId}
+        WHERE table_name=#{tabName}
+    </update>
+    <!--新增表名及id-->
+    <insert id="insertTab">
+        INSERT INTO sys_uid_sequence (table_id,table_name)VALUES (#{tabId},#{tabName})
+    </insert>
+
+    <!--查看危险源等级-->
+    <select id="getRiskDangerLevel" resultType="java.util.Map">
+        SELECT
+        dict_name AS "dictName",
+        dict_code AS "dictCode"
+        FROM  sys_dict
+        WHERE dict_type='hidden_level' and del_flag=0
+        order by dict_code
+    </select>
+</mapper>

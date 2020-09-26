@@ -1,0 +1,180 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.hngf.mapper.danger.HiddenAttachMapper">
+
+    <sql id="HiddenAttachColumns">
+        a.company_id AS companyId,
+        a.hidden_detail_type AS hiddenDetailType,
+        a.hidden_detail_id AS hiddenDetailId,
+        a.hidden_attach_type AS hiddenAttachType,
+        a.hidden_attach_path AS hiddenAttachPath,
+        a.created_by AS createdBy,
+        a.created_time AS createdTime,
+        a.updated_by AS updatedBy,
+        a.updated_time AS updatedTime,
+        a.del_flag AS delFlag
+    </sql>
+
+    <select id="findList" resultType="com.hngf.entity.danger.HiddenAttach">
+        select
+        <include refid="HiddenAttachColumns"/>
+        from
+        scyf_hidden_attach a
+        where
+        a.del_flag = 0
+    </select>
+
+    <select id="findById" resultType="com.hngf.entity.danger.HiddenAttach" parameterType="Long">
+        select
+        <include refid="HiddenAttachColumns"/>
+        from
+        scyf_hidden_attach a
+        where
+        a.del_flag = 0 and a.hidden_attach_id = #{id}
+    </select>
+    <!--【APP】我的，查询反馈列表附件详情信息-->
+    <select id="findByDetailId" resultType="com.hngf.entity.danger.HiddenAttach" parameterType="Map">
+        select
+        <include refid="HiddenAttachColumns"/>
+        from
+        scyf_hidden_attach a
+        where
+        a.del_flag = 0 and a.hidden_detail_id = #{detailId} and a.hidden_detail_type = #{hiddenDetailType}
+    </select>
+    <select id="findListByDetailId" resultType="com.hngf.entity.danger.HiddenAttach" parameterType="Long">
+        select
+        <include refid="HiddenAttachColumns"/>
+        from
+        scyf_hidden_attach a
+        where
+        a.del_flag = 0 and a.hidden_detail_id = #{detailId}
+    </select>
+
+    <!-- 整改后-->
+    <select id="findAfterHiddenAttach" resultType="HiddenAttach">
+        SELECT
+            ehda.hidden_attach_id,
+            ehda.hidden_detail_type,
+            ehda.hidden_detail_id,
+            ehda.hidden_attach_type,
+            ehda.hidden_attach_path
+        FROM
+            scyf_hidden_attach ehda
+            LEFT JOIN scyf_hidden_retify ehdr ON ehdr.hidden_retify_id = ehda.hidden_detail_id
+        WHERE
+            ehdr.hidden_id = #{value}
+        ORDER BY
+            ehdr.created_time DESC
+    </select>
+    <!-- 整改前-->
+    <select id="findBeforeHiddenAttach" resultType="HiddenAttach">
+         SELECT
+             ehda.hidden_attach_id,
+            ehda.hidden_detail_type,
+            ehda.hidden_detail_id,
+            ehda.hidden_attach_type,
+            ehda.hidden_attach_path
+        FROM
+            scyf_hidden_attach ehda
+            LEFT JOIN scyf_hidden  ehd ON ehd.hidden_id = ehda.hidden_detail_id
+        WHERE
+            ehd.hidden_id = #{value}
+        ORDER BY
+            ehd.created_time DESC
+    </select>
+
+    <insert id="add" parameterType="com.hngf.entity.danger.HiddenAttach">
+        INSERT INTO scyf_hidden_attach (
+            company_id,
+            hidden_detail_type,
+            hidden_detail_id,
+            hidden_attach_type,
+            hidden_attach_path,
+            created_by,
+            created_time,
+            del_flag)
+        VALUES (
+            #{companyId},
+            #{hiddenDetailType},
+            #{hiddenDetailId},
+            #{hiddenAttachType},
+            #{hiddenAttachPath},
+            #{createdBy},
+            #{createdTime},
+            0
+        )
+
+    </insert>
+
+    <insert id="addForeach" parameterType="com.hngf.entity.danger.HiddenAttach">
+        INSERT INTO scyf_hidden_attach (
+            company_id,
+            hidden_detail_type,
+            hidden_detail_id,
+            hidden_attach_type,
+            hidden_attach_path,
+            created_by,
+            created_time,
+            del_flag)
+        VALUES
+        <foreach collection="list" item="item" index="index" separator=",">
+            (#{item.companyId},
+            #{item.hiddenDetailType},
+            #{item.hiddenDetailId},
+            #{item.hiddenAttachType},
+            #{item.hiddenAttachPath},
+            #{item.createdBy},
+            #{item.createdTime},0)
+        </foreach>
+
+    </insert>
+
+    <update id="update" parameterType="com.hngf.entity.danger.HiddenAttach">
+        UPDATE scyf_hidden_attach a
+        <trim prefix="set" suffixOverrides=",">
+        <if test="companyId != null and companyId != ''">
+            a.company_id = #{companyId},
+        </if>
+        <if test="hiddenDetailType != null and hiddenDetailType != ''">
+            a.hidden_detail_type = #{hiddenDetailType},
+        </if>
+        <if test="hiddenDetailId != null and hiddenDetailId != ''">
+            a.hidden_detail_id = #{hiddenDetailId},
+        </if>
+        <if test="hiddenAttachType != null and hiddenAttachType != ''">
+            a.hidden_attach_type = #{hiddenAttachType},
+        </if>
+        <if test="hiddenAttachPath != null and hiddenAttachPath != ''">
+            a.hidden_attach_path = #{hiddenAttachPath},
+        </if>
+        <if test="updatedBy != null and updatedBy != ''">
+            a.updated_by = #{updatedBy},
+        </if>
+        </trim>
+        where hidden_attach_id = #{hiddenAttachId}
+    </update>
+
+    <update id="deleteByDetailId">
+        UPDATE scyf_hidden_attach a SET
+            a.del_flag = 1
+        where a.hidden_detail_id= #{detailId} and company_id = #{companyId} and hidden_detail_type = #{attachType}
+    </update>
+
+    <update id="deleteById">
+        UPDATE scyf_hidden_attach a SET
+            a.del_flag = 1
+        where a.company_id = #{companyId}
+            and a.hidden_attach_id  = #{id}
+    </update>
+
+    <update id="deleteByIds" parameterType="java.util.List">
+        UPDATE scyf_hidden_attach a SET
+        a.del_flag = 1
+        where a.hidden_attach_id in
+        <foreach collection="ids" item="id" open="(" close=")" separator="," index="idx">
+            #{id}
+        </foreach>
+    </update>
+
+</mapper>

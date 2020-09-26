@@ -1,0 +1,137 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.hngf.mapper.sys.GroupTypeMapper">
+
+    <sql id="groupTypeColumns">
+        a.group_type_id,
+        a.company_id,
+        a.group_type_title,
+        a.group_type_desc,
+        a.group_type_showIf,
+        a.created_by,
+        a.created_time,
+        a.updated_by,
+        a.updated_time,
+        a.del_flag
+    </sql>
+
+    <select id="findList" resultType="GroupType">
+		select
+        <include refid="groupTypeColumns"/>
+		from sys_group_type a
+		where a.del_flag = 0
+        <if test="keyword != null and keyword != ''">
+            and ( LOCATE( #{keyword} , a.group_type_title) &gt; 0
+                 or  LOCATE( #{keyword} , a.group_type_desc) &gt; 0
+            )
+        </if>
+        <if test=" null != companyId and '' != companyId " >
+            and a.company_id = #{companyId}
+        </if>
+	</select>
+
+    <select id="findById" resultType="GroupType" parameterType="Long">
+		select
+        <include refid="groupTypeColumns"/>
+		from sys_group_type a
+		where a.del_flag = 0 and a.group_type_id = #{id}
+	</select>
+
+    <select id="findAll" resultType="GroupType" parameterType="Long" >
+		select
+            a.group_type_id,
+            a.company_id,
+            a.group_type_title,
+            a.group_type_desc
+		from sys_group_type a
+		where a.del_flag = 0 and a.company_id = #{companyId}
+	</select>
+
+    <insert id="add" parameterType="GroupType" useGeneratedKeys="true" keyProperty="groupTypeId">
+		INSERT INTO sys_group_type (
+		company_id,
+		group_type_title,
+		group_type_desc,
+		group_type_showIf,
+		created_by,
+		created_time,
+		updated_by,
+		updated_time,
+		del_flag
+		)
+		VALUES (
+		#{companyId},
+        #{groupTypeTitle},
+        #{groupTypeDesc},
+        #{groupTypeShowif},
+        #{createdBy},
+        #{createdTime},
+        #{updatedBy},
+        #{updatedTime},
+        #{delFlag}
+		)
+	</insert>
+
+    <update id="update" parameterType="GroupType">
+        UPDATE sys_group_type SET
+        <if test="groupTypeTitle != null and groupTypeTitle != ''">
+            group_type_title = #{groupTypeTitle} ,
+        </if>
+        <if test="groupTypeDesc != null and groupTypeDesc != ''">
+            group_type_desc = #{groupTypeDesc} ,
+        </if>
+        <if test="groupTypeShowif != null and groupTypeShowif != ''">
+            group_type_showIf = #{groupTypeShowif} ,
+        </if>
+        <if test="updatedBy != null and updatedBy != ''">
+            updated_by = #{updatedBy} ,
+            updated_time = now()
+        </if>
+        where group_type_id = #{groupTypeId} and company_id = #{companyId} and del_flag = 0
+    </update>
+
+    <update id="deleteById" parameterType="Long">
+		UPDATE sys_group_type a SET
+		a.del_flag = 1 , a.updated_by = #{updatedBy} , a.updated_time = now()
+		where a.group_type_id = #{id}
+		and not exists  (select sg.group_id from sys_group sg where  sg.group_type_id = a.group_type_id and sg.del_flag = 0 )
+	</update>
+
+    <update id="deleteByIds" parameterType="java.util.List">
+        UPDATE sys_group_type SET
+        del_flag = 1
+        where group_type_id in
+        <foreach collection="ids" item="id" open="(" close=")"
+                 separator="," index="idx">
+            #{id}
+        </foreach>
+    </update>
+
+    <insert id="addBatch" parameterType="List" >
+		INSERT INTO sys_group_type (
+		company_id,
+		group_type_title,
+		group_type_desc,
+		group_type_showIf,
+		created_by,
+		created_time,
+		updated_by,
+		updated_time,
+		del_flag
+		) VALUES
+		<foreach collection="groupTypeList" item="item"  separator="," index="idx">
+            (#{item.companyId},
+            #{item.groupTypeTitle},
+            #{item.groupTypeDesc},
+            #{item.groupTypeShowif},
+            #{item.createdBy},
+            #{item.createdTime},
+            #{item.updatedBy},
+            #{item.updatedTime},
+            #{item.delFlag}
+            )
+        </foreach>
+	</insert>
+
+</mapper>

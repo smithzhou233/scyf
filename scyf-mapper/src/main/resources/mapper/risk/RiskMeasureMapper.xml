@@ -1,0 +1,170 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.hngf.mapper.risk.RiskMeasureMapper">
+    <!--风险管控措施删除-->
+    <update id="del">
+        UPDATE scyf_risk_measure SET del_flag=1
+        <where>
+            risk_id=#{id}
+            and company_id=#{companyId}
+        </where>
+    </update>
+
+
+    <select id="findList" resultType="com.hngf.entity.risk.RiskMeasure">
+		select * from scyf_risk_measure
+        where del_flag = 0
+	</select>
+
+    <select id="findById" resultType="com.hngf.entity.risk.RiskMeasure" parameterType="Long">
+		select * from scyf_risk_measure
+        where del_flag = 0 and risk_measure_id = #{id}
+	</select>
+    <select id="listMaps" resultType="java.util.Map">
+        SELECT
+        risk_measure_type_id AS "riskMeasureTypeId",
+        risk_measure_content AS "riskMeasureContent"
+        FROM scyf_risk_measure
+        <where>
+            del_flag=0
+            and risk_id=#{riskId}
+            and company_id=#{companyId}
+        </where>
+    </select>
+
+    <insert id="add" parameterType="com.hngf.entity.risk.RiskMeasure">
+        INSERT INTO scyf_risk_measure (
+                                                                                                                risk_id
+                                            ,
+                                                                                    risk_measure_type_id
+                                            ,
+                                                                                    risk_measure_content
+                                            ,
+                                                                                    risk_measure_desc
+                                            ,
+                                                                                    company_id
+                                            ,
+                                                                                    created_time
+                                            ,
+                                                                                    created_by
+                                            ,
+                                                                                    updated_time
+                                            ,
+                                                                                    updated_by
+                                            ,
+                                                                                    del_flag
+                                                        )
+        VALUES (
+                                                                                                                #{riskId}
+
+                                            ,
+                                                                                    #{riskMeasureTypeId}
+
+                                            ,
+                                                                                    #{riskMeasureContent}
+
+                                            ,
+                                                                                    #{riskMeasureDesc}
+
+                                            ,
+                                                                                    #{companyId}
+
+                                            ,
+                                                                                    #{createdTime}
+
+                                            ,
+                                                                                    #{createdBy}
+
+                                            ,
+                                                                                    #{updatedTime}
+
+                                            ,
+                                                                                    #{updatedBy}
+
+                                            ,
+                                                                                    #{delFlag}
+
+                                                        )
+
+    </insert>
+    <!--批量新增风险管控措施表信息-->
+    <insert id="saveBatch">
+        INSERT  INTO scyf_risk_measure (
+            risk_id,
+            risk_measure_type_id,
+            risk_measure_content,
+            company_id,
+            created_time,
+            created_by,
+            updated_time,
+            updated_by,
+            del_flag
+        )VALUES
+            <foreach collection="list" item="emp" separator=",">
+            (
+                #{emp.riskId},
+                #{emp.riskMeasureTypeId},
+                #{emp.riskMeasureContent},
+                #{emp.companyId},
+                #{emp.createdTime},
+                #{emp.createdBy},
+                #{emp.updatedTime},
+                #{emp.updatedBy},
+                #{emp.delFlag}
+            )
+            </foreach>
+    </insert>
+
+    <update id="update" parameterType="com.hngf.entity.risk.RiskMeasure">
+        UPDATE scyf_risk_measure SET
+
+                                                        risk_id = #{riskId}
+
+                                    ,
+                                                                risk_measure_type_id = #{riskMeasureTypeId}
+
+                                    ,
+                                                                risk_measure_content = #{riskMeasureContent}
+
+                                    ,
+                                                                risk_measure_desc = #{riskMeasureDesc}
+
+                                    ,
+                                                                company_id = #{companyId}
+
+                                    ,
+                                                                created_time = #{createdTime}
+
+                                    ,
+                                                                created_by = #{createdBy}
+
+                                    ,
+                                                                updated_time = #{updatedTime}
+
+                                    ,
+                                                                updated_by = #{updatedBy}
+
+                                    ,
+                                                                del_flag = #{delFlag}
+
+                                    
+        where risk_measure_id = #{riskMeasureId}
+    </update>
+
+    <update id="deleteById" parameterType="Long">
+        UPDATE scyf_risk_measure SET
+        del_flag = 1
+        where risk_measure_id = #{id}
+    </update>
+
+    <update id="deleteByIds" parameterType="java.util.List">
+        UPDATE scyf_risk_measure SET
+        del_flag = 1
+        where risk_measure_id in
+        <foreach collection="ids" item="id" open="(" close=")" separator="," index="idx">
+            #{id}
+        </foreach>
+    </update>
+
+</mapper>

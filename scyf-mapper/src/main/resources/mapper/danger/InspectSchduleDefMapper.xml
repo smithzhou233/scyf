@@ -1,0 +1,360 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.hngf.mapper.danger.InspectSchduleDefMapper">
+
+    <sql id="InspectSchduleDefColumns">
+        a.schdule_def_id as schduleDefId,
+        a.inspect_def_id AS inspectDefId,
+        a.company_id AS companyId,
+        a.group_id AS groupId,
+        a.risk_inspect_group AS riskInspectGroup,
+        a.risk_inspect_position AS riskInspectPosition,
+        a.risk_inspect_def_title AS riskInspectDefTitle,
+        a.risk_inspect_def_desc AS riskInspectDefDesc,
+        a.risk_inspect_type AS riskInspectType,
+        a.risk_inspect_level AS riskInspectLevel,
+        a.inspect_type AS inspectType,
+
+        a.schedule_count AS scheduleCount,
+        a.last_inspect_date AS lastInspectDate,
+        a.risk_inspect_participant AS riskInspectParticipant,
+        a.inspect_mode AS inspectMode,
+        a.start_date AS startDate,
+        a.end_date AS endDate,
+        a.is_open AS isOpen,
+        a.executor AS executor,
+        a.filter_week AS filterWeek,
+        a.created_by AS createdBy,
+        a.created_time AS createdTime,
+        a.updated_by AS updatedBy,
+        a.updated_time AS updatedTime,
+        a.del_flag AS delFlag,
+        a.schedule_cron_expression as scheduleCronExpression
+    </sql>
+    <sql id="InspectSchduleDefStaffColumns">
+        a.staff_id as staffId,
+        a.company_id AS companyId,
+        a.group_id AS groupId,
+        a.schdule_def_id as schduleDefId,
+        a.staff_no as staffNo,
+        a.staff_name as staffName,
+        a.inspect_mode as inspectMode,
+        a.created_by AS createdBy,
+        a.created_time AS createdTime,
+        a.updated_by AS updatedBy,
+        a.updated_time AS updatedTime
+    </sql>
+
+    <select id="findList" resultType="com.hngf.entity.danger.InspectSchduleDef">
+        select  a.schdule_def_id AS schduleDefId,
+        a.risk_inspect_def_title AS riskInspectDefTitle,
+        a.risk_inspect_level AS riskInspectLevel,
+        a.inspect_type as inspectType,
+        if(psg.group_name is null, sg.group_name, concat(psg.group_name, "-", sg.group_name)) as groupName,
+        (SELECT c.group_name FROM sys_group c WHERE a.risk_inspect_group = c.group_id ) AS riskInspectGroupName,
+        pos.position_title AS riskInspectPositionName,
+        a.risk_inspect_type as riskInspectType,
+        ecc.classify_name AS riskInspectTypeName,
+        a.inspect_mode AS inspectMode,
+        a.risk_inspect_participant AS riskCheckParticipant,
+        GROUP_CONCAT(acc.user_name) as riskCheckParticipantName,
+        a.start_date AS startDate,
+        a.end_date AS endDate,
+        a.is_open AS isOpen,
+        a.created_by AS createdBy,
+        a.created_time AS createdTime,
+        a.executor AS executor,
+
+        a.schedule_cron_expression as scheduleCronExpression,
+        <if test="checkType != null and checkType != '' and checkType == 'random' ">
+            ifnull((
+            SELECT
+            COUNT( 0 )
+            FROM
+            scyf_inspect_schdule e
+            WHERE
+            ( e.schdule_def_id = a.schdule_def_id AND del_flag = 0 AND e.company_id = a.company_id AND e.STATUS != 0 )
+            ),0) AS edits,
+        </if>
+        bcd.inspect_def_name  AS inspectDefName,
+        a.risk_inspect_def_desc AS riskInspectDefDesc
+
+        FROM
+        scyf_inspect_schdule_def a
+        LEFT JOIN sys_group sg ON a.group_id = sg.group_id
+        left join sys_group psg on psg.group_id = sg.group_parent and sg.company_id = psg.company_id
+        left join sys_position pos on a.risk_inspect_position = pos.position_id and a.company_id = pos.company_id
+        left join scyf_inspect_def bcd on a.`inspect_def_id` =bcd.inspect_def_id
+        left join sys_common_classify ecc on ecc.classify_id = a.risk_inspect_type and ecc.del_flag = 0 and ecc.classify_type = 4
+        and ecc.company_id =  a.company_id
+        left join sys_user acc on FIND_IN_SET(acc.user_id , a.risk_inspect_participant)
+        <where>
+            a.del_flag = 0
+            <if test="companyId != null and companyId != ''">
+                and  a.company_id = #{companyId}
+            </if>
+            <if test="isOpen != null and isOpen != '' ">
+               and  is_open = #{isOpen}
+            </if>
+            <if test="riskInspectPosition!=null and riskInspectPosition!=''">
+                and risk_inspect_position = #{riskInspectPosition}
+            </if>
+            <if test="riskInspectGroup!=null and  riskInspectGroup!=''" >
+                AND FIND_IN_SET(risk_inspect_group ,fu_getChildrenGroup(#{riskInspectGroup}))
+            </if>
+            <if test="inspectMode!=null and inspectMode!=''">
+                and inspect_mode = #{inspectMode}
+            </if>
+            <if test="inspectType != null and inspectType != ''">
+                and a.inspect_type = #{inspectType,jdbcType=VARCHAR}
+            </if>
+            <if test="keyword != null and keyword != ''">
+                and ( a.risk_inspect_def_title like "%"#{keyword}"%"
+                or a.risk_inspect_def_desc like "%"#{keyword}"%"
+                or  sg.group_name like "%"#{keyword}"%"
+                )
+            </if>
+
+        </where>
+        group by a.schdule_def_id
+        order by a.created_time desc
+    </select>
+
+    <select id="findListBySchedule" resultType="com.hngf.entity.danger.InspectSchduleDef">
+        select
+        <include refid="InspectSchduleDefColumns"/>
+        from
+        scyf_inspect_schdule_def a
+        <where>
+            a.del_flag = 0  and is_open = #{isOpen}  and
+            ( (  start_inspect_date is not null and start_inspect_date  > current_timestamp  ) or (start_inspect_date is null ))
+            order by created_time desc
+        </where>
+    </select>
+
+    <select id="findById" resultType="com.hngf.entity.danger.InspectSchduleDef" parameterType="Long">
+
+        select  a.schdule_def_id AS schduleDefId,
+        a.risk_inspect_def_title AS riskInspectDefTitle,
+        a.risk_inspect_level AS riskInspectLevel,
+        a.inspect_type as inspectType,
+        if(psg.group_name is null, sg.group_name, concat(psg.group_name, "-", sg.group_name)) as groupName,
+        (SELECT c.group_name FROM sys_group c WHERE a.risk_inspect_group = c.group_id ) AS riskInspectGroupName,
+        pos.position_title AS riskInspectPositionName,
+        a.risk_inspect_type as riskInspectType,
+        ecc.classify_name AS riskInspectTypeName,
+        a.inspect_mode AS inspectMode,
+        a.risk_inspect_participant AS riskCheckParticipant,
+        GROUP_CONCAT(acc.user_name) as riskCheckParticipantName,
+        a.start_date AS startDate,
+        a.end_date AS endDate,
+        a.is_open AS isOpen,
+        a.created_by AS createdBy,
+        a.created_time AS createdTime,
+        a.executor AS executor,
+        GROUP_CONCAT(distinct (acc1.user_name)) as executorName,
+        bcd.inspect_def_name  AS inspectDefName,
+	    bcd.inspect_def_id inspectDefId,
+	    a.risk_inspect_group riskInspectGroup,
+	    a.risk_inspect_position riskInspectPosition,
+	    a.schedule_cron_expression as scheduleCronExpression,
+	    a.risk_inspect_def_desc AS riskInspectDefDesc,
+	    a.company_id as companyId
+        FROM
+        scyf_inspect_schdule_def a
+        LEFT JOIN sys_group sg ON a.group_id = sg.group_id
+        left join sys_group psg on psg.group_id = sg.group_parent and sg.company_id = psg.company_id
+        left join sys_position pos on a.risk_inspect_position = pos.position_id and a.company_id = pos.company_id
+        left join scyf_inspect_def bcd on a.`inspect_def_id` =bcd.inspect_def_id
+        left join sys_common_classify ecc on ecc.classify_id = a.risk_inspect_type and ecc.del_flag = 0 and ecc.classify_type = 4
+        and ecc.company_id =  a.company_id
+        left join sys_user acc on FIND_IN_SET(acc.user_id , a.risk_inspect_participant)
+        left join sys_user acc1 on FIND_IN_SET(acc1.user_id , a.executor)
+        where
+        a.del_flag = 0 and a.schdule_def_id = #{id}
+        group by a.schdule_def_id
+    </select>
+
+    <insert id="add" parameterType="com.hngf.entity.danger.InspectSchduleDef">
+        INSERT INTO scyf_inspect_schdule_def (
+            schdule_def_id,
+            inspect_def_id,
+            company_id,
+            group_id,
+            risk_inspect_group,
+            risk_inspect_position,
+            risk_inspect_def_title,
+            risk_inspect_def_desc,
+            risk_inspect_type,
+            risk_inspect_level,
+            inspect_type,
+
+
+            last_inspect_date,
+            risk_inspect_participant,
+            inspect_mode,
+            start_date,
+            end_date,
+            executor,
+
+            created_by,
+            created_time,
+            updated_by,
+            updated_time,
+
+            schedule_cron_expression )
+        VALUES (
+            #{schduleDefId},
+            #{inspectDefId},
+            #{companyId},
+            #{groupId},
+            #{riskInspectGroup},
+            #{riskInspectPosition},
+            #{riskInspectDefTitle},
+            #{riskInspectDefDesc},
+            #{riskInspectType},
+            #{riskInspectLevel},
+            #{inspectType},
+
+
+            #{lastInspectDate},
+            #{riskInspectParticipant},
+            #{inspectMode},
+            #{startDate},
+            #{endDate},
+            #{executor},
+
+            #{createdBy},
+            #{createdTime},
+            #{updatedBy},
+            #{updatedTime},
+
+            #{scheduleCronExpression}
+        )
+
+    </insert>
+
+    <update id="update" parameterType="com.hngf.entity.danger.InspectSchduleDef">
+        UPDATE scyf_inspect_schdule_def a
+        <trim prefix="set" suffixOverrides=",">
+        <if test="inspectDefId != null and inspectDefId != ''">
+            a.inspect_def_id = #{inspectDefId},
+        </if>
+        <if test="companyId != null and companyId != ''">
+            a.company_id = #{companyId},
+        </if>
+        <if test="groupId != null and groupId != ''">
+            a.group_id = #{groupId},
+        </if>
+        <if test="riskInspectGroup != null and riskInspectGroup != ''">
+            a.risk_inspect_group = #{riskInspectGroup},
+        </if>
+        <if test="riskInspectPosition != null and riskInspectPosition != ''">
+            a.risk_inspect_position = #{riskInspectPosition},
+        </if>
+        <if test="riskInspectDefTitle != null and riskInspectDefTitle != ''">
+            a.risk_inspect_def_title = #{riskInspectDefTitle},
+        </if>
+        <if test="riskInspectDefDesc != null and riskInspectDefDesc != ''">
+            a.risk_inspect_def_desc = #{riskInspectDefDesc},
+        </if>
+        <if test="riskInspectType != null and riskInspectType != ''">
+            a.risk_inspect_type = #{riskInspectType},
+        </if>
+        <if test="riskInspectLevel != null and riskInspectLevel != ''">
+            a.risk_inspect_level = #{riskInspectLevel},
+        </if>
+        <if test="inspectType != null and inspectType != ''">
+            a.inspect_type = #{inspectType},
+        </if>
+    <!--    <if test="scheduleFrequency != null and scheduleFrequency != ''">
+            a.schedule_frequency = #{scheduleFrequency},
+        </if>
+        <if test="scheduleCount != null and scheduleCount != ''">
+            a.schedule_count = #{scheduleCount},
+        </if>-->
+       <!-- <if test="lastInspectDate != null and lastInspectDate != ''">
+            a.last_inspect_date = #{lastInspectDate},
+        </if>-->
+        <if test="riskInspectParticipant != null and riskInspectParticipant != ''">
+            a.risk_inspect_participant = #{riskInspectParticipant},
+        </if>
+        <if test="inspectMode != null and inspectMode != ''">
+            a.inspect_mode = #{inspectMode},
+        </if>
+        <if test="startDate != null">
+            a.start_date = #{startDate,jdbcType=TIMESTAMP},
+        </if>
+        <if test="endDate != null ">
+            a.end_date = #{endDate,jdbcType=TIMESTAMP},
+        </if>
+        <if test="isOpen != null and isOpen != '' or  0 == isOpen">
+            a.is_open = #{isOpen},
+        </if>
+        <if test="executor != null and executor != ''">
+            a.executor = #{executor},
+        </if>
+
+        <if test="updatedBy != null and updatedBy != ''">
+            a.updated_by = #{updatedBy},
+        </if>
+        <if test="updatedTime != null">
+            a.updated_time = #{updatedTime,jdbcType=TIMESTAMP}
+        </if>
+       <!-- <if test="delFlag != null and delFlag != ''">
+            a.del_flag = #{delFlag}
+        </if>-->
+        </trim>
+        where schdule_def_id = #{schduleDefId}
+    </update>
+
+    <update id="deleteById" parameterType="Long">
+        UPDATE scyf_inspect_schdule_def a SET
+            a.del_flag = 1
+        where a.schdule_def_id = #{id}
+    </update>
+
+    <update id="deleteByIds" parameterType="java.util.List">
+        UPDATE scyf_inspect_schdule_def a SET
+        a.del_flag = 1
+        where a.schdule_def_id in
+        <foreach collection="ids" item="id" open="(" close=")" separator="," index="idx">
+            #{id}
+        </foreach>
+    </update>
+    <insert id="addInspectSchduleStaff" parameterType="java.util.List"  >
+        insert into scyf_inspect_schdule_staff (
+         `company_id`,
+         `group_id`,
+         `schdule_def_id`,
+         `staff_no`,
+         `inspect_mode`,
+         `created_by`,
+         `del_flag`)
+       VALUES
+      <foreach collection="inspectSchduleStaffs" index="index" item="InspectSchduleStaff"   separator=",">
+      ( #{InspectSchduleStaff.companyId},
+       #{InspectSchduleStaff.groupId},
+       #{InspectSchduleStaff.schduleDefId},
+       #{InspectSchduleStaff.staffNo},
+       #{InspectSchduleStaff.inspectMode},
+       #{InspectSchduleStaff.createdBy},
+       #{InspectSchduleStaff.delFlag})
+      </foreach>
+    </insert>
+    <select id="selectInspectDefListByType" parameterType="Map" resultType="com.hngf.entity.danger.InspectDef">
+       	select * from scyf_inspect_def sid left join sys_common_classify  scc on sid.inspect_def_type_id = scc.classify_id
+        where sid.del_flag = 0  and scc.classify_type = #{type}  and scc.company_id =#{companyId}
+        <if test="classifyValue!=null and classifyValue!=''">
+            and scc.classify_value  =#{classifyValue}
+        </if>
+    </select>
+
+    <delete id="deleteStaffByschduleDefId" parameterType="Long" >
+        delete from scyf_inspect_schdule_staff where  schdule_def_id= #{schduleDefId}
+    </delete>
+    <select id="selectInspectSchduleStaffList" parameterType="Long" resultType="com.hngf.entity.danger.InspectSchduleStaff">
+       select <include refid="InspectSchduleDefStaffColumns"/> from  scyf_inspect_schdule_staff a where schdule_def_id=#{schduleDefId ,jdbcType=BIGINT} and inspect_mode = 0
+    </select>
+</mapper>
